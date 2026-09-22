@@ -2914,9 +2914,256 @@ git commit -m "feat: add interview tracking, visa checklist, and acceptance auto
 
 ---
 
+---
+
+### Task 24: App shell and navigation
+
+**Files:**
+- Create: `app/(app)/layout.tsx`
+- Create: `components/nav-shell.tsx`
+
+**Interfaces:**
+- Consumes: `usePathname()` for active-link state.
+- Produces: the persistent chrome every page from Tasks 7-23 renders inside. This is purely additive — those pages' own `<main>` elements are unaffected, they just gain a rail/bottom-bar around them instead of sitting flush against the viewport edge.
+
+- [ ] **Step 1: Write the nav shell**
+
+```tsx
+// components/nav-shell.tsx
+"use client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { CommandPalette } from "./command-palette";
+
+const PRIMARY = [
+  { href: "/", label: "Dashboard" },
+  { href: "/today", label: "Today" },
+  { href: "/timeline", label: "Timeline" },
+  { href: "/wins", label: "Wins" },
+];
+const WORK = [
+  { href: "/schools", label: "Schools" },
+  { href: "/tasks", label: "Tasks" },
+  { href: "/research", label: "Research" },
+  { href: "/people", label: "People" },
+];
+const MOBILE = [
+  { href: "/", label: "Home" },
+  { href: "/schools", label: "Schools" },
+  { href: "/tasks", label: "Tasks" },
+  { href: "/research", label: "Research" },
+  { href: "/people", label: "People" },
+];
+
+function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`block px-3 py-2 rounded text-sm ${active ? "bg-gray-100 font-medium" : "text-gray-500 hover:bg-gray-50"}`}
+    >
+      {label}
+    </Link>
+  );
+}
+
+export function NavShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+
+  return (
+    <div className="flex min-h-screen">
+      <aside className="hidden md:flex w-52 flex-shrink-0 border-r flex-col gap-4 p-4">
+        <div className="font-serif text-xl italic">Command Center</div>
+        <nav className="flex flex-col gap-1">
+          {PRIMARY.map((item) => <NavLink key={item.href} {...item} active={isActive(item.href)} />)}
+          <div className="text-xs uppercase text-gray-400 px-3 pt-3 pb-1">Work</div>
+          {WORK.map((item) => <NavLink key={item.href} {...item} active={isActive(item.href)} />)}
+        </nav>
+      </aside>
+      <div className="flex-1 min-w-0 pb-16 md:pb-0">{children}</div>
+      <CommandPalette />
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2">
+        {MOBILE.map((item) => (
+          <Link key={item.href} href={item.href} className={`text-xs px-2 ${isActive(item.href) ? "font-medium" : "text-gray-400"}`}>
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+    </div>
+  );
+}
+```
+
+Note: this imports `CommandPalette` from Task 20 — do this task after Task 20, not before, or stub the import out temporarily and come back.
+
+- [ ] **Step 2: Wire it into the route group layout**
+
+```tsx
+// app/(app)/layout.tsx
+import { NavShell } from "@/components/nav-shell";
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return <NavShell>{children}</NavShell>;
+}
+```
+
+If Task 20 already created a minimal version of this file (just to mount `<CommandPalette />`), replace it with this — `NavShell` now owns mounting the palette, so don't double-mount it.
+
+- [ ] **Step 3: Verify manually**
+
+Visit any page under `/`. Expected: the rail (desktop) or bottom bar (mobile — resize the browser to check) appears around every page, the current page's nav item is visually distinct, and every link navigates correctly.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add "app/(app)/layout.tsx" components/nav-shell.tsx
+git commit -m "feat: add persistent navigation shell (rail + mobile bottom bar)"
+```
+
+---
+
+### Task 25: Dependency flag on kanban cards
+
+**Files:**
+- Modify: `app/(app)/tasks/page.tsx`
+- Modify: `components/task-board.tsx`
+
+**Interfaces:**
+- Consumes: `task_dependencies` (Task 14).
+
+- [ ] **Step 1: Extend the tasks query to fetch open dependencies**
+
+Modify `app/(app)/tasks/page.tsx` (Task 17) — add a second query and merge it into the shaped task list:
+
+```typescript
+  const { data: deps } = await supabase
+    .from("task_dependencies")
+    .select("task_id, tasks!task_dependencies_depends_on_task_id_fkey(id, title, status)");
+
+  const depsByTask = new Map<string, { title: string; status: string }[]>();
+  for (const d of deps ?? []) {
+    const dep = (d as any).tasks;
+    if (dep.status === "done") continue;
+    const list = depsByTask.get(d.task_id) ?? [];
+    list.push({ title: dep.title, status: dep.status });
+    depsByTask.set(d.task_id, list);
+  }
+```
+
+Add `openDependencies: depsByTask.get(t.id) ?? []` to each shaped task object.
+
+- [ ] **Step 2: Render the flag on the card**
+
+Modify `components/task-board.tsx` (Task 17) — extend the `Task` type with `openDependencies?: { title: string; status: string }[]` and add, right after the school/milestone tag lines inside the card's `<div>`:
+
+```tsx
+{t.openDependencies && t.openDependencies.length > 0 && (
+  <div className="text-xs text-amber-700 mt-1">
+    waiting on: {t.openDependencies.map((d) => d.title).join(", ")}
+  </div>
+)}
+```
+
+- [ ] **Step 3: Verify manually**
+
+Add a dependency between two tasks via `addTaskDependency` (Task 17's action, called from the detail page or directly via the Supabase dashboard for a quick check), confirm the dependent task's card shows the warning on the board without needing to open it.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add "app/(app)/tasks/page.tsx" components/task-board.tsx
+git commit -m "feat: surface open task dependencies directly on kanban cards"
+```
+
+---
+
+### Task 26: Dashboard upgrade
+
+**Files:**
+- Modify: `app/(app)/page.tsx`
+
+**Interfaces:**
+- Consumes: `tasks`, `activity_log.is_win`, `task_updates.is_win` (Tasks 14, 19) — this task must run after Task 19, since the wins-this-month count and deadline strip depend on data/columns that don't exist until then.
+
+- [ ] **Step 1: Replace the stat strip with the four linked tiles**
+
+Modify `app/(app)/page.tsx` (Task 10) — replace the existing stat-tile grid and its four `[label, value]` pairs with:
+
+```tsx
+import Link from "next/link";
+
+// inside DashboardPage, after fetching `list` (schools) as before:
+const { data: openTasks } = await supabase.from("tasks").select("id").not("status", "in", "(done,cancelled)");
+const { data: overdueTasks } = await supabase.from("tasks").select("id").lt("due_date", new Date().toISOString().slice(0, 10)).not("status", "in", "(done,cancelled)");
+const monthStart = new Date(); monthStart.setDate(1);
+const [{ count: winCountA }, { count: winCountB }] = await Promise.all([
+  supabase.from("activity_log").select("id", { count: "exact", head: true }).eq("is_win", true).gte("created_at", monthStart.toISOString()),
+  supabase.from("task_updates").select("id", { count: "exact", head: true }).eq("is_win", true).gte("created_at", monthStart.toISOString()),
+]);
+const winsThisMonth = (winCountA ?? 0) + (winCountB ?? 0);
+```
+
+```tsx
+<div className="grid grid-cols-4 gap-3">
+  {[
+    ["Target schools", list.length, "/schools"],
+    ["Open tasks", openTasks?.length ?? 0, "/tasks"],
+    ["Overdue", overdueTasks?.length ?? 0, "/today"],
+    ["Wins this month", winsThisMonth, "/wins"],
+  ].map(([label, value, href]) => (
+    <Link key={label as string} href={href as string} className="border rounded p-4 hover:border-black">
+      <div className={`text-2xl font-mono font-semibold ${label === "Overdue" && (value as number) > 0 ? "text-red-600" : ""}`}>{value}</div>
+      <div className="text-xs text-gray-500 uppercase">{label}</div>
+    </Link>
+  ))}
+</div>
+```
+
+- [ ] **Step 2: Add the deadline strip and timeline link**
+
+Add, between the stat grid and the pipeline funnel:
+
+```tsx
+const cutoff = new Date(); cutoff.setDate(cutoff.getDate() + 14);
+const cutoffStr = cutoff.toISOString().slice(0, 10);
+const { data: dueSoonTasks } = await supabase.from("tasks").select("id, title, due_date").lte("due_date", cutoffStr).not("status", "in", "(done,cancelled)").order("due_date").limit(6);
+```
+
+```tsx
+<div>
+  <div className="flex justify-between items-center mb-2">
+    <h2 className="font-medium">Upcoming deadlines</h2>
+    <Link href="/timeline" className="text-xs text-gray-500 underline">full timeline</Link>
+  </div>
+  <div className="flex gap-2 overflow-x-auto">
+    {(dueSoonTasks ?? []).map((t) => (
+      <Link key={t.id} href={`/tasks/${t.id}`} className="border rounded p-2 text-xs flex-shrink-0 min-w-[140px] hover:border-black">
+        <div className="font-medium">{t.title}</div>
+        <div className="text-gray-500 mt-1">{t.due_date}</div>
+      </Link>
+    ))}
+  </div>
+</div>
+```
+
+- [ ] **Step 3: Verify manually**
+
+Visit `/`. Expected: four clickable stat tiles navigate to their respective pages; the overdue tile is red when non-zero; the deadline strip shows upcoming tasks with working links; "full timeline" navigates to `/timeline`.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add "app/(app)/page.tsx"
+git commit -m "feat: upgrade dashboard with task/wins stats and a linked deadline strip"
+```
+
+---
+
 ## Self-review notes
 
-- **Spec coverage:** every section of the design spec maps to a task — architecture/scaffold (Task 1), Supabase setup (Task 2), schema/RLS (Task 3), auth (Task 4), ranked-list pipeline (Tasks 5-6), schools UI (Tasks 7-8), actions (Task 9), dashboard (Task 10), Gmail (Tasks 11-12), future-AI pattern (Task 13), task-engine schema (Task 14), research milestones (Task 15), people (Task 16), task board/dependencies/automation-1 (Task 17), Today view/journey timeline (Task 18), wins feed (Task 19), command palette (Task 20), focus mode (Task 21), letters/SOP (Task 22), interviews/visa/automation-2 (Task 23).
+- **Spec coverage:** every section of the design spec maps to a task — architecture/scaffold (Task 1), Supabase setup (Task 2), schema/RLS (Task 3), auth (Task 4), ranked-list pipeline (Tasks 5-6), schools UI (Tasks 7-8), actions (Task 9), dashboard v1 (Task 10), Gmail (Tasks 11-12), future-AI pattern (Task 13), task-engine schema (Task 14), research milestones (Task 15), people (Task 16), task board/dependencies/automation-1 (Task 17), Today view/journey timeline (Task 18), wins feed (Task 19), command palette (Task 20), focus mode (Task 21), letters/SOP (Task 22), interviews/visa/automation-2 (Task 23), navigation shell (Task 24), card-level dependency flags (Task 25), dashboard upgrade (Task 26).
 - **Non-goals respected:** no email composition/sending code anywhere; no cron/scheduled sync; no KACOF module; no live Python service; no file uploads (letters/SOP tracked as metadata, not files); no general automation-rules UI (exactly two hardcoded rules, per spec section 4d); no drag-and-drop on the board.
 - **Placeholder scan:** no TBD/TODO; every code step is complete and runnable. Task 22 Step 2's form markup is described rather than fully typed out a second time, explicitly pointing at the established pattern from Tasks 7-9 rather than leaving the behavior ambiguous — a deliberate economy, not a gap, since re-deriving the same `<form action>` + Server Action wiring a sixth time adds length without adding information.
 - **Type consistency:** `task_status`/`TaskStatus` values match between the SQL enum (Task 14), `updateTaskStatus`'s type (Task 17), and the kanban board's `COLUMNS` keys (Task 17) — `cancelled` is a valid DB status not shown as its own board column, surfaced instead as a dropdown option, consistent with the spec's non-goal on drag-and-drop-only column semantics. `is_win` is set at every activity/task-update write path added across Tasks 17, 19, and the Gmail sync modification called out in Task 19 Step 1.
+- **Ordering dependencies made explicit (added on this revision):** Task 24 depends on Task 20 (imports `CommandPalette`) — do the palette before the shell, or stub the import; Task 26 depends on Task 19 (`is_win`-driven counts don't exist before then); Task 25 depends on Task 17 (modifies its files) and Task 14 (`task_dependencies` table). None of this changes the linear task order already in the plan — Tasks 24-26 were appended after Task 23 specifically so nothing earlier needs renumbering, and their own steps call out what they consume from earlier tasks.
+- **Mockup reconciliation:** three gaps found comparing the plan against the approved design mockup — no task built the persistent nav shell (fixed: Task 24), Task 10's dashboard predated the task-engine/wins data it now needs to show (fixed: Task 26 upgrades it rather than rewriting Task 10 out of order), and dependency warnings only showed on the task detail page, not the kanban card where they're most useful while scanning (fixed: Task 25).
