@@ -116,16 +116,44 @@ def find_carnegie_match(name: str, carnegie_names: list[str], threshold: int) ->
     if name in MANUAL_CARNEGIE_OVERRIDES and MANUAL_CARNEGIE_OVERRIDES[name] in carnegie_names:
         return MANUAL_CARNEGIE_OVERRIDES[name], 100.0, "manual override"
 
-    norm_name = normalize_name(name)
-    norm_map = {c: normalize_name(c) for c in carnegie_names}
-    prefix_candidates = [c for c, nc in norm_map.items() if nc.startswith(norm_name) or norm_name.startswith(nc)]
+    # Word-boundary prefix, not character prefix — a character-level
+    # startswith wrongly matched "University of Kent" (a real, distinct UK
+    # university) against "University of Kentucky", because "kent" is a
+    # character-prefix of "kentucky". Comparing tokenized word lists closes
+    # that hole: "kent" as a whole word is never a prefix of "kentucky".
+    #
+    # One direction only: the Carnegie candidate must be the same length or
+    # LONGER than the query (Carnegie's own names are always the more
+    # verbosely-qualified side in genuine campus-suffix cases — "-Seattle
+    # Campus", "-Main Campus"). Allowing the reverse direction wrongly
+    # matched "Northeastern University (China)" — a real, different
+    # institution in Shenyang — against the US "Northeastern University",
+    # because the shorter Carnegie name is a prefix of the longer query.
+    norm_name_words = normalize_name(name).split()
+    norm_map = {c: normalize_name(c).split() for c in carnegie_names}
+    prefix_candidates = [c for c, words in norm_map.items() if words[:len(norm_name_words)] == norm_name_words]
 
     if len(prefix_candidates) == 1:
         return prefix_candidates[0], 100.0, "prefix"
     if len(prefix_candidates) > 1:
         return None, 0.0, "ambiguous: " + " | ".join(prefix_candidates)
 
+    # Fuzzy fallback only, and deliberately strict: CSRankings mixes in
+    # hundreds of non-US institutions, and generic scorers reliably produce
+    # coincidentally-high scores between unrelated same-shape names from
+    # different countries (verified 2025-09-23: "Korea University" and "Henan
+    # University" both scored >90% against "Kean University"; "Northwest
+    # University" (China) scored >90% against "Northwestern University").
+    # A high bar plus a shared-distinctive-word requirement cuts these out
+    # without also cutting the genuine abbreviation cases the prefix path
+    # already handles, since those no longer need the fallback at all.
+    GENERIC_WORDS = {"university", "college", "of", "the", "institute", "state", "technology"}
     match, score, _ = process.extractOne(name, carnegie_names, scorer=fuzz.token_sort_ratio) or (None, 0, None)
+    if match:
+        match_words = set(normalize_name(match).split()) - GENERIC_WORDS
+        name_words = set(norm_name_words) - GENERIC_WORDS
+        if not (match_words & name_words):
+            return None, 0.0, "fuzzy-rejected: no shared distinctive word with " + match
     return match, score, "fuzzy"
 
 

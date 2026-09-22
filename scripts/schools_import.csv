@@ -55,16 +55,15 @@ Brandeis University,USA,R1,124,15.775,False,,,6.345685268230926
 University of Oregon,USA,R1,132,14.628540000000001,False,,,5.881834712109055
 Boston University,USA,R1,136,14.081150000000001,False,,,5.6603641366720145
 Yale University,USA,R1,137,14.071861,False,,,5.656605865283725
-Kean University,USA,R2,139,14.021423,False,,,5.636198965479393
 Harvard University,USA,R1,140,13.890879,False,,,5.583381678353481
 University of Delaware,USA,R1,141,13.78569,False,,,5.540822865880387
 University of Wisconsin-Madison,USA,R1,144,13.313382,False,,,5.349729998740837
-Northeastern University,USA,R1,146,13.19819,False,,,5.303124034938532
 University of Florida,USA,R1,147,13.19328,False,,,5.30113747960249
 University of Utah,USA,R1,149,12.70436,False,,,5.103323501008291
 University of Chicago,USA,R1,150,12.417462,False,,,4.987246361945217
 Brown University,USA,R1,152,12.07836,False,,,4.850047810506843
 George Washington University,USA,R1,153,12.04683,False,,,4.837290969418167
+University of Maryland-Baltimore County,USA,R1,154,11.940467,False,,,4.794257163876945
 University of Minnesota-Twin Cities,USA,R1,155,11.810028,False,,,4.741482359095286
 Duke University,USA,R1,158,11.707169,False,,,4.699866250070863
 Rochester Institute of Technology,USA,R2,164,10.827106,False,,,4.343798256445022
@@ -115,8 +114,8 @@ Tufts University,USA,R1,374,1.14286,False,,,0.4256128049499835
 University of Georgia,USA,R1,376,1.106802,False,,,0.4110239633395981
 California Institute of Technology,USA,R1,377,1.059523,False,,,0.39189517520666195
 University of Massachusetts-Boston,USA,R1,378,1.03333,False,,,0.38129765098732576
-University of Kentucky,USA,R1,379,1.0,False,,,0.3678125411400202
 Wayne State University,USA,R1,379,1.0,False,,,0.3678125411400202
+University of Kentucky,USA,R1,379,1.0,False,,,0.3678125411400202
 Wichita State University,USA,R2,391,0.904769,False,,,0.3292826732771712
 University of South Carolina-Columbia,USA,R1,392,0.88889,False,,,0.322858129044787
 University of Hawaii at Manoa,USA,R1,394,0.880949,False,,,0.3196452500379627
@@ -130,26 +129,20 @@ University of Kansas,USA,R1,420,0.65,False,,,0.22620472696189384
 Cleveland State University,USA,R2,422,0.641945,False,,,0.22294572426702294
 Georgia State University,USA,R1,423,0.625,False,,,0.21608988309202767
 Colorado School of Mines,USA,R1,429,0.56667,False,,,0.1924899293748559
-American University,USA,R1,436,0.521277,False,,,0.17412420506346252
 Southern Methodist University,USA,R1,438,0.5,False,,,0.16551566374269683
-Utah State University,USA,R1,438,0.5,False,,,0.16551566374269683
 University of Massachusetts-Dartmouth,USA,R2,438,0.5,False,,,0.16551566374269683
-University at Albany,USA,R1,460,0.40953,False,,,0.12891206674642514
+Utah State University,USA,R1,438,0.5,False,,,0.16551566374269683
 Augusta University,USA,R2,463,0.368497,False,,,0.11231037120593639
 University of Michigan-Dearborn,USA,R2,464,0.36667000000000005,False,,,0.11157117841592659
 Kansas State University,USA,R1,466,0.34286,False,,,0.10193780111426604
 Illinois Institute of Technology,USA,R2,469,0.33333,False,,,0.09808202263107305
 University of Wisconsin-Milwaukee,USA,R1,469,0.33333,False,,,0.09808202263107305
 Virginia Commonwealth University,USA,R1,469,0.33333,False,,,0.09808202263107305
-University of Maine,USA,R1,469,0.33333,False,,,0.09808202263107305
 Kent State University at Kent,USA,R1,482,0.28572,False,,,0.07881931396529991
 University of Missouri-Kansas City,USA,R1,485,0.262338,False,,,0.06935910279069149
-University of Kentucky,USA,R1,486,0.25,False,,,0.06436722504403514
 Washington State University,USA,R1,502,0.24286,False,,,0.06147842563480136
 University of Idaho,USA,R1,503,0.2,False,,,0.0441375373043028
 Baylor University,USA,R1,511,0.194443,False,,,0.04188920980890896
-Kean University,USA,R2,512,0.16667,False,,,0.03065242745699723
 University of Nevada-Las Vegas,USA,R1,512,0.16667,False,,,0.03065242745699723
-Northwestern University,USA,R1,512,0.16667,False,,,0.03065242745699723
 New Mexico State University-Main Campus,USA,R1,524,0.125,False,,,0.013793005694704302
 Nova Southeastern University,USA,R1,529,0.090909,False,,,0.0
