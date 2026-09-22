@@ -4,7 +4,9 @@ Read these two files first, in full:
 1. `docs/superpowers/specs/2026-09-22-grad-command-center-design.md` — the design spec (why every decision was made, what's explicitly out of scope)
 2. `docs/superpowers/plans/2026-09-22-grad-command-center-implementation.md` — the implementation plan (13 tasks, exact files/code/commands)
 
-Then execute the plan task-by-task. Use the `superpowers:subagent-driven-development` skill if available in this session (a fresh subagent per task, reviewed between tasks); otherwise use `superpowers:executing-plans`. If neither skill is available, just work through the plan's tasks in order — each one is self-contained with exact file paths, complete code, and verification steps, so it doesn't require the skill to execute correctly.
+Then execute the plan task-by-task — it's 23 tasks now, not a small build: the ranked school directory, a full ERP-style task engine (people, tasks, dependencies, reassignment, results), Gmail read-only tracking, and an application-logistics layer (recommendation letters, SOP versions, interviews, visa checklist) plus a productivity layer (command palette, journey timeline, wins feed, focus mode). Use the `superpowers:subagent-driven-development` skill if available in this session (a fresh subagent per task, reviewed between tasks); otherwise use `superpowers:executing-plans`. If neither skill is available, just work through the plan's tasks in order — each one is self-contained with exact file paths, complete code, and verification steps, so it doesn't require the skill to execute correctly.
+
+Tasks 14-23 depend on Tasks 1-13 already being done (they build on the base schema and the schools/auth pages) — don't skip ahead.
 
 A few things to know going in:
 
@@ -14,5 +16,8 @@ A few things to know going in:
 - **The composite score is a heuristic, explicitly labeled as such in the UI** (Task 10). Don't present it as an objective ranking anywhere in copy or comments.
 - **Gmail integration is read-only, manual-trigger only.** Don't add send/compose capability or automatic scheduled sync — both are explicit non-goals in the spec (section 2).
 - Follow the plan's commit-per-task structure — each task ends with its own commit, not one giant commit at the end.
+- **Task dependencies (Task 17) are advisory, not enforced** — a task can still be marked done with an open dependency. Don't "fix" this into a hard lock; it's a deliberate design choice, documented in the spec's risks section.
+- **The two automation rules (Tasks 17 and 23) are hardcoded**, not a configurable rules engine — don't build a rules UI, that's explicitly out of scope.
+- **`is_win` (Task 19) must be set at every write path that inserts an `activity_log` or `task_updates` row** — go back and check Tasks 7, 8, 12, and 17's insert calls when you get to Task 19, not just the new code in that task.
 
 If you hit a point where the plan is ambiguous or something doesn't work as written (e.g., a library version conflict, a Next.js API that's changed), use your own judgment to resolve it in the spirit of the design spec, and note what you changed and why — don't silently deviate.

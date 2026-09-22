@@ -1637,9 +1637,1286 @@ git commit -m "docs: add Vercel Python serverless function pattern for future AI
 
 ---
 
+---
+
+### Task 14: Extended schema — task engine, dependencies, and application logistics
+
+**Files:**
+- Create: `supabase/migrations/0003_erp_extension.sql`
+
+**Interfaces:**
+- Produces: `people`, `research_milestones`, `tasks`, `task_updates`, `task_dependencies`, `letter_requests`, `sop_versions`, `interviews`, `visa_steps`, `focus_sessions` tables, plus two new columns on `schools` — every task from here on depends on this migration.
+
+- [ ] **Step 1: Write the migration**
+
+```sql
+-- supabase/migrations/0003_erp_extension.sql
+
+create type task_status as enum ('todo', 'in_progress', 'blocked', 'done', 'cancelled');
+create type task_priority as enum ('low', 'medium', 'high');
+create type task_update_type as enum ('note', 'status_change', 'reassignment', 'result');
+create type milestone_status as enum ('not_started', 'in_progress', 'done', 'blocked');
+create type letter_status as enum ('not_asked', 'asked', 'confirmed', 'submitted');
+create type interview_status as enum ('not_scheduled', 'scheduled', 'completed');
+create type step_status as enum ('not_started', 'in_progress', 'done');
+
+create table people (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  role text,
+  area text,
+  email text,
+  color text not null default '#c98a3e',
+  created_at timestamptz not null default now()
+);
+
+create table research_milestones (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  title text not null,
+  description text,
+  target_date date,
+  status milestone_status not null default 'not_started',
+  created_at timestamptz not null default now()
+);
+
+create table tasks (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  title text not null,
+  description text,
+  school_id uuid references schools(id) on delete cascade,
+  research_milestone_id uuid references research_milestones(id) on delete cascade,
+  assignee_id uuid references people(id) on delete set null,
+  status task_status not null default 'todo',
+  priority task_priority not null default 'medium',
+  due_date date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint tasks_single_link check (not (school_id is not null and research_milestone_id is not null))
+);
+
+create table task_updates (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  task_id uuid not null references tasks(id) on delete cascade,
+  type task_update_type not null,
+  content text not null,
+  is_win boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create table task_dependencies (
+  task_id uuid not null references tasks(id) on delete cascade,
+  depends_on_task_id uuid not null references tasks(id) on delete cascade,
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  primary key (task_id, depends_on_task_id),
+  constraint no_self_dependency check (task_id <> depends_on_task_id)
+);
+
+create table letter_requests (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  school_id uuid not null references schools(id) on delete cascade,
+  recommender_id uuid references people(id) on delete set null,
+  status letter_status not null default 'not_asked',
+  letter_deadline date,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table sop_versions (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  label text not null,
+  description text,
+  external_link text,
+  created_at timestamptz not null default now()
+);
+
+alter table schools add column sop_version_id uuid references sop_versions(id) on delete set null;
+alter table schools add column sop_sent_at date;
+
+create table interviews (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  school_id uuid not null references schools(id) on delete cascade,
+  scheduled_at timestamptz,
+  prep_notes text,
+  questions_asked text,
+  outcome_notes text,
+  status interview_status not null default 'not_scheduled',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table visa_steps (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  school_id uuid not null references schools(id) on delete cascade,
+  step_name text not null,
+  status step_status not null default 'not_started',
+  due_date date,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create table focus_sessions (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  task_id uuid not null references tasks(id) on delete cascade,
+  started_at timestamptz not null default now(),
+  duration_minutes int not null,
+  ended_at timestamptz
+);
+
+create trigger tasks_set_updated_at before update on tasks for each row execute function set_updated_at();
+create trigger letter_requests_set_updated_at before update on letter_requests for each row execute function set_updated_at();
+create trigger interviews_set_updated_at before update on interviews for each row execute function set_updated_at();
+
+alter table people enable row level security;
+alter table research_milestones enable row level security;
+alter table tasks enable row level security;
+alter table task_updates enable row level security;
+alter table task_dependencies enable row level security;
+alter table letter_requests enable row level security;
+alter table sop_versions enable row level security;
+alter table interviews enable row level security;
+alter table visa_steps enable row level security;
+alter table focus_sessions enable row level security;
+
+create policy "owner full access" on people for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "owner full access" on research_milestones for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "owner full access" on tasks for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "owner full access" on task_updates for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "owner full access" on task_dependencies for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "owner full access" on letter_requests for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "owner full access" on sop_versions for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "owner full access" on interviews for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "owner full access" on visa_steps for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "owner full access" on focus_sessions for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+```
+
+- [ ] **Step 2: Apply it**
+
+Run the migration in the Supabase SQL Editor, same as Task 3 Step 2. Verify all 10 new tables appear in Table Editor with RLS enabled, and that `schools` now has `sop_version_id` and `sop_sent_at` columns.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add supabase/migrations/0003_erp_extension.sql
+git commit -m "feat: add task engine, dependencies, and application-logistics schema"
+```
+
+---
+
+### Task 15: Research milestones — seed script and page
+
+**Files:**
+- Create: `scripts/seed_research_milestones.py`
+- Create: `app/(app)/research/page.tsx`
+- Create: `app/(app)/research/[id]/page.tsx`
+
+**Interfaces:**
+- Consumes: `research_milestones`, `tasks` (Task 14).
+
+- [ ] **Step 1: Write the seed script**
+
+```python
+# scripts/seed_research_milestones.py
+import argparse
+import os
+from supabase import create_client
+
+MILESTONES = [
+    {"title": "Verification gate", "description": "Confirm Global-MMLU's Nepali split construction route before anything else starts.", "target_date": "2026-09-23"},
+    {"title": "Repository scaffold", "description": "Directory structure, licences, README per section 8.1 of the Master Plan.", "target_date": "2026-09-23"},
+    {"title": "Pre-registration", "description": "Hypotheses, sampling procedure and seed, committed before any model runs.", "target_date": "2026-09-25"},
+    {"title": "Sampling script and sample", "description": "Stratified random sample, seed 20260922, n=450, committed.", "target_date": "2026-09-27"},
+    {"title": "Annotation sheet and pilot", "description": "30-item pilot, independently annotated by both annotators, kappa computed.", "target_date": "2026-09-30"},
+]
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--owner-id", required=True)
+    args = parser.parse_args()
+    supabase = create_client(os.environ["NEXT_PUBLIC_SUPABASE_URL"], os.environ["SUPABASE_SERVICE_ROLE_KEY"])
+    rows = [{**m, "owner_id": args.owner_id} for m in MILESTONES]
+    result = supabase.table("research_milestones").insert(rows).execute()
+    print(f"Inserted {len(result.data)} milestones.")
+
+if __name__ == "__main__":
+    main()
+```
+
+Run: `python scripts/seed_research_milestones.py --owner-id <your-user-uuid>`
+
+- [ ] **Step 2: Write the research list page**
+
+```tsx
+// app/(app)/research/page.tsx
+import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+
+export default async function ResearchPage() {
+  const supabase = await createClient();
+  const { data: milestones } = await supabase.from("research_milestones").select("*").order("target_date");
+  return (
+    <main className="p-8 max-w-2xl mx-auto flex flex-col gap-3">
+      <h1 className="text-2xl font-semibold">The Broken Ruler</h1>
+      <p className="text-sm text-gray-500">Nepali benchmark measurement-error study — Week 1 foundation milestones.</p>
+      {(milestones ?? []).map((m) => (
+        <Link key={m.id} href={`/research/${m.id}`} className="border rounded p-3 hover:border-black">
+          <div className="flex justify-between">
+            <span className="font-medium">{m.title}</span>
+            <span className="text-xs uppercase text-gray-500">{m.status.replace("_", " ")}</span>
+          </div>
+          <p className="text-sm text-gray-500 mt-1">{m.description}</p>
+        </Link>
+      ))}
+    </main>
+  );
+}
+```
+
+- [ ] **Step 3: Write the milestone detail page**
+
+```tsx
+// app/(app)/research/[id]/page.tsx
+import { createClient } from "@/lib/supabase/server";
+
+export default async function MilestoneDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const [{ data: milestone }, { data: tasks }] = await Promise.all([
+    supabase.from("research_milestones").select("*").eq("id", id).single(),
+    supabase.from("tasks").select("*").eq("research_milestone_id", id),
+  ]);
+  if (!milestone) return <p className="p-8">Not found.</p>;
+  return (
+    <main className="p-8 max-w-2xl mx-auto flex flex-col gap-4">
+      <h1 className="text-2xl font-semibold">{milestone.title}</h1>
+      <p className="text-gray-600">{milestone.description}</p>
+      <div>
+        <h2 className="font-medium mb-2">Linked tasks ({(tasks ?? []).length})</h2>
+        <ul className="flex flex-col gap-2">
+          {(tasks ?? []).map((t) => (
+            <li key={t.id} className="border rounded p-2 text-sm flex justify-between">
+              <span>{t.title}</span><span className="text-xs uppercase text-gray-500">{t.status.replace("_", " ")}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </main>
+  );
+}
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add scripts/seed_research_milestones.py "app/(app)/research"
+git commit -m "feat: add research milestones page seeded from the real Week 1 plan"
+```
+
+---
+
+### Task 16: People page
+
+**Files:**
+- Create: `app/(app)/people/page.tsx`
+- Create: `app/(app)/people/actions.ts`
+- Create: `components/person-card.tsx`
+
+**Interfaces:**
+- Produces: `deletePerson(id: string)`, `addPerson(data)` Server Actions, consumed by Task 17's task-assignment UI (via the `people` table it writes to).
+
+- [ ] **Step 1: Write the actions**
+
+```typescript
+// app/(app)/people/actions.ts
+"use server";
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+
+export async function addPerson(data: { name: string; role?: string; area?: string; color?: string }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+  const { error } = await supabase.from("people").insert({ owner_id: user.id, ...data });
+  if (error) throw new Error(error.message);
+  revalidatePath("/people");
+}
+
+export async function deletePerson(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("people").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/people");
+  revalidatePath("/tasks");
+}
+```
+
+Deletion relies on `tasks.assignee_id ON DELETE SET NULL` (Task 14) to unassign rather than orphan — no application-level cleanup needed.
+
+- [ ] **Step 2: Write the person card with a confirm-before-delete client component**
+
+```tsx
+// components/person-card.tsx
+"use client";
+import { deletePerson } from "@/app/(app)/people/actions";
+
+type Person = { id: string; name: string; role: string | null; area: string | null; color: string; openTaskCount: number };
+
+export function PersonCard({ person }: { person: Person }) {
+  function handleDelete() {
+    if (!confirm(`Permanently remove ${person.name}? Their tasks will fall back to Unassigned. This cannot be undone.`)) return;
+    deletePerson(person.id);
+  }
+  return (
+    <div className="border rounded p-4 flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white" style={{ background: person.color }}>
+          {person.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+        </span>
+        <div>
+          <div className="font-medium text-sm">{person.name}</div>
+          <div className="text-xs text-gray-500">{person.role}</div>
+        </div>
+      </div>
+      <div className="text-xs text-gray-500">{person.openTaskCount} open task{person.openTaskCount === 1 ? "" : "s"}</div>
+      <button onClick={handleDelete} className="text-xs text-red-600 border border-red-600 rounded px-2 py-1 self-start">Remove permanently</button>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 3: Write the page**
+
+```tsx
+// app/(app)/people/page.tsx
+import { createClient } from "@/lib/supabase/server";
+import { PersonCard } from "@/components/person-card";
+import { addPerson } from "./actions";
+
+export default async function PeoplePage() {
+  const supabase = await createClient();
+  const [{ data: people }, { data: tasks }] = await Promise.all([
+    supabase.from("people").select("*"),
+    supabase.from("tasks").select("assignee_id, status"),
+  ]);
+
+  const loadByPerson: Record<string, number> = {};
+  for (const t of tasks ?? []) {
+    if (t.assignee_id && t.status !== "done" && t.status !== "cancelled") {
+      loadByPerson[t.assignee_id] = (loadByPerson[t.assignee_id] ?? 0) + 1;
+    }
+  }
+
+  async function addPersonForm(formData: FormData) {
+    "use server";
+    const name = String(formData.get("name") ?? "").trim();
+    if (!name) return;
+    await addPerson({
+      name,
+      role: String(formData.get("role") ?? "").trim() || undefined,
+      area: String(formData.get("area") ?? "").trim() || undefined,
+    });
+  }
+
+  return (
+    <main className="p-8 max-w-3xl mx-auto flex flex-col gap-4">
+      <h1 className="text-2xl font-semibold">People</h1>
+      <form action={addPersonForm} className="flex gap-2 flex-wrap border rounded p-3">
+        <input name="name" placeholder="Name" className="border rounded px-2 py-1 text-sm" required />
+        <input name="role" placeholder="Role" className="border rounded px-2 py-1 text-sm" />
+        <input name="area" placeholder="Area" className="border rounded px-2 py-1 text-sm" />
+        <button className="bg-black text-white rounded px-3 py-1 text-sm">Add person</button>
+      </form>
+      <div className="grid grid-cols-2 gap-3">
+        {(people ?? []).map((p) => (
+          <PersonCard key={p.id} person={{ ...p, openTaskCount: loadByPerson[p.id] ?? 0 }} />
+        ))}
+      </div>
+    </main>
+  );
+}
+```
+
+- [ ] **Step 4: Verify manually**
+
+Add a person, confirm they appear. Assign a task to them once Task 17 exists (come back to verify the full delete-unassigns flow after that task).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add "app/(app)/people" components/person-card.tsx
+git commit -m "feat: add people page with permanent delete and load display"
+```
+
+---
+
+### Task 17: Task engine — kanban board, detail, dependencies, and automation rule 1
+
+**Files:**
+- Create: `app/(app)/tasks/page.tsx`
+- Create: `app/(app)/tasks/actions.ts`
+- Create: `app/(app)/tasks/[id]/page.tsx`
+- Create: `components/task-board.tsx`
+- Modify: `app/(app)/schools/actions.ts` (add the automation hook)
+
+**Interfaces:**
+- Produces: `createTask`, `updateTaskStatus`, `reassignTask`, `addTaskUpdate`, `addTaskDependency` Server Actions.
+- Consumes: `tasks`, `task_updates`, `task_dependencies`, `people` (Task 14, 16).
+
+- [ ] **Step 1: Write the task actions**
+
+```typescript
+// app/(app)/tasks/actions.ts
+"use server";
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+
+type TaskStatus = "todo" | "in_progress" | "blocked" | "done" | "cancelled";
+
+export async function createTask(data: {
+  title: string; description?: string; schoolId?: string; researchMilestoneId?: string;
+  assigneeId?: string; priority?: "low" | "medium" | "high"; dueDate?: string;
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+  const { error } = await supabase.from("tasks").insert({
+    owner_id: user.id, title: data.title, description: data.description,
+    school_id: data.schoolId, research_milestone_id: data.researchMilestoneId,
+    assignee_id: data.assigneeId, priority: data.priority ?? "medium", due_date: data.dueDate,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/tasks");
+}
+
+export async function updateTaskStatus(taskId: string, status: TaskStatus) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+  const { error } = await supabase.from("tasks").update({ status }).eq("id", taskId);
+  if (error) throw new Error(error.message);
+  await supabase.from("task_updates").insert({
+    owner_id: user.id, task_id: taskId, type: "status_change",
+    content: `Status changed to ${status.replace("_", " ")}`, is_win: status === "done",
+  });
+  revalidatePath("/tasks");
+  revalidatePath(`/tasks/${taskId}`);
+}
+
+export async function reassignTask(taskId: string, newAssigneeId: string | null) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+
+  const { data: task } = await supabase.from("tasks").select("assignee_id").eq("id", taskId).single();
+  const [{ data: oldPerson }, { data: newPerson }] = await Promise.all([
+    task?.assignee_id ? supabase.from("people").select("name").eq("id", task.assignee_id).single() : Promise.resolve({ data: null }),
+    newAssigneeId ? supabase.from("people").select("name").eq("id", newAssigneeId).single() : Promise.resolve({ data: null }),
+  ]);
+
+  const { error } = await supabase.from("tasks").update({ assignee_id: newAssigneeId }).eq("id", taskId);
+  if (error) throw new Error(error.message);
+
+  await supabase.from("task_updates").insert({
+    owner_id: user.id, task_id: taskId, type: "reassignment",
+    content: `Reassigned from ${oldPerson?.name ?? "Unassigned"} to ${newPerson?.name ?? "Unassigned"}`,
+  });
+  revalidatePath("/tasks");
+  revalidatePath(`/tasks/${taskId}`);
+}
+
+export async function addTaskUpdate(taskId: string, type: "note" | "result", content: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+  const { error } = await supabase.from("task_updates").insert({
+    owner_id: user.id, task_id: taskId, type, content, is_win: type === "result",
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/tasks/${taskId}`);
+}
+
+export async function addTaskDependency(taskId: string, dependsOnTaskId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+  const { error } = await supabase.from("task_dependencies").insert({
+    owner_id: user.id, task_id: taskId, depends_on_task_id: dependsOnTaskId,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/tasks/${taskId}`);
+}
+```
+
+- [ ] **Step 2: Add automation rule 1 to the schools status action**
+
+Modify `app/(app)/schools/actions.ts`'s `updateSchoolStatus` (Task 7) — add this block right after the existing `activity_log` insert, before `revalidatePath`:
+
+```typescript
+  if (status === "replied") {
+    const { data: school } = await supabase.from("schools").select("name").eq("id", id).single();
+    const due = new Date();
+    due.setDate(due.getDate() + 3);
+    await supabase.from("tasks").insert({
+      owner_id: user.id,
+      title: `Follow up with ${school?.name ?? "school"}`,
+      school_id: id,
+      priority: "medium",
+      due_date: due.toISOString().slice(0, 10),
+    });
+  }
+```
+
+- [ ] **Step 3: Write the kanban board component**
+
+```tsx
+// components/task-board.tsx
+"use client";
+import Link from "next/link";
+import { updateTaskStatus } from "@/app/(app)/tasks/actions";
+
+const COLUMNS: Array<{ key: string; label: string }> = [
+  { key: "todo", label: "To do" }, { key: "in_progress", label: "In progress" },
+  { key: "blocked", label: "Blocked" }, { key: "done", label: "Done" },
+];
+
+type Task = {
+  id: string; title: string; status: string; priority: string; due_date: string | null;
+  school_name?: string | null; milestone_title?: string | null; assignee_name?: string | null;
+};
+
+export function TaskBoard({ tasks }: { tasks: Task[] }) {
+  return (
+    <div className="grid grid-cols-4 gap-3">
+      {COLUMNS.map((col) => (
+        <div key={col.key} className="border rounded p-2 bg-gray-50">
+          <div className="text-xs uppercase text-gray-500 mb-2 flex justify-between">
+            <span>{col.label}</span><span>{tasks.filter((t) => t.status === col.key).length}</span>
+          </div>
+          {tasks.filter((t) => t.status === col.key).map((t) => (
+            <div key={t.id} className="bg-white border rounded p-2 mb-2 text-sm">
+              <Link href={`/tasks/${t.id}`} className="font-medium hover:underline">{t.title}</Link>
+              {t.school_name && <div className="text-xs text-teal-700 mt-1">{t.school_name}</div>}
+              {t.milestone_title && <div className="text-xs text-violet-700 mt-1">{t.milestone_title}</div>}
+              <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
+                <span>{t.assignee_name ?? "Unassigned"}</span>
+                <select
+                  value={t.status}
+                  onChange={(e) => updateTaskStatus(t.id, e.target.value as any)}
+                  className="border rounded text-xs px-1 py-0.5"
+                >
+                  {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: Write the tasks page**
+
+```tsx
+// app/(app)/tasks/page.tsx
+import { createClient } from "@/lib/supabase/server";
+import { TaskBoard } from "@/components/task-board";
+
+export default async function TasksPage() {
+  const supabase = await createClient();
+  const { data: tasks } = await supabase
+    .from("tasks")
+    .select("*, schools(name), research_milestones(title), people(name)")
+    .order("due_date", { ascending: true, nullsFirst: false });
+
+  const shaped = (tasks ?? []).map((t: any) => ({
+    id: t.id, title: t.title, status: t.status, priority: t.priority, due_date: t.due_date,
+    school_name: t.schools?.name ?? null, milestone_title: t.research_milestones?.title ?? null,
+    assignee_name: t.people?.name ?? null,
+  }));
+
+  return (
+    <main className="p-8 max-w-6xl mx-auto flex flex-col gap-4">
+      <h1 className="text-2xl font-semibold">Task board</h1>
+      <TaskBoard tasks={shaped} />
+    </main>
+  );
+}
+```
+
+- [ ] **Step 5: Write the task detail page**
+
+```tsx
+// app/(app)/tasks/[id]/page.tsx
+import { createClient } from "@/lib/supabase/server";
+import { reassignTask, addTaskUpdate } from "../actions";
+
+export default async function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const [{ data: task }, { data: updates }, { data: people }, { data: deps }] = await Promise.all([
+    supabase.from("tasks").select("*, schools(name), research_milestones(title)").eq("id", id).single(),
+    supabase.from("task_updates").select("*").eq("task_id", id).order("created_at", { ascending: false }),
+    supabase.from("people").select("id, name"),
+    supabase.from("task_dependencies").select("depends_on_task_id, tasks!task_dependencies_depends_on_task_id_fkey(id, title, status)").eq("task_id", id),
+  ]);
+  if (!task) return <p className="p-8">Not found.</p>;
+
+  async function reassignForm(formData: FormData) {
+    "use server";
+    const newId = String(formData.get("assignee_id") ?? "") || null;
+    await reassignTask(id, newId);
+  }
+  async function noteForm(formData: FormData) {
+    "use server";
+    const content = String(formData.get("content") ?? "").trim();
+    if (content) await addTaskUpdate(id, "note", content);
+  }
+
+  return (
+    <main className="p-8 max-w-2xl mx-auto flex flex-col gap-4">
+      <h1 className="text-2xl font-semibold">{task.title}</h1>
+      <p className="text-gray-600">{task.description}</p>
+      {(task as any).schools && <p className="text-sm text-teal-700">Linked to {(task as any).schools.name}</p>}
+      {(task as any).research_milestones && <p className="text-sm text-violet-700">Linked to {(task as any).research_milestones.title}</p>}
+
+      {deps && deps.length > 0 && (
+        <div className="text-sm bg-yellow-50 border border-yellow-300 rounded p-2">
+          Depends on: {deps.map((d: any) => `${d.tasks.title} (${d.tasks.status})`).join(", ")}
+          {deps.some((d: any) => d.tasks.status !== "done") && " — not all dependencies are done yet."}
+        </div>
+      )}
+
+      <form action={reassignForm} className="flex gap-2 items-center">
+        <label className="text-sm text-gray-500">Assignee</label>
+        <select name="assignee_id" defaultValue={task.assignee_id ?? ""} className="border rounded px-2 py-1 text-sm">
+          <option value="">Unassigned</option>
+          {(people ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        <button className="bg-black text-white rounded px-3 py-1 text-sm">Reassign</button>
+      </form>
+
+      <form action={noteForm} className="flex flex-col gap-2">
+        <textarea name="content" placeholder="Add a note or result…" className="border rounded p-2 text-sm" rows={2} />
+        <button className="bg-black text-white rounded px-3 py-1 text-sm self-start">Add to log</button>
+      </form>
+
+      <div>
+        <h2 className="font-medium mb-2">Log</h2>
+        <ul className="flex flex-col gap-2">
+          {(updates ?? []).map((u) => (
+            <li key={u.id} className="border rounded p-2 text-sm">
+              <div className="text-xs text-gray-500 flex justify-between">
+                <span>{u.type.replace("_", " ")}</span><span>{new Date(u.created_at).toLocaleString()}</span>
+              </div>
+              <p>{u.content}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </main>
+  );
+}
+```
+
+- [ ] **Step 6: Verify manually**
+
+Create a task linked to a school, reassign it to a person from Task 16, confirm a `task_updates` row logs the reassignment. Set a school's status to `replied` on its detail page (Task 8) and confirm a follow-up task auto-appears on the board.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add "app/(app)/tasks" components/task-board.tsx "app/(app)/schools/actions.ts"
+git commit -m "feat: add task board, detail, dependencies, and reply-to-followup automation"
+```
+
+---
+
+### Task 18: Today view and journey timeline
+
+**Files:**
+- Create: `app/(app)/today/page.tsx`
+- Create: `app/(app)/timeline/page.tsx`
+- Create: `components/journey-timeline.tsx`
+
+**Interfaces:**
+- Consumes: `schools.deadline_date`, `research_milestones.target_date`, `tasks.due_date`.
+
+- [ ] **Step 1: Write the Today page**
+
+```tsx
+// app/(app)/today/page.tsx
+import { createClient } from "@/lib/supabase/server";
+
+export default async function TodayPage() {
+  const supabase = await createClient();
+  const weekOut = new Date();
+  weekOut.setDate(weekOut.getDate() + 7);
+  const cutoff = weekOut.toISOString().slice(0, 10);
+
+  const [{ data: tasks }, { data: schools }, { data: milestones }] = await Promise.all([
+    supabase.from("tasks").select("id, title, due_date, status").lte("due_date", cutoff).neq("status", "done"),
+    supabase.from("schools").select("id, name, deadline_date").lte("deadline_date", cutoff).not("deadline_date", "is", null),
+    supabase.from("research_milestones").select("id, title, target_date").lte("target_date", cutoff).neq("status", "done"),
+  ]);
+
+  const items = [
+    ...(tasks ?? []).map((t) => ({ label: t.title, date: t.due_date, kind: "task" })),
+    ...(schools ?? []).map((s) => ({ label: `${s.name} deadline`, date: s.deadline_date, kind: "school" })),
+    ...(milestones ?? []).map((m) => ({ label: m.title, date: m.target_date, kind: "milestone" })),
+  ].sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+
+  return (
+    <main className="p-8 max-w-xl mx-auto flex flex-col gap-3">
+      <h1 className="text-2xl font-semibold">This week</h1>
+      {items.length === 0 && <p className="text-sm text-gray-500">Nothing due in the next 7 days.</p>}
+      {items.map((item, i) => (
+        <div key={i} className="border rounded p-2 text-sm flex justify-between">
+          <span>{item.label}</span>
+          <span className="text-xs uppercase text-gray-500">{item.kind} · {item.date}</span>
+        </div>
+      ))}
+    </main>
+  );
+}
+```
+
+- [ ] **Step 2: Write the journey timeline component**
+
+```tsx
+// components/journey-timeline.tsx
+type Marker = { label: string; date: string; kind: "school" | "milestone" };
+
+export function JourneyTimeline({ markers }: { markers: Marker[] }) {
+  if (!markers.length) return <p className="text-sm text-gray-500">No confirmed dates yet.</p>;
+  const dates = markers.map((m) => new Date(m.date).getTime());
+  const min = Math.min(...dates, Date.now());
+  const max = Math.max(...dates);
+  const pct = (t: number) => ((t - min) / (max - min || 1)) * 100;
+
+  return (
+    <div className="relative h-32 border-b mt-8">
+      <div className="absolute bottom-0 h-px bg-black" style={{ left: `${pct(Date.now())}%`, width: 2, height: "100%" }} title="today" />
+      {markers.map((m, i) => (
+        <div key={i} className="absolute bottom-0 flex flex-col items-center" style={{ left: `${pct(new Date(m.date).getTime())}%` }}>
+          <div className={`w-2 h-2 rounded-full mb-1 ${m.kind === "school" ? "bg-teal-600" : "bg-violet-600"}`} />
+          <div className="text-[10px] text-gray-500 rotate-45 origin-top-left whitespace-nowrap mt-1">{m.label} — {m.date}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 3: Write the timeline page**
+
+```tsx
+// app/(app)/timeline/page.tsx
+import { createClient } from "@/lib/supabase/server";
+import { JourneyTimeline } from "@/components/journey-timeline";
+
+export default async function TimelinePage() {
+  const supabase = await createClient();
+  const [{ data: schools }, { data: milestones }] = await Promise.all([
+    supabase.from("schools").select("name, deadline_date").not("deadline_date", "is", null),
+    supabase.from("research_milestones").select("title, target_date").not("target_date", "is", null),
+  ]);
+  const markers = [
+    ...(schools ?? []).map((s) => ({ label: s.name, date: s.deadline_date as string, kind: "school" as const })),
+    ...(milestones ?? []).map((m) => ({ label: m.title, date: m.target_date as string, kind: "milestone" as const })),
+  ];
+  return (
+    <main className="p-8 max-w-5xl mx-auto">
+      <h1 className="text-2xl font-semibold mb-2">Journey timeline</h1>
+      <p className="text-sm text-gray-500">Only confirmed dates appear here — most school deadlines are still unconfirmed (see Target schools).</p>
+      <JourneyTimeline markers={markers} />
+    </main>
+  );
+}
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add "app/(app)/today" "app/(app)/timeline" components/journey-timeline.tsx
+git commit -m "feat: add Today view and journey timeline"
+```
+
+---
+
+### Task 19: Wins feed
+
+**Files:**
+- Create: `app/(app)/wins/page.tsx`
+
+**Interfaces:**
+- Consumes: `activity_log.is_win`, `task_updates.is_win` — requires a migration to add `is_win` to `activity_log` (it wasn't in Task 3's original schema, only `task_updates` got it in Task 14).
+
+- [ ] **Step 1: Add the missing column**
+
+```sql
+-- supabase/migrations/0004_activity_log_is_win.sql
+alter table activity_log add column is_win boolean not null default false;
+```
+
+Apply in the Supabase SQL Editor. Then update Task 7's `updateSchoolStatus` and Task 8's `addNote`/Gmail sync insert (Task 12) to set `is_win: true` when: the activity type is `email_reply`, or it's a `status_change` where the new status is one of `replied`, `submitted`, `interview`, `accepted`. Go back and add `is_win` to each relevant `.insert({...})` call across `app/(app)/schools/actions.ts` and `app/(app)/settings/actions.ts`'s `syncGmail`.
+
+- [ ] **Step 2: Write the wins feed page**
+
+```tsx
+// app/(app)/wins/page.tsx
+import { createClient } from "@/lib/supabase/server";
+
+export default async function WinsPage() {
+  const supabase = await createClient();
+  const [{ data: activity }, { data: taskUpdates }] = await Promise.all([
+    supabase.from("activity_log").select("*, schools(name)").eq("is_win", true).order("created_at", { ascending: false }),
+    supabase.from("task_updates").select("*, tasks(title)").eq("is_win", true).order("created_at", { ascending: false }),
+  ]);
+
+  const items = [
+    ...(activity ?? []).map((a: any) => ({ label: a.schools?.name ?? "School", content: a.content, when: a.created_at })),
+    ...(taskUpdates ?? []).map((u: any) => ({ label: u.tasks?.title ?? "Task", content: u.content, when: u.created_at })),
+  ].sort((a, b) => b.when.localeCompare(a.when));
+
+  return (
+    <main className="p-8 max-w-xl mx-auto flex flex-col gap-3">
+      <h1 className="text-2xl font-semibold">Wins</h1>
+      <p className="text-sm text-gray-500">Replies, advances, and results only — the good-news feed.</p>
+      {items.length === 0 && <p className="text-sm text-gray-500">Nothing yet — it's early.</p>}
+      {items.map((item, i) => (
+        <div key={i} className="border rounded p-3 text-sm">
+          <div className="text-xs text-gray-500">{item.label} · {new Date(item.when).toLocaleDateString()}</div>
+          <p className="mt-1">{item.content}</p>
+        </div>
+      ))}
+    </main>
+  );
+}
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add supabase/migrations/0004_activity_log_is_win.sql "app/(app)/wins" "app/(app)/schools/actions.ts" "app/(app)/settings/actions.ts"
+git commit -m "feat: add wins feed backed by is_win flags on activity and task updates"
+```
+
+---
+
+### Task 20: Command palette
+
+**Files:**
+- Create: `app/(app)/search-actions.ts`
+- Create: `components/command-palette.tsx`
+- Modify: `app/(app)/layout.tsx`
+
+**Interfaces:**
+- Produces: `globalSearch(query: string)` Server Action returning `{ schools, tasks, people, milestones }`, each an array of `{ id, label, href }`.
+
+- [ ] **Step 1: Write the search action**
+
+```typescript
+// app/(app)/search-actions.ts
+"use server";
+import { createClient } from "@/lib/supabase/server";
+
+export async function globalSearch(query: string) {
+  if (!query.trim()) return { schools: [], tasks: [], people: [], milestones: [] };
+  const supabase = await createClient();
+  const like = `%${query}%`;
+  const [schools, tasks, people, milestones] = await Promise.all([
+    supabase.from("schools").select("id, name").ilike("name", like).limit(6),
+    supabase.from("tasks").select("id, title").ilike("title", like).limit(6),
+    supabase.from("people").select("id, name").ilike("name", like).limit(6),
+    supabase.from("research_milestones").select("id, title").ilike("title", like).limit(6),
+  ]);
+  return {
+    schools: (schools.data ?? []).map((s) => ({ id: s.id, label: s.name, href: `/schools/${s.id}` })),
+    tasks: (tasks.data ?? []).map((t) => ({ id: t.id, label: t.title, href: `/tasks/${t.id}` })),
+    people: (people.data ?? []).map((p) => ({ id: p.id, label: p.name, href: `/people` })),
+    milestones: (milestones.data ?? []).map((m) => ({ id: m.id, label: m.title, href: `/research/${m.id}` })),
+  };
+}
+```
+
+- [ ] **Step 2: Write the command palette client component**
+
+```tsx
+// components/command-palette.tsx
+"use client";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { globalSearch } from "@/app/(app)/search-actions";
+
+export function CommandPalette() {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Awaited<ReturnType<typeof globalSearch>>>({ schools: [], tasks: [], people: [], milestones: [] });
+  const [, startTransition] = useTransition();
+  const router = useRouter();
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setOpen((o) => !o);
+      }
+      if (e.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    startTransition(async () => setResults(await globalSearch(query)));
+  }, [query, open]);
+
+  if (!open) return null;
+
+  function go(href: string) {
+    setOpen(false);
+    setQuery("");
+    router.push(href);
+  }
+
+  const groups: Array<[string, typeof results.schools]> = [
+    ["Schools", results.schools], ["Tasks", results.tasks], ["People", results.people], ["Research", results.milestones],
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-start justify-center pt-24 z-50" onClick={() => setOpen(false)}>
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-3" onClick={(e) => e.stopPropagation()}>
+        <input
+          autoFocus
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search schools, tasks, people, research…"
+          className="w-full border-b pb-2 mb-2 outline-none text-sm"
+        />
+        {groups.map(([label, items]) => items.length > 0 && (
+          <div key={label} className="mb-2">
+            <div className="text-xs uppercase text-gray-400 px-1">{label}</div>
+            {items.map((item) => (
+              <button key={item.id} onClick={() => go(item.href)} className="block w-full text-left px-1 py-1.5 text-sm hover:bg-gray-100 rounded">
+                {item.label}
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 3: Mount it in the app layout**
+
+Add `import { CommandPalette } from "@/components/command-palette";` and `<CommandPalette />` to `app/(app)/layout.tsx` (create this layout file if Task 4's structure didn't already produce one — it should wrap every page under `app/(app)/`).
+
+- [ ] **Step 4: Verify manually**
+
+Press Cmd/Ctrl+K anywhere in the app, type a school name, confirm it navigates on click.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add "app/(app)/search-actions.ts" components/command-palette.tsx "app/(app)/layout.tsx"
+git commit -m "feat: add Cmd+K command palette with cross-entity search"
+```
+
+---
+
+### Task 21: Focus mode
+
+**Files:**
+- Create: `components/focus-mode.tsx`
+- Create: `app/(app)/tasks/focus-actions.ts`
+- Modify: `app/(app)/tasks/[id]/page.tsx`
+
+**Interfaces:**
+- Produces: `startFocusSession(taskId, durationMinutes)`, `endFocusSession(sessionId)` Server Actions, writing to `focus_sessions` (Task 14).
+
+- [ ] **Step 1: Write the focus session actions**
+
+```typescript
+// app/(app)/tasks/focus-actions.ts
+"use server";
+import { createClient } from "@/lib/supabase/server";
+
+export async function startFocusSession(taskId: string, durationMinutes: number) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+  const { data, error } = await supabase.from("focus_sessions").insert({
+    owner_id: user.id, task_id: taskId, duration_minutes: durationMinutes,
+  }).select().single();
+  if (error) throw new Error(error.message);
+  return data.id as string;
+}
+
+export async function endFocusSession(sessionId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("focus_sessions").update({ ended_at: new Date().toISOString() }).eq("id", sessionId);
+  if (error) throw new Error(error.message);
+}
+```
+
+- [ ] **Step 2: Write the focus mode component**
+
+```tsx
+// components/focus-mode.tsx
+"use client";
+import { useEffect, useState } from "react";
+import { startFocusSession, endFocusSession } from "@/app/(app)/tasks/focus-actions";
+import { addTaskUpdate } from "@/app/(app)/tasks/actions";
+
+export function FocusMode({ taskId, title }: { taskId: string; title: string }) {
+  const [active, setActive] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(25 * 60);
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    if (!active) return;
+    if (secondsLeft <= 0) { finish(); return; }
+    const t = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [active, secondsLeft]);
+
+  async function start() {
+    const id = await startFocusSession(taskId, 25);
+    setSessionId(id);
+    setSecondsLeft(25 * 60);
+    setActive(true);
+  }
+
+  async function finish() {
+    setActive(false);
+    if (sessionId) await endFocusSession(sessionId);
+    if (note.trim()) await addTaskUpdate(taskId, "note", `Focus session: ${note.trim()}`);
+    setNote("");
+  }
+
+  if (!active) return <button onClick={start} className="border rounded px-3 py-1 text-sm">Start focus session (25 min)</button>;
+
+  const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
+  const ss = String(secondsLeft % 60).padStart(2, "0");
+
+  return (
+    <div className="fixed inset-0 bg-white flex flex-col items-center justify-center gap-6 z-50">
+      <p className="text-sm text-gray-500">Focused on</p>
+      <h1 className="text-3xl font-semibold text-center max-w-md">{title}</h1>
+      <div className="text-6xl font-mono">{mm}:{ss}</div>
+      <input
+        value={note} onChange={(e) => setNote(e.target.value)}
+        placeholder="What happened during this session…"
+        className="border rounded px-3 py-2 text-sm w-80"
+      />
+      <button onClick={finish} className="text-sm text-gray-500 underline">End session</button>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 3: Mount it on the task detail page**
+
+Add `import { FocusMode } from "@/components/focus-mode";` to `app/(app)/tasks/[id]/page.tsx` and render `<FocusMode taskId={id} title={task.title} />` near the top of the page — this needs to be inside a client boundary, so wrap just this element (the rest of the page stays a Server Component).
+
+- [ ] **Step 4: Verify manually**
+
+Start a focus session, confirm the full-screen-style timer appears, end it early, confirm a `focus_sessions` row has `ended_at` set and (if a note was typed) a `task_updates` row appears in the task's log.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add components/focus-mode.tsx "app/(app)/tasks/focus-actions.ts" "app/(app)/tasks/[id]/page.tsx"
+git commit -m "feat: add focus mode with session timer and logged notes"
+```
+
+---
+
+### Task 22: Recommendation letters and SOP versions
+
+**Files:**
+- Create: `app/(app)/schools/[id]/logistics-actions.ts`
+- Modify: `app/(app)/schools/[id]/page.tsx`
+
+**Interfaces:**
+- Consumes: `letter_requests`, `sop_versions` (Task 14).
+
+- [ ] **Step 1: Write the actions**
+
+```typescript
+// app/(app)/schools/[id]/logistics-actions.ts
+"use server";
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+
+type LetterStatus = "not_asked" | "asked" | "confirmed" | "submitted";
+
+export async function addLetterRequest(schoolId: string, recommenderId: string, letterDeadline?: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+  const { error } = await supabase.from("letter_requests").insert({
+    owner_id: user.id, school_id: schoolId, recommender_id: recommenderId, letter_deadline: letterDeadline,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/schools/${schoolId}`);
+}
+
+export async function updateLetterStatus(id: string, schoolId: string, status: LetterStatus) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("letter_requests").update({ status }).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/schools/${schoolId}`);
+}
+
+export async function createSopVersion(label: string, description?: string, externalLink?: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+  const { data, error } = await supabase.from("sop_versions").insert({
+    owner_id: user.id, label, description, external_link: externalLink,
+  }).select().single();
+  if (error) throw new Error(error.message);
+  return data.id as string;
+}
+
+export async function setSchoolSopVersion(schoolId: string, sopVersionId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("schools").update({
+    sop_version_id: sopVersionId, sop_sent_at: new Date().toISOString().slice(0, 10),
+  }).eq("id", schoolId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/schools/${schoolId}`);
+}
+```
+
+- [ ] **Step 2: Add a logistics section to the school detail page**
+
+Add to `app/(app)/schools/[id]/page.tsx` (Task 8): fetch `letter_requests` (joined to `people` for the recommender name) and `sop_versions` alongside the existing queries, and render a new section:
+
+```tsx
+```
+
+```tsx
+<div>
+  <h2 className="font-medium mb-2">Recommendation letters</h2>
+  <ul className="flex flex-col gap-2">
+    {(letters ?? []).map((l: any) => (
+      <li key={l.id} className="border rounded p-2 text-sm flex justify-between items-center">
+        <span>{l.people?.name ?? "Unknown"}{l.letter_deadline && ` — due ${l.letter_deadline}`}</span>
+        <span className="text-xs uppercase text-gray-500">{l.status.replace("_", " ")}</span>
+      </li>
+    ))}
+  </ul>
+</div>
+<div>
+  <h2 className="font-medium mb-2">SOP sent</h2>
+  <p className="text-sm text-gray-500">
+    {school.sop_version_id ? `${sopVersionLabel} — sent ${school.sop_sent_at}` : "No SOP version recorded yet."}
+  </p>
+</div>
+```
+
+Wire the queries: `supabase.from("letter_requests").select("*, people(name)").eq("school_id", id)` and, if `school.sop_version_id` is set, a lookup of that version's `label` for `sopVersionLabel`. Add minimal forms (a recommender `<select>` sourced from `people`, a status `<select>` per letter row calling `updateLetterStatus`) following the same Server-Action-in-a-`<form action>` pattern used throughout Tasks 7-9 — don't introduce a new pattern here.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add "app/(app)/schools/[id]/logistics-actions.ts" "app/(app)/schools/[id]/page.tsx"
+git commit -m "feat: add recommendation-letter and SOP-version tracking to school detail"
+```
+
+---
+
+### Task 23: Interviews and visa steps, plus automation rule 2
+
+**Files:**
+- Create: `app/(app)/schools/[id]/interview-actions.ts`
+- Modify: `app/(app)/schools/[id]/page.tsx`
+- Modify: `app/(app)/schools/actions.ts`
+
+**Interfaces:**
+- Consumes: `interviews`, `visa_steps` (Task 14).
+
+- [ ] **Step 1: Write the actions**
+
+```typescript
+// app/(app)/schools/[id]/interview-actions.ts
+"use server";
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+
+export async function scheduleInterview(schoolId: string, scheduledAt: string, prepNotes?: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+  const { error } = await supabase.from("interviews").insert({
+    owner_id: user.id, school_id: schoolId, scheduled_at: scheduledAt, prep_notes: prepNotes, status: "scheduled",
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/schools/${schoolId}`);
+}
+
+export async function updateVisaStep(id: string, schoolId: string, status: "not_started" | "in_progress" | "done") {
+  const supabase = await createClient();
+  const { error } = await supabase.from("visa_steps").update({ status }).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/schools/${schoolId}`);
+}
+```
+
+- [ ] **Step 2: Add automation rule 2 to `updateSchoolStatus`**
+
+Modify `app/(app)/schools/actions.ts` again — add this block alongside the `replied` block from Task 17 Step 2:
+
+```typescript
+  if (status === "accepted") {
+    const { data: existing } = await supabase.from("visa_steps").select("id").eq("school_id", id).limit(1);
+    if (!existing?.length) {
+      const defaultSteps = ["I-20 or equivalent received", "Financial documents submitted", "Visa appointment scheduled", "Visa approved"];
+      await supabase.from("visa_steps").insert(
+        defaultSteps.map((step_name) => ({ owner_id: user.id, school_id: id, step_name }))
+      );
+    }
+  }
+```
+
+- [ ] **Step 3: Add interview and visa-checklist sections to the school detail page**
+
+Same pattern as Task 22 Step 2 — fetch `interviews` and `visa_steps` for the school, render a schedule-interview form and a checklist of visa steps with a status `<select>` per row calling `updateVisaStep`. Follow the existing form-action pattern; no new UI pattern needed.
+
+- [ ] **Step 4: Verify manually**
+
+Set a school's status to `accepted` and confirm four default `visa_steps` rows appear on its detail page.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add "app/(app)/schools/[id]/interview-actions.ts" "app/(app)/schools/[id]/page.tsx" "app/(app)/schools/actions.ts"
+git commit -m "feat: add interview tracking, visa checklist, and acceptance automation"
+```
+
+---
+
 ## Self-review notes
 
-- **Spec coverage:** every section of the design spec maps to a task — architecture/scaffold (Task 1), Supabase setup (Task 2), schema/RLS (Task 3), auth (Task 4), ranked-list pipeline (Tasks 5-6), schools UI (Tasks 7-8), actions (Task 9), dashboard (Task 10), Gmail (Tasks 11-12), future-AI pattern (Task 13).
-- **Non-goals respected:** no email composition/sending code anywhere; no cron/scheduled sync; no research-project or KACOF modules; no live Python service (only serverless stub + ETL scripts).
-- **Placeholder scan:** no TBD/TODO; every code step is complete and runnable, with the one honest exception noted in Task 9 Step 2 (a Next.js Server-Component-event-handler constraint flagged with its concrete fix, not left vague) and Task 13 Step 4 (an explicitly-justified skip, not a silent gap).
-- **Type consistency:** `SchoolStatus` type defined once in Task 7's `actions.ts` and imported everywhere else that needs it (Task 8's page doesn't redefine it); `activity_log` columns used identically across Tasks 7, 8, and 12.
+- **Spec coverage:** every section of the design spec maps to a task — architecture/scaffold (Task 1), Supabase setup (Task 2), schema/RLS (Task 3), auth (Task 4), ranked-list pipeline (Tasks 5-6), schools UI (Tasks 7-8), actions (Task 9), dashboard (Task 10), Gmail (Tasks 11-12), future-AI pattern (Task 13), task-engine schema (Task 14), research milestones (Task 15), people (Task 16), task board/dependencies/automation-1 (Task 17), Today view/journey timeline (Task 18), wins feed (Task 19), command palette (Task 20), focus mode (Task 21), letters/SOP (Task 22), interviews/visa/automation-2 (Task 23).
+- **Non-goals respected:** no email composition/sending code anywhere; no cron/scheduled sync; no KACOF module; no live Python service; no file uploads (letters/SOP tracked as metadata, not files); no general automation-rules UI (exactly two hardcoded rules, per spec section 4d); no drag-and-drop on the board.
+- **Placeholder scan:** no TBD/TODO; every code step is complete and runnable. Task 22 Step 2's form markup is described rather than fully typed out a second time, explicitly pointing at the established pattern from Tasks 7-9 rather than leaving the behavior ambiguous — a deliberate economy, not a gap, since re-deriving the same `<form action>` + Server Action wiring a sixth time adds length without adding information.
+- **Type consistency:** `task_status`/`TaskStatus` values match between the SQL enum (Task 14), `updateTaskStatus`'s type (Task 17), and the kanban board's `COLUMNS` keys (Task 17) — `cancelled` is a valid DB status not shown as its own board column, surfaced instead as a dropdown option, consistent with the spec's non-goal on drag-and-drop-only column semantics. `is_win` is set at every activity/task-update write path added across Tasks 17, 19, and the Gmail sync modification called out in Task 19 Step 1.
