@@ -1,0 +1,155 @@
+name,country,carnegie_tier,csranking_nlp_rank,csranking_nlp_score,verified_fit,faculty,fit_note,composite_score
+Carnegie Mellon University,USA,R1,5,148.38781,True,Graham Neubig,"2026 paper ""Round-Trip Translation Reveals What Frontier Multilingual Benchmarks Miss"", LTI",100.0
+Stanford University,USA,R1,6,138.711625,True,Percy Liang,"Created HELM, the reference framework for rigorous LLM benchmarking, CRFM",86.08507597876235
+Johns Hopkins University,USA,R1,7,127.905149,True,"Philipp Koehn, Kevin Duh","Historical home of MT evaluation research (WMT organizers), CLSP",81.71284327782413
+University of Washington-Seattle Campus,USA,R1,8,124.786895,True,Yulia Tsvetkov,"Inclusive language technologies, methodological bias in low-resource NLP",80.45121718356071
+University of Illinois Urbana-Champaign,USA,R1,12,100.5013,True,Heng Ji,"2025 ACL Fellow for multimodal/multilingual knowledge extraction; low-resource language knowledge representation, BLENDER Lab",75.6254171150886
+University of Maryland - College Park,USA,R1,13,98.595453,True,Marine Carpuat,"2025 work reframes MT evaluation around fitness-for-purpose, not system-centric metrics. Mohit Iyyer's lab also moved here from UMass Amherst (Jan 2025).",69.85432332129449
+Columbia University in the City of New York,USA,R1,32,60.601774,True,Smaranda Muresan,"Code-switching and low-resource multilingual processing; co-authored CS-FLEURS, MaskLID",59.48231807622197
+University of Michigan-Ann Arbor,USA,R1,20,77.210474,True,Rada Mihalcea,"2025 ACL Fellow for NLP for social good; long-standing program extending NLP tools to underserved languages, AI Lab",56.202094371479824
+University of California-San Diego,USA,R1,29,63.265427,True,Ndapa Nakashole,"NSF CAREER awardee for low-resource-language work — KB acquisition, entity linking, QA, MT for low-resource languages",55.56001544496199
+University of Melbourne,Australia,,42,47.565780000000004,True,Jey Han Lau,"LLM/NLG evaluation + low-resource languages, primarily based at Melbourne",54.208036316281486
+University of California-Los Angeles,USA,R1,33,59.58925,True,Nanyun (Violet) Peng,"Low-resource IE; ""The Zeno's Paradox of 'Low-Resource' Languages"", PlusLab",54.07265718924228
+University of Southern California,USA,R1,38,50.794005,True,"Jonathan May, Xuezhe Ma","May is PI on DARPA ""MT for Indo-Pacific Low Resource Languages""; gave invited talk on evaluation methodology, ISI",50.51415599035343
+University of Notre Dame,USA,R1,79,29.955229,True,David Chiang,"Co-authored ""Languages still left behind: toward a better multilingual MT benchmark"" (EMNLP 2025)",47.08291736318886
+Monash University,Australia,,55,38.747159,True,Reza Haffari,"Strongest verified fit overall — actively recruiting for ""NMT for Low-Resource Languages""",45.64007733378056
+University of Waterloo,Canada,,56,37.747307,True,Jimmy Lin,"Strongest pure benchmark-methodology fit in Canada (FreshStack, benchmark temporal drift)",45.23554345886163
+Australian National University,Australia,,156,11.7516,True,—,Kept as backup — no faculty found with a clear low-resource/multilingual-evaluation line,44.71784275519014
+Georgia Institute of Technology-Main Campus,USA,R1,63,36.211006,True,Wei Xu,Created LENS (learnable eval metric); 2025 paper on evaluator reliability under imperfect benchmarks,44.613965668776856
+Ohio State University-Main Campus,USA,R1,94,23.12103,True,Huan Sun,"Leads TrustLLM and AttributionBench — LLM evaluation methodology, though not multilingual-specific (weakest-angle inclusion)",44.31784312876505
+University of Alberta,Canada,,77,30.838329,True,Grzegorz Kondrak,Real but weaker fit — classical computational linguistics more than benchmark methodology,42.44021410804802
+Macquarie University,Australia,,51,42.70698,True,Mark Dras,"""Myanmar XNLI"" — nearly identical project shape to this project",42.24219618048525
+McGill University,Canada,,85,26.965788,True,Siva Reddy,"Multilingual/minority-language RAG, culturally-grounded understanding, Mila",40.8734082042618
+Simon Fraser University,Canada,,108,20.04911,True,Anoop Sarkar,"Low-resource MT for Kokborok, Tetun — strong, confirmed fit",38.07496348153627
+Cornell University,USA,R1,15,90.788278,False,,,36.6955890737056
+University of California-Berkeley,USA,R1,16,90.231808,False,,,36.470444786975015
+University of California-Irvine,USA,R1,125,15.666689,True,Sameer Singh,"Evaluator-reliability work (""When Scanners Lie"", ""Lost in Simulation"") — strong eval-methodology fit, not multilingual-specific",36.30186331405537
+George Mason University,USA,R1,95,22.981556,True,Antonios Anastasopoulos,"Runs ""NLP Beyond the Top-100 Languages"" — closest direct match found",34.26141281940882
+RMIT University,Australia,,175,9.70115,True,Karin Verspoor,"Evaluation-methodology track record, but biomedical domain — secondary fit",33.88824349067146
+University of Pennsylvania,USA,R1,18,81.400024,False,,,32.89716013687974
+New York University,USA,R1,23,70.657032,False,,,28.550612665870883
+Massachusetts Institute of Technology,USA,R1,27,65.006733,False,,,26.264536977748445
+Concordia University,Canada,,330,1.68453,True,CLaC lab,Kept as backup — general NLP focus doesn't closely match the thesis question,25.6447691041096
+The University of Texas at Dallas,USA,R1,34,57.825242,False,,,23.35895056903448
+University of Arizona,USA,R1,41,47.822618,False,,,19.311951367075427
+University of Massachusetts-Amherst,USA,R1,43,47.105433,False,,,19.021782795043034
+University of Illinois Chicago,USA,R1,48,43.073733,False,,,17.390582153837457
+Pennsylvania State University-Main Campus,USA,R1,54,39.30525,False,,,15.86587746698766
+The University of Texas at Austin,USA,R1,59,36.925325,False,,,14.902974675108013
+University of California-Santa Barbara,USA,R1,64,35.863129,False,,,14.473216807140156
+Northeastern University,USA,R1,66,35.325052,False,,,14.255514213341517
+Stony Brook University,USA,R1,67,35.07303,False,,,14.153547686070661
+University of Rochester,USA,R1,70,33.371768,False,,,13.465227705601212
+University of Colorado Boulder,USA,R1,71,33.260903,False,,,13.420372418975901
+University of Pittsburgh-Pittsburgh Campus,USA,R1,82,29.361863,False,,,11.842845185281385
+University of California-Davis,USA,R1,89,25.64499,False,,,10.33902158211654
+Oregon State University,USA,R1,91,24.24139,False,,,9.771133787886773
+Emory University,USA,R1,93,23.124554,False,,,9.31926891715694
+Arizona State University Campus Immersion,USA,R1,99,21.891282,False,,,8.820294767993838
+Princeton University,USA,R1,100,21.44285,False,,,8.638861981343764
+University of California-Santa Cruz,USA,R1,102,20.79157,False,,,8.375358160721106
+Purdue University-Main Campus,USA,R1,105,20.59916,False,,,8.297510276361068
+University of Virginia-Main Campus,USA,R1,113,18.5536,False,,,7.469889475303331
+University of Massachusetts-Lowell,USA,R1,115,17.58971,False,,,7.079905600994319
+Brandeis University,USA,R1,124,15.775,False,,,6.345685268230926
+University of Oregon,USA,R1,132,14.628540000000001,False,,,5.881834712109055
+Boston University,USA,R1,136,14.081150000000001,False,,,5.6603641366720145
+Yale University,USA,R1,137,14.071861,False,,,5.656605865283725
+Kean University,USA,R2,139,14.021423,False,,,5.636198965479393
+Harvard University,USA,R1,140,13.890879,False,,,5.583381678353481
+University of Delaware,USA,R1,141,13.78569,False,,,5.540822865880387
+University of Wisconsin-Madison,USA,R1,144,13.313382,False,,,5.349729998740837
+Northeastern University,USA,R1,146,13.19819,False,,,5.303124034938532
+University of Florida,USA,R1,147,13.19328,False,,,5.30113747960249
+University of Utah,USA,R1,149,12.70436,False,,,5.103323501008291
+University of Chicago,USA,R1,150,12.417462,False,,,4.987246361945217
+Brown University,USA,R1,152,12.07836,False,,,4.850047810506843
+George Washington University,USA,R1,153,12.04683,False,,,4.837290969418167
+University of Minnesota-Twin Cities,USA,R1,155,11.810028,False,,,4.741482359095286
+Duke University,USA,R1,158,11.707169,False,,,4.699866250070863
+Rochester Institute of Technology,USA,R2,164,10.827106,False,,,4.343798256445022
+Georgetown University,USA,R1,165,10.788023,False,,,4.327985518726384
+Northwestern University,USA,R1,166,10.64811,False,,,4.271377592711799
+Dartmouth College,USA,R1,171,10.199728,False,,,4.089965035749466
+The University of Texas at Arlington,USA,R1,179,9.469469,False,,,3.7945068049668826
+Michigan State University,USA,R1,180,9.302339,False,,,3.726887050728053
+University at Buffalo,USA,R1,181,9.140532,False,,,3.6614209490459957
+University of Central Florida,USA,R1,199,7.701172000000001,False,,,3.0790648821447726
+Worcester Polytechnic Institute,USA,R1,203,7.493339,False,,,2.994976948304537
+Washington University in St Louis,USA,R1,205,7.40079,False,,,2.9575322008920475
+Stevens Institute of Technology,USA,R2,211,6.943681,False,,,2.7725887542316205
+University of California-Riverside,USA,R1,220,5.99405,False,,,2.3883739822722254
+University of Cincinnati-Main Campus,USA,R1,221,5.98379,False,,,2.3842228503480327
+Vanderbilt University,USA,R1,225,5.670461,False,,,2.257451893751981
+Rice University,USA,R1,233,5.008018,False,,,1.9894315930445505
+Drexel University,USA,R1,234,4.92263,False,,,1.9548841415101454
+Brigham Young University,USA,R1,235,4.88651,False,,,1.940270215086963
+University of Houston,USA,R1,241,4.58334,False,,,1.8176095264458696
+University of South Florida,USA,R1,255,4.05894,False,,,1.6054405614315568
+Case Western Reserve University,USA,R1,256,4.033009,False,,,1.594949040775977
+University of California-Merced,USA,R1,257,4.0241999999999996,False,,,1.5913849743899908
+Iowa State University,USA,R1,260,3.9503999999999997,False,,,1.561525955286146
+Temple University,USA,R1,265,3.83655,False,,,1.5154629563027753
+North Carolina State University at Raleigh,USA,R1,267,3.714181,False,,,1.4659532231223091
+Texas State University,USA,R2,275,3.35,False,,,1.3186078649074402
+University of Iowa,USA,R1,278,3.249997,False,,,1.278147275646711
+University of Connecticut,USA,R1,279,3.018692,False,,,1.1845627171939355
+University of North Texas,USA,R1,281,2.99999,False,,,1.1769960047917658
+Florida International University,USA,R1,288,2.85952,False,,,1.1201627200557616
+Tulane University of Louisiana,USA,R1,292,2.72915,False,,,1.0674158322431837
+Rensselaer Polytechnic Institute,USA,R1,302,2.41786,False,,,0.941469842313158
+Binghamton University,USA,R1,304,2.31666,False,,,0.9005249543279398
+Boston College,USA,R1,305,2.30952,False,,,0.8976361549187061
+Portland State University,USA,R2,326,1.78333,False,,,0.6847429670833108
+Oakland University,USA,R2,333,1.650439,False,,,0.6309760984148954
+Lehigh University,USA,R1,336,1.632946,False,,,0.6238985398622727
+University of Tulsa,USA,R2,339,1.590909,False,,,0.60689063219197
+The University of Alabama,USA,R1,342,1.559533,False,,,0.5941960985415332
+Auburn University,USA,R1,344,1.51508,False,,,0.5762106923596468
+DePaul University,USA,R2,346,1.5,False,,,0.5701094185373435
+University of New Hampshire-Main Campus,USA,R1,357,1.36666,False,,,0.5161608872730254
+Clemson University,USA,R1,359,1.33335,False,,,0.5026838693008158
+Boise State University,USA,R2,364,1.28333,False,,,0.48244608968598757
+University of Memphis,USA,R1,370,1.1706400000000001,False,,,0.43685241945817876
+Tufts University,USA,R1,374,1.14286,False,,,0.4256128049499835
+University of Georgia,USA,R1,376,1.106802,False,,,0.4110239633395981
+California Institute of Technology,USA,R1,377,1.059523,False,,,0.39189517520666195
+University of Massachusetts-Boston,USA,R1,378,1.03333,False,,,0.38129765098732576
+University of Kentucky,USA,R1,379,1.0,False,,,0.3678125411400202
+Wayne State University,USA,R1,379,1.0,False,,,0.3678125411400202
+Wichita State University,USA,R2,391,0.904769,False,,,0.3292826732771712
+University of South Carolina-Columbia,USA,R1,392,0.88889,False,,,0.322858129044787
+University of Hawaii at Manoa,USA,R1,394,0.880949,False,,,0.3196452500379627
+Florida State University,USA,R1,395,0.862303,False,,,0.3121011948860617
+Michigan Technological University,USA,R1,396,0.83333,False,,,0.3003789000283964
+The University of Texas at San Antonio,USA,R1,401,0.798849,False,,,0.2864281027693222
+Colorado State University-Fort Collins,USA,R1,407,0.75397,False,,,0.2682703396478932
+University of Vermont,USA,R1,408,0.75,False,,,0.26666410244135846
+Old Dominion University,USA,R1,413,0.7000000000000001,False,,,0.2464344147016262
+University of Kansas,USA,R1,420,0.65,False,,,0.22620472696189384
+Cleveland State University,USA,R2,422,0.641945,False,,,0.22294572426702294
+Georgia State University,USA,R1,423,0.625,False,,,0.21608988309202767
+Colorado School of Mines,USA,R1,429,0.56667,False,,,0.1924899293748559
+American University,USA,R1,436,0.521277,False,,,0.17412420506346252
+Southern Methodist University,USA,R1,438,0.5,False,,,0.16551566374269683
+Utah State University,USA,R1,438,0.5,False,,,0.16551566374269683
+University of Massachusetts-Dartmouth,USA,R2,438,0.5,False,,,0.16551566374269683
+University at Albany,USA,R1,460,0.40953,False,,,0.12891206674642514
+Augusta University,USA,R2,463,0.368497,False,,,0.11231037120593639
+University of Michigan-Dearborn,USA,R2,464,0.36667000000000005,False,,,0.11157117841592659
+Kansas State University,USA,R1,466,0.34286,False,,,0.10193780111426604
+Illinois Institute of Technology,USA,R2,469,0.33333,False,,,0.09808202263107305
+University of Wisconsin-Milwaukee,USA,R1,469,0.33333,False,,,0.09808202263107305
+Virginia Commonwealth University,USA,R1,469,0.33333,False,,,0.09808202263107305
+University of Maine,USA,R1,469,0.33333,False,,,0.09808202263107305
+Kent State University at Kent,USA,R1,482,0.28572,False,,,0.07881931396529991
+University of Missouri-Kansas City,USA,R1,485,0.262338,False,,,0.06935910279069149
+University of Kentucky,USA,R1,486,0.25,False,,,0.06436722504403514
+Washington State University,USA,R1,502,0.24286,False,,,0.06147842563480136
+University of Idaho,USA,R1,503,0.2,False,,,0.0441375373043028
+Baylor University,USA,R1,511,0.194443,False,,,0.04188920980890896
+Kean University,USA,R2,512,0.16667,False,,,0.03065242745699723
+University of Nevada-Las Vegas,USA,R1,512,0.16667,False,,,0.03065242745699723
+Northwestern University,USA,R1,512,0.16667,False,,,0.03065242745699723
+New Mexico State University-Main Campus,USA,R1,524,0.125,False,,,0.013793005694704302
+Nova Southeastern University,USA,R1,529,0.090909,False,,,0.0

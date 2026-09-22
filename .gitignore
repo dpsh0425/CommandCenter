@@ -35,3 +35,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .supabase-token
+
+# python scripts scratch/generated
+scripts/data/
+scripts/low_confidence_matches.csv
+scripts/__pycache__/
+scripts/.pytest_cache/
+*.pyc
