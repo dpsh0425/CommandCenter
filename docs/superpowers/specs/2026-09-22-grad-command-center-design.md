@@ -39,6 +39,15 @@ like Supabase — this app steps outside that sandbox entirely.
 - Drag-and-drop on the task kanban board. Status changes happen via a control on
   the card (a select or a "move to..." action), not drag gestures — real
   drag-and-drop is a nice-to-have, not required for the board to work.
+- File uploads (SOP PDFs, CVs, letters themselves). SOP versions and letters are
+  tracked as structured metadata (label, status, dates, notes) — not file
+  storage. If you want the actual files stored later, that's a Supabase Storage
+  addition on top of this schema, not a redesign.
+- Automation rules as a generic, user-configurable rules engine. The two
+  specific rules described in section 4d (reply → follow-up task,
+  acceptance → visa checklist) are hardcoded application logic, not a rules UI
+  you can extend yourself — building a general automation-rule builder is real
+  scope this phase doesn't need.
 - Automatic (cron-based) Gmail sync. Manual "Sync Gmail" button only, because
   automatic background sync needs a live scheduler, which only makes sense once
   this is deployed (Vercel Cron), and deployment is explicitly deferred.
@@ -239,6 +248,152 @@ A reassignment writes a row like `"Reassigned from You to <name>"`; a result on
 a `done` task is where the actual outcome goes (e.g. "kappa = 0.52, protocol
 revised" for a research task) — status alone never carries that information.
 
+## 4b. Application logistics (letters, SOP versions, interviews, visa steps)
+
+The parts of a real application season that quietly go wrong if nothing tracks
+them — sourced from how applicants actually get burned, not from generic
+"application tracker" feature lists.
+
+### `letter_requests`
+
+A recommendation letter is its own tracked object, separate from the school's
+`status` — a school can be `submitted` while a letter is still `asked`, and
+that gap is exactly what this table exists to surface.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid, PK | |
+| owner_id | uuid | |
+| school_id | uuid | FK to `schools`, cascade delete |
+| recommender_id | uuid | FK to `people` — a recommender is a `people` row like any other, `ON DELETE SET NULL` |
+| status | `letter_status` enum | `not_asked`, `asked`, `confirmed`, `submitted` |
+| letter_deadline | date, nullable | often earlier than the school's own application deadline — track separately |
+| notes | text, nullable | |
+| created_at | timestamptz | |
+| updated_at | timestamptz | trigger |
+
+### `sop_versions` and school-level linkage
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid, PK | |
+| owner_id | uuid | |
+| label | text | e.g. "v3 — Australia research-proposal variant" |
+| description | text, nullable | what's different about this version |
+| external_link | text, nullable | a link to the actual doc (Google Docs, etc.) — no file storage, see Non-goals |
+| created_at | timestamptz | |
+
+Add two nullable columns to `schools` (migration, not a new table):
+`sop_version_id uuid references sop_versions(id) on delete set null` and
+`sop_sent_at date`. A school shows which SOP version was actually sent and
+when, directly on its detail page.
+
+### `interviews`
+
+One row per interview round — a school can have more than one (initial +
+faculty interviews are common).
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid, PK | |
+| owner_id | uuid | |
+| school_id | uuid | FK to `schools`, cascade delete |
+| scheduled_at | timestamptz, nullable | |
+| prep_notes | text, nullable | |
+| questions_asked | text, nullable | filled in after — becomes a question bank across schools over time |
+| outcome_notes | text, nullable | |
+| status | `interview_status` enum | `not_scheduled`, `scheduled`, `completed` |
+| created_at | timestamptz | |
+| updated_at | timestamptz | trigger |
+
+### `visa_steps`
+
+Post-acceptance logistics — the second wave of deadlines that shows up only
+after the application deadlines are behind you, and is easy to lose track of
+in the relief of an acceptance.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid, PK | |
+| owner_id | uuid | |
+| school_id | uuid | FK to `schools`, cascade delete |
+| step_name | text | e.g. "I-20 received", "Visa appointment", "Financial documents submitted" |
+| status | `step_status` enum | `not_started`, `in_progress`, `done` |
+| due_date | date, nullable | |
+| notes | text, nullable | |
+| created_at | timestamptz | |
+
+## 4c. Productivity layer (command palette, journey timeline, wins feed, focus mode)
+
+Features that make the system feel operated, not just filled in.
+
+**Command palette** (Cmd/Ctrl+K): a client-side overlay backed by a
+`globalSearch(query)` Server Action that queries `schools`, `tasks`, `people`,
+and `research_milestones` by name/title (`ilike`) and returns grouped results,
+plus a fixed list of quick actions (new task, new person, new school). Doubles
+as the system's search — a separate search feature is redundant with this and
+isn't built.
+
+**Journey timeline**: a horizontal view, today through the latest known
+deadline, plotting confirmed `schools.deadline_date` values and
+`research_milestones.target_date` values as markers on one axis, with a "today"
+line. Distinct from the dashboard's short deadline strip — this is the
+whole-season view, not the next-two-weeks view.
+
+**Wins feed**: a filtered read of `activity_log` and `task_updates` where a new
+boolean column `is_win` is true. Set `is_win = true` at write time (not
+computed at read time) for: any `email_reply` activity, a school `status_change`
+whose new status is in `('replied','submitted','interview','accepted')`, any
+`task_updates` row of type `result`, and a task `status_change` to `done`. This
+keeps the feed's query a plain `where is_win = true order by created_at desc`
+rather than reimplementing "what counts as good news" as read-time logic in
+more than one place.
+
+**Focus mode**: opens from a task's detail view. An in-page (not OS/browser
+fullscreen — see the artifact platform's own constraints if this is ever
+rebuilt as an Artifact; irrelevant for a real Next.js app but worth noting) expanded
+layout: the task's title and description large, a countdown timer (default 25
+minutes, adjustable), everything else visually quieted. On session end, prompt
+to log a note to that task. Backed by a new `focus_sessions` table:
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid, PK | |
+| owner_id | uuid | |
+| task_id | uuid | FK to `tasks`, cascade delete |
+| started_at | timestamptz | |
+| duration_minutes | int | planned duration |
+| ended_at | timestamptz, nullable | null while a session is in progress |
+
+This exists because the research project's own Master Plan explicitly warns
+that annotation quality collapses when done in fragmented gaps and needs
+concentrated blocks — focus mode is earned from something already written, not
+a generic gamification bolt-on. It also gives an honest answer, later, to
+"was the plan's 2-5-minutes-per-item annotation estimate right" by comparing
+logged focus-session time against actual items completed.
+
+## 4d. Task engine extensions: dependencies and automation
+
+**Task dependencies**: a `task_dependencies` join table
+(`task_id`, `depends_on_task_id`, both FK to `tasks` cascade delete, composite
+PK) recording "task_id cannot start until depends_on_task_id is done." The UI
+surfaces this as a visible blocker on the dependent task's card/detail (not an
+enforced hard lock — you can still override status manually, since the
+plan/spec's own troubleshooting sections are full of cases where flexibility
+matters more than rigidity) but a task with an incomplete dependency shows a
+warning rather than silence.
+
+**Automation (two hardcoded rules, not a rules engine — see Non-goals):**
+1. When a school's `status` changes to `replied` (whether by manual edit or by
+   Gmail sync), auto-create a task: "Follow up with `<school name>`", linked to
+   that school, due 3 business days out, unassigned. This does not require
+   confirmation — creating a task is low-cost and reversible (delete it if
+   unwanted), unlike the Gmail-sync status-change *suggestion* in section 7,
+   which does require confirmation because it overwrites existing data.
+2. When a school's `status` changes to `accepted`, auto-create a default set of
+   `visa_steps` rows for that school (the four step names in section 4b's
+   example, as a starting checklist) if none exist yet for that school.
+
 ## 5. Auth
 
 Supabase Auth, email/password or magic link (implementer's choice at build time —
@@ -353,7 +508,18 @@ their current task load (count of non-done tasks assigned to them).
 
 **School and research-milestone detail pages** each show their linked tasks
 inline, not just the existing notes/activity feed — a task created from a
-school's page pre-fills `school_id`; same pattern for research milestones.
+school's page pre-fills `school_id`; same pattern for research milestones. A
+school's detail page additionally shows its recommendation-letter requests, its
+SOP version + sent date, its interview rounds, and (once accepted) its visa
+checklist.
+
+**Today view**: a single page, everything due within 7 days across schools,
+tasks, and research milestones, one list — the working page, distinct from the
+dashboard's summary strip.
+
+**Journey timeline, wins feed, and command palette**: see section 4c.
+
+**Focus mode**: see section 4c — reachable from any task's detail view.
 
 ## 10. Risks and open items
 
@@ -375,3 +541,15 @@ school's page pre-fills `school_id`; same pattern for research milestones.
   enforced at the database level, not just in the UI form — a bug in a future
   feature (e.g. a bulk-import script) shouldn't be able to produce a task linked
   to both.
+- **Task dependencies are advisory, not enforced.** A dependent task can still
+  be marked done while its dependency is open — this is a deliberate choice
+  (section 4d), not an oversight; don't "fix" it into a hard lock without
+  re-checking with the user first, since the plan's own troubleshooting
+  guidance elsewhere is explicit about needing flexibility over rigidity.
+- **`is_win` is set at write time, not computed at read time.** Every code path
+  that writes an `activity_log` or `task_updates` row must set it correctly
+  (section 4c) — a new write path added later (e.g. a bulk-import script) that
+  forgets this silently breaks the wins feed rather than erroring.
+- **The two automation rules in section 4d are hardcoded, not user-configurable.**
+  Don't let scope creep turn this into a rules-builder UI — that's explicitly
+  out of scope (section 2).
