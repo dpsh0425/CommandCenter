@@ -70,6 +70,14 @@ like Supabase — this app steps outside that sandbox entirely.
 - **Hosting (this phase):** Local only, `npm run dev`. Designed so that deploying
   to Vercel later requires no architecture change — only adding environment
   variables in the Vercel dashboard and (for Gmail auto-sync) a Vercel Cron job.
+- **App shell:** every page under `app/(app)/` renders inside one persistent
+  navigation shell — a left rail on desktop (Dashboard, Today, Timeline, Wins,
+  then Schools/Tasks/Research/People), a bottom tab bar on mobile (the five
+  primary destinations only — Today/Timeline/Wins are reached from the
+  dashboard's quick links or the command palette on mobile, not a sixth+
+  bottom-bar icon). The rail's active item highlights from the current route.
+  This is its own task (built once other pages exist and it's clear what needs
+  linking to, not upfront) — see the implementation plan.
 - **Python:** Used for the one-time ranked-list ETL pipeline (`scripts/`), run
   manually via `python scripts/build_school_list.py`, not a running service.
   Future AI features get a documented pattern for a Vercel Python serverless
@@ -327,12 +335,13 @@ in the relief of an acceptance.
 
 Features that make the system feel operated, not just filled in.
 
-**Command palette** (Cmd/Ctrl+K): a client-side overlay backed by a
-`globalSearch(query)` Server Action that queries `schools`, `tasks`, `people`,
-and `research_milestones` by name/title (`ilike`) and returns grouped results,
-plus a fixed list of quick actions (new task, new person, new school). Doubles
-as the system's search — a separate search feature is redundant with this and
-isn't built.
+**Command palette** (Cmd/Ctrl+K, plus a visible "Search or jump to…" button in
+the nav rail for anyone on a device without that keyboard shortcut handy): a
+client-side overlay backed by a `globalSearch(query)` Server Action that
+queries `schools`, `tasks`, `people`, and `research_milestones` by name/title
+(`ilike`) and returns grouped results, plus a fixed list of quick actions (new
+task, new person, new school). Doubles as the system's search — a separate
+search feature is redundant with this and isn't built.
 
 **Journey timeline**: a horizontal view, today through the latest known
 deadline, plotting confirmed `schools.deadline_date` values and
@@ -377,11 +386,12 @@ logged focus-session time against actual items completed.
 **Task dependencies**: a `task_dependencies` join table
 (`task_id`, `depends_on_task_id`, both FK to `tasks` cascade delete, composite
 PK) recording "task_id cannot start until depends_on_task_id is done." The UI
-surfaces this as a visible blocker on the dependent task's card/detail (not an
-enforced hard lock — you can still override status manually, since the
-plan/spec's own troubleshooting sections are full of cases where flexibility
-matters more than rigidity) but a task with an incomplete dependency shows a
-warning rather than silence.
+surfaces this as a visible "waiting on: <title>" warning **on the kanban card
+itself**, not only on the task's detail page — a blocker you only discover
+after clicking in is much less useful than one you see while scanning the
+board. Not an enforced hard lock — you can still override status manually,
+since the plan/spec's own troubleshooting sections are full of cases where
+flexibility matters more than rigidity.
 
 **Automation (two hardcoded rules, not a rules engine — see Non-goals):**
 1. When a school's `status` changes to `replied` (whether by manual edit or by
@@ -487,16 +497,18 @@ built.
 
 ## 9. Dashboard and views (Phase 1)
 
-**Dashboard:**
-- Stat strip: total schools, outreach-started count, submitted+ count, accepted
-  count.
+**Dashboard** (built in two passes — see the implementation plan's Task 10 vs.
+its later dashboard-upgrade task — because the open-tasks/overdue/wins numbers
+below don't exist until the task engine and wins feed are built):
+- Stat strip, each tile a link to its own page: total schools (→ Schools),
+  open tasks (→ Tasks), overdue count (→ Today), wins this month (→ Wins).
 - Status-funnel chart: counts per `school_status` value, in pipeline order.
 - Score-vs-rank scatter: `composite_score` (y) against `csranking_nlp_rank` (x),
   one point per school, colored by `verified_fit`.
-- Overdue-task count and an upcoming-deadlines strip pulling from `tasks.due_date`
-  across both schools and research milestones, not just the school deadline
-  dates — this is the one dashboard element that spans the whole task engine,
-  not just the grad pipeline.
+- An upcoming-deadlines strip pulling from `tasks.due_date` across schools,
+  research milestones, and general tasks — not just school deadlines — each
+  item clickable through to its detail page, with a "full timeline" link to
+  the Journey timeline page.
 
 **Tasks board:** a kanban-style view (To do / In progress / Blocked / Done),
 filterable by area (school-linked / research-linked / general), assignee, and
