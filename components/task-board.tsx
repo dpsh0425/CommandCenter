@@ -10,6 +10,7 @@ const COLUMNS: Array<{ key: string; label: string }> = [
 type Task = {
   id: string; title: string; status: string; priority: string; due_date: string | null;
   school_name?: string | null; milestone_title?: string | null; assignee_name?: string | null;
+  openDependencies?: { title: string; status: string }[];
 };
 
 export function TaskBoard({ tasks }: { tasks: Task[] }) {
@@ -25,6 +26,11 @@ export function TaskBoard({ tasks }: { tasks: Task[] }) {
               <Link href={`/tasks/${t.id}`} className="font-medium hover:underline">{t.title}</Link>
               {t.school_name && <div className="text-xs text-teal-700 mt-1">{t.school_name}</div>}
               {t.milestone_title && <div className="text-xs text-violet-700 mt-1">{t.milestone_title}</div>}
+              {t.openDependencies && t.openDependencies.length > 0 && (
+                <div className="text-xs text-amber-700 mt-1">
+                  waiting on: {t.openDependencies.map((d) => d.title).join(", ")}
+                </div>
+              )}
               <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
                 <span>{t.assignee_name ?? "Unassigned"}</span>
                 <select
