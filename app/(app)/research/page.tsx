@@ -1,10 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { addMilestone } from "./actions";
+import { OWNER_USER_ID } from "@/lib/owner";
 
 export default async function ResearchPage() {
   const supabase = await createClient();
-  const { data: milestones } = await supabase.from("research_milestones").select("*").order("target_date");
+  const [{ data: { user } }, { data: milestones }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from("research_milestones").select("*").order("target_date"),
+  ]);
+  const isOwner = user?.id === OWNER_USER_ID;
 
   async function addMilestoneAction(formData: FormData) {
     "use server";
@@ -28,15 +33,17 @@ export default async function ResearchPage() {
           <p className="text-sm text-gray-500 mt-1">{m.description}</p>
         </Link>
       ))}
-      <details className="border border-dashed border-line rounded p-3">
-        <summary className="text-sm text-gray-500 cursor-pointer">+ Add milestone</summary>
-        <form action={addMilestoneAction} className="flex flex-col gap-2 mt-3">
-          <input name="title" placeholder="Milestone title" className="border rounded px-2 py-1 text-sm" required />
-          <textarea name="description" placeholder="Description (optional)" className="border rounded px-2 py-1 text-sm" rows={2} />
-          <input type="date" name="target_date" className="border rounded px-2 py-1 text-sm" />
-          <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm self-start">Add milestone</button>
-        </form>
-      </details>
+      {isOwner && (
+        <details className="border border-dashed border-line rounded p-3">
+          <summary className="text-sm text-gray-500 cursor-pointer">+ Add milestone</summary>
+          <form action={addMilestoneAction} className="flex flex-col gap-2 mt-3">
+            <input name="title" placeholder="Milestone title" className="border rounded px-2 py-1 text-sm" required />
+            <textarea name="description" placeholder="Description (optional)" className="border rounded px-2 py-1 text-sm" rows={2} />
+            <input type="date" name="target_date" className="border rounded px-2 py-1 text-sm" />
+            <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm self-start">Add milestone</button>
+          </form>
+        </details>
+      )}
     </main>
   );
 }

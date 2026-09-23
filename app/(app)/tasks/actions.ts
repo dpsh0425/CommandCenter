@@ -24,10 +24,12 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("not authenticated");
+  const { data: task } = await supabase.from("tasks").select("owner_id").eq("id", taskId).single();
+  if (!task) throw new Error("task not found");
   const { error } = await supabase.from("tasks").update({ status }).eq("id", taskId);
   if (error) throw new Error(error.message);
   await supabase.from("task_updates").insert({
-    owner_id: user.id, task_id: taskId, type: "status_change",
+    owner_id: task.owner_id, task_id: taskId, type: "status_change",
     content: `Status changed to ${status.replace("_", " ")}`, is_win: status === "done",
   });
   revalidatePath("/tasks");
@@ -39,9 +41,10 @@ export async function reassignTask(taskId: string, newAssigneeId: string | null)
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("not authenticated");
 
-  const { data: task } = await supabase.from("tasks").select("assignee_id").eq("id", taskId).single();
+  const { data: task } = await supabase.from("tasks").select("assignee_id, owner_id").eq("id", taskId).single();
+  if (!task) throw new Error("task not found");
   const [{ data: oldPerson }, { data: newPerson }] = await Promise.all([
-    task?.assignee_id ? supabase.from("people").select("name").eq("id", task.assignee_id).single() : Promise.resolve({ data: null }),
+    task.assignee_id ? supabase.from("people").select("name").eq("id", task.assignee_id).single() : Promise.resolve({ data: null }),
     newAssigneeId ? supabase.from("people").select("name").eq("id", newAssigneeId).single() : Promise.resolve({ data: null }),
   ]);
 
@@ -49,7 +52,7 @@ export async function reassignTask(taskId: string, newAssigneeId: string | null)
   if (error) throw new Error(error.message);
 
   await supabase.from("task_updates").insert({
-    owner_id: user.id, task_id: taskId, type: "reassignment",
+    owner_id: task.owner_id, task_id: taskId, type: "reassignment",
     content: `Reassigned from ${oldPerson?.name ?? "Unassigned"} to ${newPerson?.name ?? "Unassigned"}`,
   });
   revalidatePath("/tasks");
@@ -60,8 +63,10 @@ export async function addTaskUpdate(taskId: string, type: "note" | "result", con
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("not authenticated");
+  const { data: task } = await supabase.from("tasks").select("owner_id").eq("id", taskId).single();
+  if (!task) throw new Error("task not found");
   const { error } = await supabase.from("task_updates").insert({
-    owner_id: user.id, task_id: taskId, type, content, is_win: type === "result",
+    owner_id: task.owner_id, task_id: taskId, type, content, is_win: type === "result",
   });
   if (error) throw new Error(error.message);
   revalidatePath(`/tasks/${taskId}`);

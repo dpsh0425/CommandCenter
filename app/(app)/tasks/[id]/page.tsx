@@ -1,17 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { reassignTask, addTaskUpdate } from "../actions";
 import { FocusMode } from "@/components/focus-mode";
+import { OWNER_USER_ID } from "@/lib/owner";
 
 export default async function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: task }, { data: updates }, { data: people }, { data: deps }] = await Promise.all([
+  const [{ data: { user } }, { data: task }, { data: updates }, { data: people }, { data: deps }] = await Promise.all([
+    supabase.auth.getUser(),
     supabase.from("tasks").select("*, schools(name), research_milestones(title)").eq("id", id).single(),
     supabase.from("task_updates").select("*").eq("task_id", id).order("created_at", { ascending: false }),
     supabase.from("people").select("id, name"),
     supabase.from("task_dependencies").select("depends_on_task_id, tasks!task_dependencies_depends_on_task_id_fkey(id, title, status)").eq("task_id", id),
   ]);
   if (!task) return <p className="p-8">Not found.</p>;
+  const isOwner = user?.id === OWNER_USER_ID;
 
   async function reassignForm(formData: FormData) {
     "use server";
@@ -40,14 +43,18 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
         </div>
       )}
 
-      <form action={reassignForm} className="flex gap-2 items-center">
-        <label className="text-sm text-gray-500">Assignee</label>
-        <select name="assignee_id" defaultValue={task.assignee_id ?? ""} className="border rounded px-2 py-1 text-sm">
-          <option value="">Unassigned</option>
-          {(people ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm">Reassign</button>
-      </form>
+      {isOwner ? (
+        <form action={reassignForm} className="flex gap-2 items-center">
+          <label className="text-sm text-gray-500">Assignee</label>
+          <select name="assignee_id" defaultValue={task.assignee_id ?? ""} className="border rounded px-2 py-1 text-sm">
+            <option value="">Unassigned</option>
+            {(people ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm">Reassign</button>
+        </form>
+      ) : (
+        <p className="text-sm text-gray-500">Assigned to you</p>
+      )}
 
       <form action={noteForm} className="flex flex-col gap-2">
         <textarea name="content" placeholder="Add a note or result…" className="border rounded p-2 text-sm" rows={2} />

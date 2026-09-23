@@ -13,10 +13,15 @@ export default function LoginPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/confirm`, shouldCreateUser: false },
     });
-    if (error) setError(error.message);
-    else setSent(true);
+    if (error) {
+      setError(
+        error.message.toLowerCase().includes("signups not allowed")
+          ? "That email hasn't been invited. Ask the owner to invite you first."
+          : error.message
+      );
+    } else setSent(true);
   }
 
   if (sent) return <p className="p-8">Check your email for a sign-in link.</p>;
