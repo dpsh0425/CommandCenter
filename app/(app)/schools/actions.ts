@@ -27,12 +27,13 @@ export async function updateSchoolStatus(id: string, status: SchoolStatus) {
     const { data: school } = await supabase.from("schools").select("name").eq("id", id).single();
     const due = new Date();
     due.setDate(due.getDate() + 3);
+    const dueStr = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
     await supabase.from("tasks").insert({
       owner_id: user.id,
       title: `Follow up with ${school?.name ?? "school"}`,
       school_id: id,
       priority: "medium",
-      due_date: due.toISOString().slice(0, 10),
+      due_date: dueStr,
     });
   }
 
@@ -49,4 +50,7 @@ export async function updateSchoolStatus(id: string, status: SchoolStatus) {
   revalidatePath("/schools");
   revalidatePath(`/schools/${id}`);
   revalidatePath("/tasks");
+  revalidatePath("/");
+  revalidatePath("/today");
+  revalidatePath("/wins");
 }

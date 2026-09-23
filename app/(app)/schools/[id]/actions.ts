@@ -14,9 +14,26 @@ export async function addNote(schoolId: string, content: string) {
   revalidatePath(`/schools/${schoolId}`);
 }
 
-export async function updateContactEmail(schoolId: string, email: string) {
+export async function updateSchoolDetails(schoolId: string, fields: {
+  deadlineDate: string | null; deadlineNote: string | null; contactEmail: string | null;
+  faculty: string | null; fitNote: string | null;
+}) {
   const supabase = await createClient();
-  const { error } = await supabase.from("schools").update({ contact_email: email }).eq("id", schoolId);
+  const { error } = await supabase.from("schools").update({
+    deadline_date: fields.deadlineDate, deadline_note: fields.deadlineNote, contact_email: fields.contactEmail,
+    faculty: fields.faculty, fit_note: fields.fitNote,
+  }).eq("id", schoolId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/schools/${schoolId}`);
+  revalidatePath("/schools");
+  revalidatePath("/");
+  revalidatePath("/today");
+  revalidatePath("/timeline");
+}
+
+export async function deleteNote(schoolId: string, activityId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("activity_log").delete().eq("id", activityId).eq("type", "note");
   if (error) throw new Error(error.message);
   revalidatePath(`/schools/${schoolId}`);
 }
