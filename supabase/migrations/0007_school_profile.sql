@@ -1,0 +1,22 @@
+-- Admissions facts and decision notes for a school. All nullable: null means "not researched yet".
+alter table schools
+  add column city text,
+  add column application_url text,
+  add column admissions_url text,
+  add column application_fee numeric,
+  add column fee_currency text not null default 'USD',
+  add column fee_waiver text,
+  add column gre_policy text check (gre_policy in ('required', 'optional', 'not_accepted')),
+  add column english_test text,
+  add column min_gpa text,
+  add column letters_required smallint check (letters_required between 0 and 10),
+  add column writing_sample text,
+  add column program_length text,
+  add column funding_guarantee text,
+  add column tuition_note text,
+  add column living_cost_note text,
+  add column acceptance_note text,
+  add column international_note text,
+  add column tier text check (tier in ('reach', 'target', 'safe')),
+  add column pros text,
+  add column cons text;

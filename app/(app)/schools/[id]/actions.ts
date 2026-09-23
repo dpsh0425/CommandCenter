@@ -31,6 +31,31 @@ export async function updateSchoolDetails(schoolId: string, fields: {
   revalidatePath("/timeline");
 }
 
+export type SchoolProfileInput = {
+  city: string | null; applicationUrl: string | null; admissionsUrl: string | null;
+  applicationFee: number | null; feeCurrency: string; feeWaiver: string | null;
+  grePolicy: "required" | "optional" | "not_accepted" | null; englishTest: string | null; minGpa: string | null;
+  lettersRequired: number | null; writingSample: string | null; programLength: string | null;
+  fundingGuarantee: string | null; tuitionNote: string | null; livingCostNote: string | null;
+  acceptanceNote: string | null; internationalNote: string | null;
+  tier: "reach" | "target" | "safe" | null; pros: string | null; cons: string | null;
+};
+
+export async function updateSchoolProfile(schoolId: string, p: SchoolProfileInput) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("schools").update({
+    city: p.city, application_url: p.applicationUrl, admissions_url: p.admissionsUrl,
+    application_fee: p.applicationFee, fee_currency: (p.feeCurrency || "USD").toUpperCase(), fee_waiver: p.feeWaiver,
+    gre_policy: p.grePolicy, english_test: p.englishTest, min_gpa: p.minGpa, letters_required: p.lettersRequired,
+    writing_sample: p.writingSample, program_length: p.programLength, funding_guarantee: p.fundingGuarantee,
+    tuition_note: p.tuitionNote, living_cost_note: p.livingCostNote, acceptance_note: p.acceptanceNote,
+    international_note: p.internationalNote, tier: p.tier, pros: p.pros, cons: p.cons,
+  }).eq("id", schoolId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/schools/${schoolId}`);
+  revalidatePath("/schools");
+}
+
 export async function deleteNote(schoolId: string, activityId: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("activity_log").delete().eq("id", activityId).eq("type", "note");
