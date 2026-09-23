@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { SchoolTable } from "@/components/school-table";
 
+export const metadata = { title: "Schools" };
+
 const COUNTRIES = ["USA", "Canada", "Australia"];
 const STATUSES = ["not_started", "researching", "contacted", "replied", "submitted", "interview", "accepted", "rejected"];
 

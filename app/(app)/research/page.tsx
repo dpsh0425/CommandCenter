@@ -4,6 +4,8 @@ import { addMilestone } from "./actions";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { MilestoneStatusSelect } from "@/components/milestone-controls";
 
+export const metadata = { title: "Research" };
+
 const localDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const daysBetween = (from: string, to: string) =>

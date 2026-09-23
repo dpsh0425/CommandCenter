@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { JourneyTimeline } from "@/components/journey-timeline";
 
+export const metadata = { title: "Timeline" };
+
 export default async function TimelinePage() {
   const supabase = await createClient();
   const [{ data: schools }, { data: milestones }] = await Promise.all([

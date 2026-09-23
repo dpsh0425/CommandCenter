@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardAnalytics } from "@/components/dashboard-analytics";
 
+export const metadata = { title: "Dashboard" };
+
 const localDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const daysFrom = (today: string, date: string) =>

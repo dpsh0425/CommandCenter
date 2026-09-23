@@ -3,6 +3,8 @@ import { TaskBoard } from "@/components/task-board";
 import { NewTaskForm } from "@/components/new-task-form";
 import { OWNER_USER_ID } from "@/lib/owner";
 
+export const metadata = { title: "Tasks" };
+
 export default async function TasksPage() {
   const supabase = await createClient();
   const [{ data: { user } }, { data: tasks }, { data: schools }, { data: milestones }, { data: people }] = await Promise.all([

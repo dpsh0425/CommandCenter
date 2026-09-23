@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Command Center",
+  title: { default: "Command Center", template: "%s · Command Center" },
   description: "Grad applications, research, and task tracking — one system.",
 };
 

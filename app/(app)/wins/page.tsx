@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
+export const metadata = { title: "Wins" };
+
 type Win = { label: string; content: string; when: string; href: string; kind: "school" | "task" };
 
 export default async function WinsPage() {

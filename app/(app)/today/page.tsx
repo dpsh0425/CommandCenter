@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TodayTaskRow } from "@/components/today-task-row";
 
+export const metadata = { title: "Today" };
+
 const localDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const daysBetween = (from: string, to: string) =>

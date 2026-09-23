@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PasswordForm } from "@/components/password-form";
 import { OWNER_USER_ID } from "@/lib/owner";
 
+export const metadata = { title: "Account" };
+
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
   const { welcome } = await searchParams;
   const supabase = await createClient();
