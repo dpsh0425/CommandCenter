@@ -1,6 +1,7 @@
 "use server";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 type TaskStatus = "todo" | "in_progress" | "blocked" | "done" | "cancelled";
 
@@ -83,6 +84,44 @@ export async function addTaskUpdate(taskId: string, type: "note" | "result", con
   revalidatePath(`/tasks/${taskId}`);
 }
 
+export async function updateTask(taskId: string, fields: {
+  title: string; description: string | null; priority: "low" | "medium" | "high"; dueDate: string | null;
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+  const { error } = await supabase.from("tasks").update({
+    title: fields.title, description: fields.description, priority: fields.priority, due_date: fields.dueDate,
+  }).eq("id", taskId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/tasks");
+  revalidatePath(`/tasks/${taskId}`);
+  revalidatePath("/");
+  revalidatePath("/today");
+  revalidatePath("/research", "layout");
+}
+
+export async function deleteTask(taskId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+  const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/tasks");
+  revalidatePath("/");
+  revalidatePath("/today");
+  revalidatePath("/research", "layout");
+  redirect("/tasks");
+}
+
+export async function removeTaskDependency(taskId: string, dependsOnTaskId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("task_dependencies").delete().eq("task_id", taskId).eq("depends_on_task_id", dependsOnTaskId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/tasks/${taskId}`);
+  revalidatePath("/tasks");
+}
+
 export async function addTaskDependency(taskId: string, dependsOnTaskId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -92,4 +131,5 @@ export async function addTaskDependency(taskId: string, dependsOnTaskId: string)
   });
   if (error) throw new Error(error.message);
   revalidatePath(`/tasks/${taskId}`);
+  revalidatePath("/tasks");
 }

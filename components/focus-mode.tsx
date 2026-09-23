@@ -30,7 +30,7 @@ export function FocusMode({ taskId, title }: { taskId: string; title: string }) 
     setNote("");
   }
 
-  if (!active) return <button onClick={start} className="border rounded px-3 py-1 text-sm">Start focus session (25 min)</button>;
+  if (!active) return <button onClick={start} className="border border-brass text-brass rounded px-3 py-1.5 text-sm hover:bg-surface-raised">▶ Start 25-min focus session</button>;
 
   const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
   const ss = String(secondsLeft % 60).padStart(2, "0");
