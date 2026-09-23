@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { OWNER_USER_ID } from "@/lib/owner";
+import { Fold, PageHeader, Section, SubNav, TODAY_TABS } from "@/components/ui";
 
 export const metadata = { title: "This week" };
 
@@ -109,137 +110,110 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
   const winsLast = (winsA ?? []).filter((t) => inLast(t.created_at)).length;
   const contactedLast = P.filter((p) => p.last_contacted_on && p.last_contacted_on >= lastWeekStart && p.last_contacted_on <= lastWeekEnd).length;
 
-  const closingSoon = countdown.filter((c) => c.days <= 30).length;
-  const tiles = [
-    { label: "Due this week", value: weekCount, tone: "" },
-    { label: "Overdue", value: overdue.length, tone: overdue.length ? "text-red-600" : "text-teal-600" },
-    { label: "Applications closing ≤30d", value: closingSoon, tone: closingSoon ? "text-brass" : "" },
-    { label: "Follow-ups to send", value: followUps.length, tone: followUps.length ? "text-brass" : "" },
-  ];
-
-  const navBtn = "border rounded px-2.5 py-1 text-xs hover:border-brass";
+  const dayLabel = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+  const daysWithItems = days.filter((d) => d.items.length > 0);
+  const nextStep = (checks: Array<{ ok: boolean; text: string }>) => checks.find((c) => !c.ok)?.text;
+  const navLink = "text-sm text-gray-500 hover:text-cream";
 
   return (
-    <main className="p-4 md:p-8 max-w-5xl mx-auto flex flex-col gap-6">
-      <div className="flex items-end justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold">{offset === 0 ? "This week" : offset === 1 ? "Next week" : offset === -1 ? "Last week" : "Week plan"}</h1>
-          <p className="text-sm text-gray-500 font-mono">{short(start)} – {short(end)}, {end.getFullYear()}</p>
-        </div>
-        <div className="flex gap-2">
-          <Link href={`/week?w=${offset - 1}`} className={navBtn}>← Previous</Link>
-          {offset !== 0 && <Link href="/week" className={navBtn}>This week</Link>}
-          <Link href={`/week?w=${offset + 1}`} className={navBtn}>Next →</Link>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {tiles.map((t) => (
-          <div key={t.label} className="border border-line bg-surface rounded-lg p-3">
-            <div className={`text-3xl font-mono font-semibold ${t.tone}`}>{t.value}</div>
-            <div className="text-xs text-gray-500 uppercase mt-1">{t.label}</div>
-          </div>
-        ))}
+    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-8">
+      <div className="flex flex-col gap-4">
+        <PageHeader
+          title={offset === 0 ? "This week" : offset === 1 ? "Next week" : offset === -1 ? "Last week" : "Week plan"}
+          subtitle={`${short(start)} to ${short(end)}, ${end.getFullYear()}`}
+          actions={
+            <>
+              <Link href={`/week?w=${offset - 1}`} className={navLink}>← Previous</Link>
+              {offset !== 0 && <Link href="/week" className={navLink}>Today</Link>}
+              <Link href={`/week?w=${offset + 1}`} className={navLink}>Next →</Link>
+            </>
+          }
+        />
+        <SubNav items={TODAY_TABS} current="/week" />
       </div>
 
       {countdown.length > 0 && (
-        <section className="border border-line bg-surface rounded-lg p-4 flex flex-col gap-3">
-          <h2 className="text-xs uppercase tracking-wide text-gray-500">Application countdown · next 90 days</h2>
-          <ul className="flex flex-col gap-2">
-            {countdown.map(({ s, days: d, checks, ready }) => (
-              <li key={s.id}>
-                <Link href={`/schools/${s.id}?tab=application`} className={`border border-l-4 rounded p-3 flex flex-col gap-2 hover:border-brass ${d <= 14 ? "border-l-red-600" : d <= 30 ? "border-l-brass" : "border-l-line"}`}>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="font-medium">{s.name}</span>
-                    <span className={`font-mono text-sm whitespace-nowrap ${d <= 14 ? "text-red-600" : d <= 30 ? "text-brass" : "text-gray-500"}`}>{d} days · {s.deadline_date}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    {checks.map((c) => (
-                      <span key={c.text} className={`border rounded-full px-2 py-0.5 ${c.ok ? "text-teal-600 border-teal-600" : "text-gray-500 border-line"}`}>{c.ok ? "✓" : "○"} {c.text}</span>
-                    ))}
-                    <span className="ml-auto text-gray-400 font-mono">{ready}/{checks.length} ready</span>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {offset >= 0 && overdue.length > 0 && (
-        <section className="border border-red-600 rounded-lg p-4 flex flex-col gap-2">
-          <h2 className="text-xs uppercase tracking-wide text-red-600">Overdue · {overdue.length}</h2>
-          {overdue.slice(0, 8).map((i, idx) => (
-            <Link key={idx} href={i.href} className="flex justify-between gap-3 text-sm hover:text-brass">
-              <span className="truncate">{i.label}</span>
-              <span className="text-xs font-mono text-red-600 whitespace-nowrap">{rel(daysBetween(today, i.date))}</span>
-            </Link>
-          ))}
-          {overdue.length > 8 && <span className="text-xs text-gray-400">+{overdue.length - 8} more</span>}
-        </section>
-      )}
-
-      <section className="flex flex-col gap-2">
-        <h2 className="text-xs uppercase tracking-wide text-gray-500">Day by day</h2>
-        <div className="grid gap-2 md:grid-cols-2">
-          {days.map((d) => (
-            <div key={d.date} className={`border rounded-lg p-3 flex flex-col gap-1.5 ${d.date === today ? "border-brass bg-brass-soft" : "border-line bg-surface"} ${d.date < today ? "opacity-70" : ""}`}>
-              <div className="flex justify-between items-baseline">
-                <span className={`text-sm font-medium ${d.date === today ? "text-brass" : ""}`}>{d.label}{d.date === today && " · today"}</span>
-                <span className="text-xs text-gray-400 font-mono">{d.short}</span>
-              </div>
-              {d.items.length === 0 ? (
-                <span className="text-xs text-gray-400">Nothing scheduled</span>
-              ) : (
-                d.items.map((i, idx) => (
-                  <Link key={idx} href={i.href} className="flex items-start gap-2 text-sm hover:text-brass">
-                    <i className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${KIND[i.kind].dot}`} />
+        <Section title="Application deadlines" hint="next 90 days">
+          <ul className="flex flex-col">
+            {countdown.map(({ s, days: d, checks, ready }) => {
+              const next = nextStep(checks);
+              return (
+                <li key={s.id} className="border-b border-line/60 last:border-0">
+                  <Link href={`/schools/${s.id}?tab=application`} className="flex items-baseline justify-between gap-4 py-3 hover:text-brass">
                     <span className="min-w-0">
-                      <span className="block truncate">{i.label}</span>
-                      <span className="block text-xs text-gray-500 truncate">{KIND[i.kind].label} · {i.sub}</span>
+                      <span className="block font-medium truncate">{s.name}</span>
+                      <span className="block text-sm text-gray-500">
+                        {ready === checks.length ? "Everything ready" : `${ready} of ${checks.length} steps done · next: ${next?.toLowerCase()}`}
+                      </span>
+                    </span>
+                    <span className="text-right flex-shrink-0">
+                      <span className={`block font-mono text-sm ${d <= 14 ? "text-red-600" : d <= 30 ? "text-brass" : "text-gray-500"}`}>{d} days</span>
+                      <span className="block text-xs text-gray-400">{short(new Date(s.deadline_date + "T00:00:00"))}</span>
                     </span>
                   </Link>
-                ))
-              )}
+                </li>
+              );
+            })}
+          </ul>
+        </Section>
+      )}
+
+      <Section title={offset === 0 ? "On your plate" : "Scheduled"} hint={weekCount === 0 && overdue.length === 0 ? undefined : `${weekCount} this week`}>
+        {offset >= 0 && overdue.length > 0 && (
+          <div className="flex flex-col">
+            <h3 className="font-sans text-sm text-red-600 mb-1">Overdue</h3>
+            {overdue.slice(0, 8).map((i, idx) => (
+              <Link key={idx} href={i.href} className="flex justify-between gap-4 py-2 border-b border-line/60 last:border-0 hover:text-brass">
+                <span className="truncate">{i.label}</span>
+                <span className="text-sm text-red-600 whitespace-nowrap">{rel(daysBetween(today, i.date))}</span>
+              </Link>
+            ))}
+            {overdue.length > 8 && <span className="text-xs text-gray-400 pt-1">and {overdue.length - 8} more</span>}
+          </div>
+        )}
+        {daysWithItems.length === 0 && overdue.length === 0 && (
+          <p className="text-sm text-gray-500">Nothing due {offset === 0 ? "this week" : "that week"}. A good time to move an application forward.</p>
+        )}
+        {daysWithItems.map((d) => (
+          <div key={d.date} className="flex flex-col">
+            <h3 className={`font-sans text-sm mb-1 ${d.date === today ? "text-brass font-medium" : "text-gray-500"}`}>{dayLabel(d.date)}{d.date === today && " (today)"}</h3>
+            {d.items.map((i, idx) => (
+              <Link key={idx} href={i.href} className="flex justify-between gap-4 py-2 border-b border-line/60 last:border-0 hover:text-brass">
+                <span className="truncate">{i.label}</span>
+                <span className="text-sm text-gray-400 whitespace-nowrap">{KIND[i.kind].label}</span>
+              </Link>
+            ))}
+          </div>
+        ))}
+      </Section>
+
+      <Fold
+        title="People to contact"
+        summary={[followUps.length && `${followUps.length} to follow up`, replies.length && `${replies.length} in conversation`, reachOut.length && `${reachOut.length} to reach out to`].filter(Boolean).join(" · ") || "Nobody needs attention"}
+        defaultOpen={followUps.length > 0}
+      >
+        <div className="flex flex-col gap-5">
+          {[
+            { title: "Follow up", hint: "Contacted 10 or more days ago, no reply", list: followUps, why: (p: any) => `contacted ${p.last_contacted_on}` },
+            { title: "Keep talking", hint: "They replied or a meeting is booked", list: replies, why: (p: any) => String(p.outreach).replace("_", " ") },
+            { title: "Reach out next", hint: "Best fit at schools closing soon", list: reachOut, why: (p: any) => `${p.accepting === "yes" ? "taking students · " : ""}school due ${p.schools?.deadline_date?.slice(5)}` },
+          ].filter((c) => c.list.length > 0).map((col) => (
+            <div key={col.title} className="flex flex-col">
+              <h3 className="font-sans text-sm mb-1">{col.title} <span className="text-xs text-gray-400">{col.hint}</span></h3>
+              {col.list.map((p: any) => (
+                <Link key={p.id} href="/outreach" className="flex justify-between gap-4 py-2 border-b border-line/60 last:border-0 hover:text-brass">
+                  <span className="truncate">{p.name} <span className="text-gray-500">· {p.schools?.name}</span></span>
+                  <span className="text-sm text-gray-400 whitespace-nowrap">{col.why(p)}</span>
+                </Link>
+              ))}
             </div>
           ))}
         </div>
-      </section>
+      </Fold>
 
-      <section className="grid gap-4 md:grid-cols-3 items-start">
-        {[
-          { title: "Follow up", hint: "Contacted 10+ days ago, no reply", list: followUps, why: (p: any) => `contacted ${p.last_contacted_on}` },
-          { title: "Keep the conversation going", hint: "They replied or you have a meeting", list: replies, why: (p: any) => String(p.outreach).replace("_", " ") },
-          { title: "Reach out next", hint: "Best fit at schools closing soon", list: reachOut, why: (p: any) => `${p.accepting === "yes" ? "taking students · " : ""}school due ${p.schools?.deadline_date?.slice(5)}` },
-        ].map((col) => (
-          <div key={col.title} className="border border-line bg-surface rounded-lg p-3 flex flex-col gap-2">
-            <div>
-              <h3 className="text-xs uppercase tracking-wide text-gray-500">{col.title}</h3>
-              <p className="text-[11px] text-gray-400">{col.hint}</p>
-            </div>
-            {col.list.length === 0 ? (
-              <p className="text-xs text-gray-400 border border-dashed border-line rounded p-3 text-center">Nothing here.</p>
-            ) : (
-              col.list.map((p: any) => (
-                <Link key={p.id} href="/outreach" className="text-sm hover:text-brass">
-                  <span className="block truncate">{p.name}</span>
-                  <span className="block text-xs text-gray-500 truncate">{p.schools?.name} · {col.why(p)}</span>
-                </Link>
-              ))
-            )}
-          </div>
-        ))}
-      </section>
-
-      <section className="border border-line bg-surface rounded-lg p-4 flex flex-col gap-2">
-        <h2 className="text-xs uppercase tracking-wide text-gray-500">Last week ({short(new Date(lastWeekStart + "T00:00:00"))} – {short(new Date(lastWeekEnd + "T00:00:00"))})</h2>
-        <div className="flex flex-wrap gap-x-8 gap-y-2">
-          <span><span className="font-mono text-2xl">{doneLast}</span> <span className="text-xs text-gray-500">tasks completed</span></span>
-          <span><span className="font-mono text-2xl">{contactedLast}</span> <span className="text-xs text-gray-500">professors contacted</span></span>
-          <span><span className="font-mono text-2xl text-teal-600">{winsLast}</span> <span className="text-xs text-gray-500">wins</span></span>
-        </div>
-        {doneLast + contactedLast + winsLast === 0 && <p className="text-xs text-gray-400">Quiet week. Pick one thing from the countdown above and start there.</p>}
-      </section>
+      <p className="text-sm text-gray-500 border-t border-line pt-4">
+        Last week: {doneLast} task{doneLast === 1 ? "" : "s"} done · {contactedLast} professor{contactedLast === 1 ? "" : "s"} contacted · {winsLast} win{winsLast === 1 ? "" : "s"}
+      </p>
     </main>
   );
 }

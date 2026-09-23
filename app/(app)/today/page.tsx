@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TodayTaskRow } from "@/components/today-task-row";
+import { PageHeader, SubNav, TODAY_TABS } from "@/components/ui";
 
 export const metadata = { title: "Today" };
 
@@ -83,16 +84,14 @@ export default async function TodayPage() {
   ].filter((g) => g.nodes.length > 0);
 
   return (
-    <main className="p-4 md:p-8 max-w-2xl mx-auto flex flex-col gap-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Today</h1>
-          <p className="text-sm text-gray-500">{now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
-        </div>
-        <div className="text-right text-xs text-gray-500">
-          <span className="font-mono text-cream text-lg">{finished}</span> done today
-          {remaining > 0 && <span> · {remaining} to go</span>}
-        </div>
+    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
+        <PageHeader
+          title="Today"
+          subtitle={now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+          actions={<span className="text-sm text-gray-500"><span className="font-mono text-cream">{finished}</span> done{remaining > 0 && <> · {remaining} to go</>}</span>}
+        />
+        <SubNav items={TODAY_TABS} current="/today" />
       </div>
 
       {(finished > 0 || remaining > 0) && (

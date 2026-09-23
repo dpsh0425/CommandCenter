@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { LinksPanel, type LinkRow } from "@/components/links-panel";
 import { OWNER_USER_ID } from "@/lib/owner";
+import { PageHeader, RESEARCH_TABS, SubNav } from "@/components/ui";
 
 export const metadata = { title: "Library" };
 
@@ -26,9 +27,9 @@ export default async function LibraryPage() {
 
   return (
     <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Library</h1>
-        <p className="text-sm text-gray-500">Every link you've saved, across your research project, milestones and schools. Links you add here go to the research project; add school- or milestone-specific ones from their own pages.</p>
+      <div className="flex flex-col gap-4">
+        <PageHeader title="Library" subtitle="Everything you've saved: repos, papers, datasets and docs." />
+        <SubNav items={RESEARCH_TABS} current="/links" />
       </div>
       <LinksPanel links={rows} scope={{}} placeholder="Paste any link: GitHub repo, arXiv paper, dataset, doc…" emptyText="Nothing saved yet. Paste your first link above." />
     </main>

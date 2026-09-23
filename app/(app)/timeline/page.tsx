@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { JourneyTimeline } from "@/components/journey-timeline";
+import { PageHeader, SubNav, TODAY_TABS } from "@/components/ui";
 
 export const metadata = { title: "Timeline" };
 
@@ -14,10 +15,10 @@ export default async function TimelinePage() {
     ...(milestones ?? []).map((m) => ({ label: m.title, date: m.target_date as string, kind: "milestone" as const, href: `/research/${m.id}` })),
   ];
   return (
-    <main className="p-4 md:p-8 max-w-2xl mx-auto flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Journey timeline</h1>
-        <p className="text-sm text-gray-500">Only confirmed dates appear here — most school deadlines are still unconfirmed (see Target schools).</p>
+    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
+        <PageHeader title="Timeline" subtitle="Every confirmed deadline and milestone date, in order." />
+        <SubNav items={TODAY_TABS} current="/timeline" />
       </div>
       <JourneyTimeline markers={markers} />
     </main>

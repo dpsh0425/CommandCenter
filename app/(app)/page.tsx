@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardAnalytics } from "@/components/dashboard-analytics";
+import { Fold, PageHeader, Section } from "@/components/ui";
 
 export const metadata = { title: "Dashboard" };
 
@@ -34,13 +35,14 @@ export default async function DashboardPage() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
   const [
-    { data: schools }, { data: openTasks }, { data: dueTasks }, { data: schoolDeadlines },
+    { data: schools }, { data: openTasks }, { data: dueTasks }, { data: schoolDeadlines }, { data: nextDeadlines },
     { data: milestones }, { data: letters }, { count: winsA }, { count: winsB },
   ] = await Promise.all([
     supabase.from("schools").select("id, name, status, country, csranking_nlp_rank, composite_score, verified_fit, faculty, fit_note"),
     supabase.from("tasks").select("id").not("status", "in", "(done,cancelled)"),
     supabase.from("tasks").select("id, title, due_date, priority").not("due_date", "is", null).lte("due_date", cutoff).not("status", "in", "(done,cancelled)"),
     supabase.from("schools").select("id, name, deadline_date").not("deadline_date", "is", null).lte("deadline_date", cutoff),
+    supabase.from("schools").select("id, name, deadline_date").not("deadline_date", "is", null).gte("deadline_date", localDate(now)).order("deadline_date").limit(3),
     supabase.from("research_milestones").select("id, title, target_date").not("target_date", "is", null).lte("target_date", cutoff).neq("status", "done"),
     supabase.from("letter_requests").select("id, school_id, status, letter_deadline, people(name), schools(name)").not("letter_deadline", "is", null).lte("letter_deadline", cutoff).neq("status", "submitted"),
     supabase.from("activity_log").select("id", { count: "exact", head: true }).eq("is_win", true).gte("created_at", monthStart),
@@ -103,102 +105,80 @@ export default async function DashboardPage() {
 
   const total = list.length || 1;
 
+  const headline = overdue.length > 0
+    ? `${overdue.length} thing${overdue.length === 1 ? " is" : "s are"} overdue.`
+    : attention.length > 0
+      ? `${attention.length} thing${attention.length === 1 ? "" : "s"} need${attention.length === 1 ? "s" : ""} you in the next 3 days.`
+      : "Nothing urgent. Good time to move an application forward.";
+
   return (
-    <main className="p-4 md:p-8 max-w-5xl mx-auto flex flex-col gap-8">
+    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-8">
+      <PageHeader
+        title="Home"
+        subtitle={now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+      />
+
       <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-gray-500">
-          {now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+        <p className="text-xl font-serif">{headline}</p>
+        <p className="text-sm text-gray-500 mt-2 flex flex-wrap gap-x-5 gap-y-1">
+          <Link href="/schools" className="hover:text-cream"><span className="font-mono text-cream">{list.length}</span> schools ({active} in progress)</Link>
+          <Link href="/tasks" className="hover:text-cream"><span className="font-mono text-cream">{openTasks?.length ?? 0}</span> open tasks</Link>
+          <Link href="/wins" className="hover:text-cream"><span className="font-mono text-cream">{wins}</span> wins this month</Link>
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {tiles.map((t) => (
-          <Link key={t.label} href={t.href} className="border border-line bg-surface rounded-lg p-4 hover:border-brass">
-            <div className={`text-3xl font-mono font-semibold ${t.tone ?? ""}`}>{t.value}</div>
-            <div className="text-xs text-gray-500 uppercase mt-1">{t.label}</div>
-            <div className="text-xs text-gray-400 mt-0.5">{t.sub}</div>
-          </Link>
-        ))}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2 items-start">
-        <section className="border border-line bg-surface rounded-lg p-4">
-          <h2 className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex justify-between">
-            <span>Needs attention</span><span className="font-mono">{attention.length}</span>
-          </h2>
-          {attention.length === 0 ? (
-            <p className="text-xs text-gray-400 border border-dashed border-line rounded p-4 text-center">Nothing urgent in the next 3 days.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {attention.slice(0, 6).map((r, i) => (
-                <li key={i}>
-                  <Link href={r.href} className={`border border-l-4 ${r.date < today ? "border-l-red-600" : "border-l-brass"} rounded p-2.5 text-sm flex justify-between gap-3 hover:border-brass`}>
-                    <span className="min-w-0">
-                      <span className="block truncate">{r.label}</span>
-                      <span className="block text-xs text-gray-500">{r.sub}</span>
-                    </span>
-                    <span className={`text-xs whitespace-nowrap font-mono ${r.date < today ? "text-red-600" : "text-gray-500"}`}>{when(daysFrom(today, r.date))}</span>
+      {(nextDeadlines ?? []).length > 0 && (
+        <Section title="Application deadlines" action={<Link href="/week" className="hover:text-cream">See the week →</Link>}>
+          <ul className="flex flex-col">
+            {(nextDeadlines ?? []).map((d) => {
+              const n = daysFrom(today, d.deadline_date as string);
+              return (
+                <li key={d.id} className="border-b border-line/60 last:border-0">
+                  <Link href={`/schools/${d.id}`} className="flex justify-between gap-4 py-2.5 hover:text-brass">
+                    <span className="font-medium truncate">{d.name}</span>
+                    <span className={`text-sm whitespace-nowrap ${n <= 14 ? "text-red-600" : n <= 30 ? "text-brass" : "text-gray-500"}`}>{n} days · {(d.deadline_date as string).slice(5)}</span>
                   </Link>
                 </li>
-              ))}
-            </ul>
-          )}
-        </section>
+              );
+            })}
+          </ul>
+        </Section>
+      )}
 
-        <section className="border border-line bg-surface rounded-lg p-4">
-          <h2 className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex justify-between">
-            <span>Coming up · to {cutoff.slice(5)}</span>
-            <Link href="/timeline" className="normal-case underline">full timeline</Link>
-          </h2>
-          {upcoming.length === 0 ? (
-            <p className="text-xs text-gray-400 border border-dashed border-line rounded p-4 text-center">Nothing else due in the next 14 days.</p>
-          ) : (
-            <ul className="flex flex-col divide-y divide-line">
-              {upcoming.slice(0, 7).map((r, i) => (
-                <li key={i}>
-                  <Link href={r.href} className="flex justify-between gap-3 py-2 text-sm hover:text-brass">
-                    <span className="truncate">{r.label}</span>
-                    <span className="text-xs text-gray-500 whitespace-nowrap font-mono">{r.date.slice(5)} · {when(daysFrom(today, r.date))}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+      {(attention.length > 0 || upcoming.length > 0) && (
+        <Section title="Coming up" hint="next 14 days">
+          <ul className="flex flex-col">
+            {[...attention, ...upcoming].slice(0, 7).map((r, i) => (
+              <li key={i} className="border-b border-line/60 last:border-0">
+                <Link href={r.href} className="flex justify-between gap-4 py-2.5 hover:text-brass">
+                  <span className="truncate">{r.label}</span>
+                  <span className={`text-sm whitespace-nowrap ${r.date < today ? "text-red-600" : "text-gray-400"}`}>{when(daysFrom(today, r.date))}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
-      <section className="border border-line bg-surface rounded-lg p-4 flex flex-col gap-3">
-        <h2 className="text-xs uppercase tracking-wide text-gray-500">Application pipeline</h2>
-        <div className="flex h-3 rounded overflow-hidden bg-surface-raised">
+      <Section title="Your applications" action={<Link href="/schools" className="hover:text-cream">All schools →</Link>}>
+        <div className="flex h-2 rounded overflow-hidden bg-surface-raised">
           {PIPELINE.filter((p) => counts[p.key]).map((p) => (
-            <Link
-              key={p.key}
-              href={`/schools?status=${p.key}`}
-              title={`${p.label}: ${counts[p.key]}`}
-              style={{ width: `${(counts[p.key] / total) * 100}%`, background: p.color }}
-              className="min-w-[3px] hover:opacity-80"
-            />
+            <Link key={p.key} href={`/schools?status=${p.key}`} title={`${p.label}: ${counts[p.key]}`} style={{ width: `${(counts[p.key] / total) * 100}%`, background: p.color }} className="min-w-[3px] hover:opacity-80" />
           ))}
         </div>
-        <ul className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
-          {PIPELINE.map((p) => (
-            <li key={p.key}>
-              <Link href={`/schools?status=${p.key}`} className="flex items-center gap-2 text-sm hover:text-brass">
-                <i className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: p.color }} />
-                <span className="text-gray-500 flex-1">{p.label}</span>
-                <span className="font-mono">{counts[p.key] ?? 0}</span>
-              </Link>
-            </li>
+        <p className="text-sm text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
+          {PIPELINE.filter((p) => counts[p.key]).map((p) => (
+            <Link key={p.key} href={`/schools?status=${p.key}`} className="hover:text-cream flex items-center gap-1.5">
+              <i className="w-2 h-2 rounded-sm" style={{ background: p.color }} />{p.label} <span className="font-mono text-cream">{counts[p.key]}</span>
+            </Link>
           ))}
-        </ul>
-      </section>
+        </p>
+      </Section>
 
-      <div className="flex flex-col gap-2">
-        <h2 className="text-xs uppercase tracking-wide text-gray-500">Explore your schools</h2>
+      <Fold title="Explore your schools" summary="fit map, pipeline, scores, momentum">
         <DashboardAnalytics schools={list as any} weekly={weekly.map(({ week, tasks, wins }) => ({ week, tasks, wins }))} />
-        <p className="text-xs text-gray-400">Scores are a heuristic, not a validated ranking.</p>
-      </div>
+        <p className="text-xs text-gray-400 mt-2">Scores are a heuristic, not a validated ranking.</p>
+      </Fold>
     </main>
   );
 }

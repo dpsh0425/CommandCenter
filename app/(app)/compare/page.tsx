@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { researchGaps } from "@/lib/school-research";
+import { PageHeader, SCHOOL_TABS, SubNav } from "@/components/ui";
 
 export const metadata = { title: "Compare schools" };
 
@@ -91,9 +92,9 @@ export default async function ComparePage() {
 
   return (
     <main className="p-4 md:p-8 max-w-6xl mx-auto flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Compare schools</h1>
-        <p className="text-sm text-gray-500">Every school you've researched, side by side and sorted by deadline. Anything marked <span className="italic text-gray-400">unknown</span> is still to research.</p>
+      <div className="flex flex-col gap-4">
+        <PageHeader title="Compare" subtitle="Researched schools side by side, soonest deadline first. Gaps say “unknown”." />
+        <SubNav items={SCHOOL_TABS} current="/compare" />
       </div>
 
       {cols.length === 0 ? (

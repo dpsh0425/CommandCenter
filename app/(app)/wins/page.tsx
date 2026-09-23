@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { PageHeader, SubNav, TODAY_TABS } from "@/components/ui";
 
 export const metadata = { title: "Wins" };
 
@@ -30,12 +31,11 @@ export default async function WinsPage() {
   }
 
   return (
-    <main className="p-4 md:p-8 max-w-xl mx-auto flex flex-col gap-5">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold">Wins</h1>
-        <span className="font-mono text-sm text-brass">{items.length} total</span>
+    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
+        <PageHeader title="Wins" subtitle={`${items.length} so far. Replies, advances and finished results.`} />
+        <SubNav items={TODAY_TABS} current="/wins" />
       </div>
-      <p className="text-sm text-gray-500 -mt-3">Replies, advances, and finished results — the good-news feed.</p>
 
       {items.length === 0 && (
         <div className="border border-dashed border-line rounded p-6 text-center text-sm text-gray-500">

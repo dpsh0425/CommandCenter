@@ -4,6 +4,7 @@ import { addMilestone } from "./actions";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { MilestoneStatusSelect } from "@/components/milestone-controls";
 import { LinksPanel } from "@/components/links-panel";
+import { PageHeader, RESEARCH_TABS, Section, SubNav } from "@/components/ui";
 
 export const metadata = { title: "Research" };
 
@@ -58,100 +59,62 @@ export default async function ResearchPage() {
   }
 
   return (
-    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">The Broken Ruler</h1>
-        <p className="text-sm text-gray-500">Nepali benchmark measurement-error study — milestones and the work behind them.</p>
+    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-8">
+      <div className="flex flex-col gap-4">
+        <PageHeader
+          title="The Broken Ruler"
+          subtitle={list.length === 0 ? "Nepali benchmark measurement-error study." : `${doneCount} of ${list.length} milestones done${next ? ` · next: ${next.title} ${relative(daysBetween(today, next.target_date as string))}` : ""}${overdue > 0 ? ` · ${overdue} overdue` : ""}${blocked > 0 ? ` · ${blocked} blocked` : ""}`}
+        />
+        <SubNav items={RESEARCH_TABS} current="/research" />
       </div>
 
-      <section className="border border-line bg-surface rounded-lg p-4 flex flex-col gap-3">
-        <div className="flex items-baseline justify-between">
-          <span className="text-xs uppercase tracking-wide text-gray-500">Overall progress</span>
-          <span className="font-mono text-sm">{doneCount}/{list.length} milestones · {pct}%</span>
-        </div>
-        <div className="h-2 rounded bg-surface-raised overflow-hidden">
-          <div className="h-full bg-teal-600" style={{ width: `${pct}%` }} />
-        </div>
-        <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-500">
-          <span>{list.filter((m) => m.status === "in_progress").length} in progress</span>
-          {blocked > 0 && <span className="text-red-600">{blocked} blocked</span>}
-          {overdue > 0 && <span className="text-red-600">{overdue} overdue</span>}
-          {next && <span className="ml-auto">next: <span className="text-cream">{next.title}</span> · {relative(daysBetween(today, next.target_date as string))}</span>}
-        </div>
-      </section>
-
       {isOwner && (
-        <section className="border border-line bg-surface rounded-lg p-4 flex flex-col gap-3">
-          <div>
-            <h2 className="text-xs uppercase tracking-wide text-gray-500">Project links</h2>
-            <p className="text-xs text-gray-400">Your GitHub repo, papers, datasets and docs for this study, in one place.</p>
-          </div>
+        <Section title="Project links" hint="repo, papers, datasets, docs">
           <LinksPanel
             links={(projectLinks ?? []) as any}
             scope={{}}
             placeholder="Paste your GitHub repo, arXiv paper, dataset or doc link…"
             emptyText="No links yet. Paste your project's GitHub repository to start."
           />
-        </section>
+        </Section>
       )}
 
-      {list.length === 0 && (
-        <p className="text-sm text-gray-500 border border-dashed border-line rounded p-6 text-center">No milestones yet. Add the first one below.</p>
-      )}
-
-      <ol className="flex flex-col gap-3">
-        {list.map((m, i) => {
-          const p = progress.get(m.id) ?? { done: 0, total: 0 };
-          const late = m.status !== "done" && m.target_date && m.target_date < today;
-          return (
-            <li key={m.id} className={`border bg-surface rounded-lg p-4 flex flex-col gap-2 ${late ? "border-red-600" : "border-line"} hover:border-brass`}>
-              <div className="flex items-start justify-between gap-3">
-                <Link href={`/research/${m.id}`} className="min-w-0 flex-1">
-                  <div className="text-[10px] font-mono text-gray-400">MILESTONE {String(i + 1).padStart(2, "0")}</div>
-                  <div className={`font-medium ${m.status === "done" ? "line-through text-gray-500" : ""}`}>{m.title}</div>
+      <Section title="Milestones" hint={list.length ? `${pct}% complete` : undefined}>
+        {list.length === 0 && <p className="text-sm text-gray-500">No milestones yet. Add the first one below.</p>}
+        <ul className="flex flex-col">
+          {list.map((m) => {
+            const p = progress.get(m.id) ?? { done: 0, total: 0 };
+            const late = m.status !== "done" && m.target_date && m.target_date < today;
+            return (
+              <li key={m.id} className="border-b border-line/60 last:border-0 py-3 flex items-start justify-between gap-4">
+                <Link href={`/research/${m.id}`} className="min-w-0 flex-1 hover:text-brass">
+                  <span className={`block font-medium ${m.status === "done" ? "line-through text-gray-500" : ""}`}>{m.title}</span>
+                  <span className="block text-sm text-gray-500 truncate">
+                    {[m.target_date ? `${m.target_date.slice(5)} · ${relative(daysBetween(today, m.target_date))}` : "no date", p.total > 0 ? `${p.done}/${p.total} tasks` : null].filter(Boolean).join(" · ")}
+                    {late && <span className="text-red-600"> · late</span>}
+                  </span>
                 </Link>
                 {isOwner ? (
                   <MilestoneStatusSelect id={m.id} value={m.status} />
                 ) : (
-                  <span className={`text-xs uppercase border rounded-full px-2 py-0.5 ${STATUS_TONE[m.status]}`}>{m.status.replace("_", " ")}</span>
+                  <span className={`text-xs border rounded-full px-2 py-0.5 ${STATUS_TONE[m.status]}`}>{m.status.replace("_", " ")}</span>
                 )}
-              </div>
-              {m.description && <p className="text-sm text-gray-500">{m.description}</p>}
-              <div className="flex items-center gap-3 text-xs">
-                {m.target_date ? (
-                  <span className={`font-mono ${late ? "text-red-600" : "text-gray-500"}`}>
-                    {m.target_date} · {relative(daysBetween(today, m.target_date))}
-                  </span>
-                ) : (
-                  <span className="text-gray-400">no target date</span>
-                )}
-                {p.total > 0 ? (
-                  <span className="ml-auto flex items-center gap-2 text-gray-500">
-                    <span className="w-24 h-1.5 rounded bg-surface-raised overflow-hidden inline-block">
-                      <span className="block h-full bg-brass" style={{ width: `${(p.done / p.total) * 100}%` }} />
-                    </span>
-                    <span className="font-mono">{p.done}/{p.total} tasks</span>
-                  </span>
-                ) : (
-                  <span className="ml-auto text-gray-400">no tasks yet</span>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-
-      {isOwner && (
-        <details className="border border-dashed border-line rounded p-3">
-          <summary className="text-sm text-gray-500 cursor-pointer">+ Add milestone</summary>
-          <form action={addMilestoneAction} className="flex flex-col gap-2 mt-3">
-            <input name="title" placeholder="Milestone title" className="border rounded px-2 py-1 text-sm" required />
-            <textarea name="description" placeholder="Description (optional)" className="border rounded px-2 py-1 text-sm" rows={2} />
-            <input type="date" name="target_date" className="border rounded px-2 py-1 text-sm" />
-            <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm self-start">Add milestone</button>
-          </form>
-        </details>
-      )}
+              </li>
+            );
+          })}
+        </ul>
+        {isOwner && (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-gray-500 hover:text-cream list-none">+ Add a milestone</summary>
+            <form action={addMilestoneAction} className="flex flex-col gap-2 mt-3">
+              <input name="title" placeholder="Milestone title" className="border rounded px-2 py-1.5 text-sm" required />
+              <textarea name="description" placeholder="Description (optional)" className="border rounded px-2 py-1.5 text-sm" rows={2} />
+              <input type="date" name="target_date" className="border rounded px-2 py-1.5 text-sm" />
+              <button className="bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm self-start">Add milestone</button>
+            </form>
+          </details>
+        )}
+      </Section>
     </main>
   );
 }

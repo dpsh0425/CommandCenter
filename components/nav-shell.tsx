@@ -7,19 +7,14 @@ import { QuickAdd } from "./quick-add";
 import { createClient } from "@/lib/supabase/client";
 
 const PRIMARY = [
-  { href: "/", label: "Dashboard" },
-  { href: "/today", label: "Today" },
-  { href: "/week", label: "This week" },
-  { href: "/timeline", label: "Timeline" },
-  { href: "/wins", label: "Wins" },
+  { href: "/", label: "Home" },
+  { href: "/today", label: "Today", also: ["/week", "/timeline", "/wins"] },
 ];
 const WORK = [
-  { href: "/schools", label: "Schools" },
-  { href: "/compare", label: "Compare" },
+  { href: "/schools", label: "Schools", also: ["/compare"] },
   { href: "/outreach", label: "Outreach" },
   { href: "/tasks", label: "Tasks" },
-  { href: "/research", label: "Research" },
-  { href: "/links", label: "Library" },
+  { href: "/research", label: "Research", also: ["/links"] },
   { href: "/people", label: "People" },
 ];
 const MOBILE = [
@@ -32,10 +27,10 @@ const MORE = [
   { href: "/week", label: "This week" },
   { href: "/compare", label: "Compare schools" },
   { href: "/outreach", label: "Outreach" },
-  { href: "/timeline", label: "Timeline" },
-  { href: "/wins", label: "Wins" },
   { href: "/research", label: "Research" },
   { href: "/links", label: "Library" },
+  { href: "/timeline", label: "Timeline" },
+  { href: "/wins", label: "Wins" },
   { href: "/people", label: "People" },
   { href: "/account", label: "Account" },
 ];
@@ -51,7 +46,7 @@ function NavHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
+function NavLink({ href, label, active }: { href: string; label: string; active: boolean; also?: string[] }) {
   return (
     <Link
       href={href}
@@ -64,7 +59,7 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
 
 export function NavShell({ children, isOwner }: { children: React.ReactNode; isOwner: boolean }) {
   const pathname = usePathname();
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const isActive = (href: string, also: string[] = []) => (href === "/" ? pathname === "/" : [href, ...also].some((h) => pathname.startsWith(h)));
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -92,10 +87,9 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
           </button>
         )}
         <nav className="flex flex-col gap-0.5">
-          <NavHeading>Overview</NavHeading>
-          {PRIMARY.map((item) => <NavLink key={item.href} {...item} active={isActive(item.href)} />)}
-          <NavHeading>Work</NavHeading>
-          {WORK.map((item) => <NavLink key={item.href} {...item} active={isActive(item.href)} />)}
+          {PRIMARY.map((item) => <NavLink key={item.href} href={item.href} label={item.label} active={isActive(item.href, (item as any).also)} />)}
+          <div className="h-3" />
+          {WORK.map((item) => <NavLink key={item.href} href={item.href} label={item.label} active={isActive(item.href, (item as any).also)} />)}
         </nav>
         <div className="mt-auto flex flex-col gap-0.5 border-t border-line pt-3">
           <NavLink href="/account" label="Account" active={isActive("/account")} />

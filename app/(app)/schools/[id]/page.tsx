@@ -13,6 +13,7 @@ import {
 import { AdmissionsPanel, type Profile } from "@/components/admissions-panel";
 import { researchGaps } from "@/lib/school-research";
 import { LinksPanel } from "@/components/links-panel";
+import { Fold, Meta, Section as PlainSection } from "@/components/ui";
 
 const localDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -132,28 +133,19 @@ export default async function SchoolDetailPage({
       <div className="flex flex-col gap-3">
         <Link href="/schools" className="text-xs text-gray-500 hover:text-cream self-start">← All schools</Link>
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="min-w-0">
-            <h1 className="text-3xl font-semibold">{school.name}</h1>
-            <div className="flex flex-wrap gap-2 mt-2 text-xs">
-              <Chip>{[meta.city, school.country].filter(Boolean).join(", ")}</Chip>
-              {meta.tier && <Chip tone={TIER_TONE[meta.tier]}>{meta.tier}</Chip>}
-              {meta.verified_fit && <Chip tone="text-teal-600 border-teal-600">verified fit</Chip>}
-              {meta.csranking_nlp_rank != null && <Chip>NLP rank #{meta.csranking_nlp_rank}</Chip>}
-              {meta.composite_score != null && <Chip>score {Number(meta.composite_score).toFixed(1)}</Chip>}
-              {meta.deadline_date && (
-                <Chip tone={meta.deadline_date < today ? "text-red-600 border-red-600" : "text-brass border-brass"}>
-                  deadline {meta.deadline_date} · {relative(daysBetween(today, meta.deadline_date))}
-                </Chip>
-              )}
-            </div>
+          <div className="min-w-0 flex flex-col gap-1">
+            <h1 className="text-3xl font-semibold leading-tight">{school.name}</h1>
+            <Meta
+              items={[
+                [meta.city, school.country].filter(Boolean).join(", "),
+                meta.tier && <span className={TIER_TONE[meta.tier].split(" ")[0]}>{meta.tier}</span>,
+                meta.verified_fit && "verified fit",
+                meta.csranking_nlp_rank != null && `NLP rank #${meta.csranking_nlp_rank}`,
+              ]}
+            />
           </div>
           {isOwner && <StatusSelect schoolId={school.id} value={meta.status} />}
         </div>
-        {isOwner && (
-          <p className="text-xs text-gray-500 font-mono">
-            {depts.length} department{depts.length === 1 ? "" : "s"} · {profs.length} professor{profs.length === 1 ? "" : "s"} · {funds.length} funding option{funds.length === 1 ? "" : "s"} · {completeness}% researched
-          </p>
-        )}
       </div>
 
       {isOwner && (
@@ -172,119 +164,95 @@ export default async function SchoolDetailPage({
       )}
 
       {tab === "overview" && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-8">
           {isOwner && (
             <>
-              <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Glance title="Dates" href={tabHref("admissions")}>
-                  {upcoming.length === 0 ? <Muted>No upcoming dates recorded</Muted> : (
-                    <ul className="flex flex-col gap-1">
-                      {upcoming.slice(0, 3).map((d, i) => (
-                        <li key={i} className="text-xs flex justify-between gap-2"><span className="truncate">{d.label}</span><span className="font-mono text-gray-500 whitespace-nowrap">{d.date.slice(5)}</span></li>
-                      ))}
-                    </ul>
-                  )}
-                </Glance>
-                <Glance title="Requirements" href={tabHref("admissions")}>
-                  <ul className="text-xs flex flex-col gap-1">
-                    <li>GRE: {meta.gre_policy ? <b className="font-medium">{meta.gre_policy.replace("_", " ")}</b> : <Muted inline>unknown</Muted>}</li>
-                    <li className="line-clamp-2" title={meta.english_test ?? undefined}>English: {meta.english_test ? <b className="font-medium">{meta.english_test}</b> : <Muted inline>unknown</Muted>}</li>
-                    <li>Letters: {meta.letters_required != null ? <b className="font-medium">{meta.letters_required}</b> : <Muted inline>unknown</Muted>} · Fee: {meta.application_fee != null ? <b className="font-medium">{meta.fee_currency} {Number(meta.application_fee).toLocaleString()}</b> : <Muted inline>unknown</Muted>}</li>
-                  </ul>
-                </Glance>
-                <Glance title="Funding" href={tabHref("funding")}>
-                  {funds.length === 0 && !meta.funding_guarantee ? <Muted>No funding researched yet</Muted> : (
-                    <div className="text-xs flex flex-col gap-1">
-                      {meta.funding_guarantee && <span>{meta.funding_guarantee}</span>}
-                      {bestFunding && <span className="text-gray-500">{funds.length} option{funds.length === 1 ? "" : "s"} · best: <b className="font-medium text-cream">{bestFunding.name}</b> ({bestFunding.status.replace("_", " ")})</span>}
-                    </div>
-                  )}
-                </Glance>
-                <Glance title="Faculty" href={tabHref("faculty")}>
-                  {profs.length === 0 ? <Muted>No professors added yet</Muted> : (
-                    <div className="text-xs flex flex-col gap-1">
-                      <span>{profs.length} professor{profs.length === 1 ? "" : "s"} · {takingStudents} taking students</span>
-                      <span className="text-gray-500">{contacted} contacted · {replied} replied</span>
-                      {bestFit.length > 0 && <span className="text-brass truncate">Best fit: {bestFit.map((p) => p.name).join(", ")}</span>}
-                    </div>
-                  )}
-                </Glance>
-              </section>
-
-              <section className="border border-line bg-surface rounded-lg p-4 flex flex-col gap-3">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h2 className="text-xs uppercase tracking-wide text-gray-500">Still to research</h2>
-                  <span className="font-mono text-sm">{completeness}% complete</span>
-                </div>
-                <div className="h-1.5 rounded bg-surface-raised overflow-hidden"><div className="h-full bg-teal-600" style={{ width: `${completeness}%` }} /></div>
+              <PlainSection title="Next steps" hint={`${completeness}% researched`}>
+                {meta.deadline_date && (
+                  <p className="text-sm">
+                    <span className="text-gray-500">Application deadline </span>
+                    <span className="font-medium">{new Date(meta.deadline_date + "T00:00:00").toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}</span>
+                    <span className={meta.deadline_date < today ? " text-red-600" : daysBetween(today, meta.deadline_date) <= 30 ? " text-brass" : " text-gray-500"}> · {relative(daysBetween(today, meta.deadline_date))}</span>
+                  </p>
+                )}
                 {gaps.length === 0 ? (
                   <p className="text-sm text-teal-600">You know everything you track about this school.</p>
                 ) : (
-                  <ul className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
-                    {gaps.map((g) => (
-                      <li key={g.text}>
-                        <Link href={tabHref(g.tab)} className="text-sm flex items-center gap-2 hover:text-brass">
-                          <span className="text-gray-400" aria-hidden>○</span>
-                          <span className="flex-1">{g.text}</span>
-                          <span className="text-[10px] uppercase text-gray-400">{g.tab}</span>
+                  <ul className="flex flex-col">
+                    {gaps.slice(0, 4).map((g) => (
+                      <li key={g.text} className="border-b border-line/60 last:border-0">
+                        <Link href={tabHref(g.tab)} className="flex justify-between gap-4 py-2 text-sm hover:text-brass">
+                          <span>{g.text}</span>
+                          <span className="text-gray-400 capitalize">{g.tab} →</span>
                         </Link>
                       </li>
                     ))}
+                    {gaps.length > 4 && <li className="text-xs text-gray-400 pt-2">and {gaps.length - 4} more to research</li>}
                   </ul>
                 )}
-              </section>
+              </PlainSection>
 
-              {(meta.pros || meta.cons || school.fit_note) && (
-                <section className="grid gap-3 sm:grid-cols-2">
-                  {school.fit_note && (
-                    <div className="border border-line bg-surface rounded-lg p-4 sm:col-span-2">
-                      <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Why it's a fit</div>
-                      <p className="text-sm text-gray-500">{school.fit_note}</p>
+              <PlainSection title="Key facts" action={<Link href={tabHref("admissions")} className="hover:text-cream">Edit admissions info</Link>}>
+                <dl className="grid grid-cols-[8.5rem_1fr] gap-x-4 text-sm">
+                  {[
+                    ["Application fee", meta.application_fee != null ? `${meta.fee_currency} ${Number(meta.application_fee)}` : null],
+                    ["GRE", meta.gre_policy ? ({ required: "Required", optional: "Optional", not_accepted: "Not considered" } as any)[meta.gre_policy] : null],
+                    ["English test", meta.english_test],
+                    ["Letters needed", meta.letters_required != null ? String(meta.letters_required) : null],
+                    ["Funding", meta.funding_guarantee ?? (funds.length ? `${funds.length} option${funds.length === 1 ? "" : "s"} tracked` : null)],
+                    ["Program length", meta.program_length],
+                  ].map(([label, value]) => (
+                    <div key={label as string} className="contents">
+                      <dt className="text-gray-500 py-1.5 border-b border-line/60">{label}</dt>
+                      <dd className="py-1.5 border-b border-line/60 min-w-0">{value ? <span className="line-clamp-2">{value}</span> : <span className="text-gray-400">Not researched</span>}</dd>
                     </div>
-                  )}
-                  {meta.pros && <div className="border border-teal-600 rounded-lg p-4"><div className="text-xs uppercase tracking-wide text-teal-600 mb-1">Pros</div><p className="text-sm whitespace-pre-line">{meta.pros}</p></div>}
-                  {meta.cons && <div className="border border-red-600 rounded-lg p-4"><div className="text-xs uppercase tracking-wide text-red-600 mb-1">Cons</div><p className="text-sm whitespace-pre-line">{meta.cons}</p></div>}
-                </section>
-              )}
+                  ))}
+                </dl>
+                {school.fit_note && <p className="text-sm text-gray-500 pt-2"><span className="text-gray-400">Why it fits: </span>{school.fit_note}</p>}
+              </PlainSection>
             </>
           )}
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start">
-            <Section title="Tasks" count={`${openTasks} open · ${(linkedTasks ?? []).length} total`}>
-              {(linkedTasks ?? []).length === 0 ? <Empty>No tasks for this school yet.</Empty> : (
-                <ul className="flex flex-col gap-2">
-                  {(linkedTasks ?? []).map((t) => (
-                    <li key={t.id}>
-                      <Link href={`/tasks/${t.id}`} className="border rounded p-2.5 text-sm flex justify-between gap-3 items-center hover:border-brass">
-                        <span className="min-w-0">
-                          <span className={`block truncate ${t.status === "done" ? "line-through text-gray-500" : ""}`}>{t.title}</span>
-                          {t.due_date && <span className={`block text-xs ${t.due_date < today && t.status !== "done" ? "text-red-600" : "text-gray-500"}`}>due {t.due_date}</span>}
-                        </span>
-                        <span className={`text-xs uppercase whitespace-nowrap ${TASK_TONE[t.status]}`}>{t.status.replace("_", " ")}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {isOwner && <SchoolTaskForm schoolId={id} people={people ?? []} />}
-            </Section>
-            {isOwner && (
-              <Section title="Links" count={(schoolLinks ?? []).length}>
-                <LinksPanel
-                  links={(schoolLinks ?? []) as any}
-                  scope={{ schoolId: id }}
-                  placeholder="Paste a lab page, funding page, paper or program page…"
-                  emptyText="No links yet. Save the lab pages, funding pages and papers you rely on."
-                />
-              </Section>
+          <PlainSection title="Tasks" hint={`${openTasks} open`}>
+            {(linkedTasks ?? []).length === 0 ? (
+              <p className="text-sm text-gray-500">No tasks for this school yet.</p>
+            ) : (
+              <ul className="flex flex-col">
+                {(linkedTasks ?? []).map((t) => (
+                  <li key={t.id} className="border-b border-line/60 last:border-0">
+                    <Link href={`/tasks/${t.id}`} className="flex justify-between gap-4 py-2 text-sm hover:text-brass">
+                      <span className={`truncate ${t.status === "done" ? "line-through text-gray-500" : ""}`}>{t.title}</span>
+                      <span className={`whitespace-nowrap ${t.due_date && t.due_date < today && t.status !== "done" ? "text-red-600" : "text-gray-400"}`}>{t.due_date ? `due ${t.due_date.slice(5)}` : t.status.replace("_", " ")}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             )}
             {isOwner && (
-              <Section title="Activity" count={(activity ?? []).length}>
-                <NoteForm schoolId={id} />
-                {(activity ?? []).length === 0 ? <Empty>No activity yet. Notes and status changes appear here.</Empty> : <ActivityTimeline items={(activity ?? []) as any} schoolId={id} />}
-              </Section>
+              <details className="text-sm">
+                <summary className="cursor-pointer text-gray-500 hover:text-cream list-none">+ Add a task</summary>
+                <SchoolTaskForm schoolId={id} people={people ?? []} />
+              </details>
             )}
-          </div>
+          </PlainSection>
+
+          {isOwner && (
+            <Fold title="Notes and activity" summary={`${(activity ?? []).length} entries`}>
+              <NoteForm schoolId={id} />
+              {(activity ?? []).length === 0 ? <p className="text-sm text-gray-500">No activity yet. Notes and status changes appear here.</p> : <ActivityTimeline items={(activity ?? []) as any} schoolId={id} />}
+            </Fold>
+          )}
+
+          {isOwner && (
+            <Fold title="Links" summary={`${(schoolLinks ?? []).length} saved`}>
+              <LinksPanel
+                links={(schoolLinks ?? []) as any}
+                scope={{ schoolId: id }}
+                placeholder="Paste a lab page, funding page, paper or program page…"
+                emptyText="No links yet. Save the lab pages, funding pages and papers you rely on."
+              />
+            </Fold>
+          )}
         </div>
       )}
 
