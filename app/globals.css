@@ -24,6 +24,13 @@ input, textarea, select {
   color: #e9e7de;
 }
 
+/* Dropdown popups are drawn by the browser; give them a solid dark surface even when the select itself is transparent. */
+select { color-scheme: dark; }
+select option, select optgroup {
+  background-color: #212836;
+  color: #e9e7de;
+}
+
 input::placeholder, textarea::placeholder {
   color: #6f7686;
 }
