@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { reassignTask, addTaskUpdate } from "../actions";
+import { FocusMode } from "@/components/focus-mode";
 
 export default async function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,6 +30,8 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
       <p className="text-gray-600">{task.description}</p>
       {(task as any).schools && <p className="text-sm text-teal-700">Linked to {(task as any).schools.name}</p>}
       {(task as any).research_milestones && <p className="text-sm text-violet-700">Linked to {(task as any).research_milestones.title}</p>}
+
+      <FocusMode taskId={id} title={task.title} />
 
       {deps && deps.length > 0 && (
         <div className="text-sm bg-yellow-50 border border-yellow-300 rounded p-2">
