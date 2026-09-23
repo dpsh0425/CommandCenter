@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CommandPalette } from "./command-palette";
+import { createClient } from "@/lib/supabase/client";
 
 const PRIMARY = [
   { href: "/", label: "Dashboard" },
@@ -56,6 +57,15 @@ export function NavShell({ children }: { children: React.ReactNode }) {
           <div className="text-xs uppercase text-gray-400 px-3 pt-3 pb-1">Work</div>
           {WORK.map((item) => <NavLink key={item.href} {...item} active={isActive(item.href)} />)}
         </nav>
+        <button
+          onClick={async () => {
+            await createClient().auth.signOut();
+            window.location.href = "/login";
+          }}
+          className="mt-auto text-left px-3 py-2 rounded text-sm text-gray-500 hover:bg-gray-50"
+        >
+          Sign out
+        </button>
       </aside>
       <div className="flex-1 min-w-0 pb-16 md:pb-0">{children}</div>
       <CommandPalette open={paletteOpen} setOpen={setPaletteOpen} />
