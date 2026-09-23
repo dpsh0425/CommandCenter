@@ -18,6 +18,13 @@ export async function createTask(data: {
   });
   if (error) throw new Error(error.message);
   revalidatePath("/tasks");
+  revalidatePath("/");
+  revalidatePath("/today");
+  if (data.researchMilestoneId) {
+    revalidatePath("/research");
+    revalidatePath(`/research/${data.researchMilestoneId}`);
+  }
+  if (data.schoolId) revalidatePath(`/schools/${data.schoolId}`);
 }
 
 export async function updateTaskStatus(taskId: string, status: TaskStatus) {
@@ -34,6 +41,10 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
   });
   revalidatePath("/tasks");
   revalidatePath(`/tasks/${taskId}`);
+  revalidatePath("/");
+  revalidatePath("/today");
+  revalidatePath("/wins");
+  revalidatePath("/research", "layout");
 }
 
 export async function reassignTask(taskId: string, newAssigneeId: string | null) {
