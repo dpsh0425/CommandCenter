@@ -95,12 +95,12 @@ export default async function ComparePage() {
         <p className="text-sm text-gray-500">No schools researched yet. Fill in a school's Admissions tab and it appears here.</p>
       ) : (
         <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-          <table className="w-full text-sm border-collapse min-w-[720px]">
+          <table className="w-full text-sm border-collapse min-w-[560px] md:min-w-[720px]">
             <thead>
               <tr className="border-b border-line">
-                <th className="sticky left-0 bg-ink z-10 w-28" />
+                <th className="sticky left-0 bg-ink z-10 w-20 md:w-28" />
                 {cols.map(({ s }) => (
-                  <th key={s.id} className="py-3 pr-6 text-left align-bottom min-w-[11rem] font-normal">
+                  <th key={s.id} className="py-3 pr-5 text-left align-bottom min-w-[10rem] md:min-w-[11rem] font-normal">
                     <Link href={`/schools/${s.id}`} className="font-serif text-xl leading-tight hover:text-brass">{s.name}</Link>
                     <div className="text-xs text-gray-500">{s.city ?? s.country}</div>
                   </th>
@@ -110,7 +110,7 @@ export default async function ComparePage() {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.label} className="border-b border-line/60 align-top">
-                  <th className="sticky left-0 bg-ink z-10 py-3 pr-4 text-left text-sm text-gray-500 font-normal whitespace-nowrap">{r.label}</th>
+                  <th className="sticky left-0 bg-ink z-10 py-3 pr-3 text-left text-xs md:text-sm text-gray-500 font-normal md:whitespace-nowrap align-top">{r.label}</th>
                   {cols.map((c) => <td key={c.s.id} className="py-3 pr-6">{r.cell(c)}</td>)}
                 </tr>
               ))}

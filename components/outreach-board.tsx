@@ -39,7 +39,7 @@ function Row({ p }: { p: OutreachProf }) {
         <Link href={`/schools/${p.school_id}?tab=faculty`} className="text-xs text-gray-500 hover:text-brass truncate block">{p.school_name}</Link>
       </div>
 
-      <div className="flex-1 min-w-0 text-sm text-gray-500 truncate">
+      <div className="flex-1 min-w-0 text-sm text-gray-500 line-clamp-2 md:truncate">
         {p.research_areas.length > 0 ? p.research_areas.slice(0, 3).join(" · ") : <span className="text-gray-400">No research areas yet</span>}
         {p.accepting !== "unknown" && <span className={`ml-3 text-xs ${p.accepting === "yes" ? "text-teal-600" : "text-red-600"}`}>{p.accepting === "yes" ? "taking students" : "not taking students"}</span>}
         {p.last_contacted_on && <span className={`ml-3 text-xs ${stale ? "text-brass" : "text-gray-400"}`}>{daysSince(p.last_contacted_on)}d ago{stale ? " · follow up?" : ""}</span>}
