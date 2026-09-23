@@ -34,7 +34,7 @@ export default async function PeoplePage() {
         <input name="name" placeholder="Name" className="border rounded px-2 py-1 text-sm" required />
         <input name="role" placeholder="Role" className="border rounded px-2 py-1 text-sm" />
         <input name="area" placeholder="Area" className="border rounded px-2 py-1 text-sm" />
-        <button className="bg-black text-white rounded px-3 py-1 text-sm">Add person</button>
+        <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm">Add person</button>
       </form>
       <div className="grid grid-cols-2 gap-3">
         {(people ?? []).map((p) => (

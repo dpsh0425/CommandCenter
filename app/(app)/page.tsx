@@ -47,7 +47,7 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-4 gap-3">
         {tiles.map(([label, value, href]) => (
-          <Link key={label} href={href} className="border rounded p-4 hover:border-black">
+          <Link key={label} href={href} className="border rounded p-4 hover:border-brass">
             <div className={`text-2xl font-mono font-semibold ${label === "Overdue" && value > 0 ? "text-red-600" : ""}`}>{value}</div>
             <div className="text-xs text-gray-500 uppercase">{label}</div>
           </Link>
@@ -61,7 +61,7 @@ export default async function DashboardPage() {
         </div>
         <div className="flex gap-2 overflow-x-auto">
           {(dueSoonTasks ?? []).map((t) => (
-            <Link key={t.id} href={`/tasks/${t.id}`} className="border rounded p-2 text-xs flex-shrink-0 min-w-[140px] hover:border-black">
+            <Link key={t.id} href={`/tasks/${t.id}`} className="border rounded p-2 text-xs flex-shrink-0 min-w-[140px] hover:border-brass">
               <div className="font-medium">{t.title}</div>
               <div className="text-gray-500 mt-1">{t.due_date}</div>
             </Link>

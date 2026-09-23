@@ -36,7 +36,7 @@ export function FocusMode({ taskId, title }: { taskId: string; title: string }) 
   const ss = String(secondsLeft % 60).padStart(2, "0");
 
   return (
-    <div className="fixed inset-0 bg-white flex flex-col items-center justify-center gap-6 z-50">
+    <div className="fixed inset-0 bg-ink flex flex-col items-center justify-center gap-6 z-50">
       <p className="text-sm text-gray-500">Focused on</p>
       <h1 className="text-3xl font-semibold text-center max-w-md">{title}</h1>
       <div className="text-6xl font-mono">{mm}:{ss}</div>

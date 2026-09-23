@@ -86,12 +86,12 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
           placeholder="faculty@university.edu"
           className="border rounded px-2 py-1 text-sm flex-1"
         />
-        <button className="bg-black text-white rounded px-3 py-1 text-sm">Save</button>
+        <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm">Save</button>
       </form>
 
       <form action={addNoteAction} className="flex flex-col gap-2">
         <textarea name="content" placeholder="Add a note…" className="border rounded p-2 text-sm" rows={3} />
-        <button className="bg-black text-white rounded px-3 py-1 text-sm self-start">Add note</button>
+        <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm self-start">Add note</button>
       </form>
 
       <div>
@@ -131,7 +131,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
             {(people ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <input type="date" name="letter_deadline" className="border rounded px-2 py-1 text-sm" />
-          <button className="bg-black text-white rounded px-3 py-1 text-sm">Request letter</button>
+          <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm">Request letter</button>
         </form>
       </div>
 
@@ -145,7 +145,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
         <form action={addSopVersionAction} className="flex gap-2 flex-wrap">
           <input name="label" placeholder="Version label, e.g. v3 — AU variant" className="border rounded px-2 py-1 text-sm" required />
           <input name="external_link" placeholder="Link (optional)" className="border rounded px-2 py-1 text-sm" />
-          <button className="bg-black text-white rounded px-3 py-1 text-sm">Record as sent</button>
+          <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm">Record as sent</button>
         </form>
       </div>
 
@@ -165,7 +165,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
         <form action={scheduleInterviewAction} className="flex gap-2 flex-wrap items-center">
           <input type="datetime-local" name="scheduled_at" className="border rounded px-2 py-1 text-sm" required />
           <input name="prep_notes" placeholder="Prep notes (optional)" className="border rounded px-2 py-1 text-sm flex-1" />
-          <button className="bg-black text-white rounded px-3 py-1 text-sm">Schedule interview</button>
+          <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm">Schedule interview</button>
         </form>
       </div>
 

@@ -27,7 +27,7 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
   return (
     <Link
       href={href}
-      className={`block px-3 py-2 rounded text-sm ${active ? "bg-gray-100 font-medium" : "text-gray-500 hover:bg-gray-50"}`}
+      className={`block px-3 py-2 rounded text-sm ${active ? "bg-surface-raised text-cream font-medium border-l-2 border-brass" : "text-gray-500 hover:bg-gray-50"}`}
     >
       {label}
     </Link>
@@ -50,9 +50,9 @@ export function NavShell({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="flex-1 min-w-0 pb-16 md:pb-0">{children}</div>
       <CommandPalette />
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t flex justify-around py-2">
         {MOBILE.map((item) => (
-          <Link key={item.href} href={item.href} className={`text-xs px-2 ${isActive(item.href) ? "font-medium" : "text-gray-400"}`}>
+          <Link key={item.href} href={item.href} className={`text-xs px-2 ${isActive(item.href) ? "text-brass font-medium" : "text-gray-400"}`}>
             {item.label}
           </Link>
         ))}

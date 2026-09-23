@@ -1,12 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { TaskBoard } from "@/components/task-board";
+import { NewTaskForm } from "@/components/new-task-form";
 
 export default async function TasksPage() {
   const supabase = await createClient();
-  const { data: tasks } = await supabase
-    .from("tasks")
-    .select("*, schools(name), research_milestones(title), people(name)")
-    .order("due_date", { ascending: true, nullsFirst: false });
+  const [{ data: tasks }, { data: schools }, { data: milestones }, { data: people }] = await Promise.all([
+    supabase.from("tasks").select("*, schools(name), research_milestones(title), people(name)").order("due_date", { ascending: true, nullsFirst: false }),
+    supabase.from("schools").select("id, name").order("name"),
+    supabase.from("research_milestones").select("id, title").order("title"),
+    supabase.from("people").select("id, name").order("name"),
+  ]);
 
   const { data: deps } = await supabase
     .from("task_dependencies")
@@ -31,6 +34,11 @@ export default async function TasksPage() {
   return (
     <main className="p-8 max-w-6xl mx-auto flex flex-col gap-4">
       <h1 className="text-2xl font-semibold">Task board</h1>
+      <NewTaskForm
+        schools={(schools ?? []).map((s) => ({ id: s.id, label: s.name }))}
+        milestones={(milestones ?? []).map((m) => ({ id: m.id, label: m.title }))}
+        people={(people ?? []).map((p) => ({ id: p.id, label: p.name }))}
+      />
       <TaskBoard tasks={shaped} />
     </main>
   );

@@ -3,21 +3,29 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #12151c;
+  --foreground: #e9e7de;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+}
+
+h1, h2, h3 {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0.2px;
+}
+
+input, textarea, select {
+  background: #212836;
+  color: #e9e7de;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #6f7686;
 }
 
 @layer utilities {

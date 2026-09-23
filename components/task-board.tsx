@@ -22,7 +22,7 @@ export function TaskBoard({ tasks }: { tasks: Task[] }) {
             <span>{col.label}</span><span>{tasks.filter((t) => t.status === col.key).length}</span>
           </div>
           {tasks.filter((t) => t.status === col.key).map((t) => (
-            <div key={t.id} className="bg-white border rounded p-2 mb-2 text-sm">
+            <div key={t.id} className="bg-surface-raised border rounded p-2 mb-2 text-sm">
               <Link href={`/tasks/${t.id}`} className="font-medium hover:underline">{t.title}</Link>
               {t.school_name && <div className="text-xs text-teal-700 mt-1">{t.school_name}</div>}
               {t.milestone_title && <div className="text-xs text-violet-700 mt-1">{t.milestone_title}</div>}

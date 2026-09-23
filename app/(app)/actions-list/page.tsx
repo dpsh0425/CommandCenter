@@ -25,7 +25,7 @@ export default async function ActionsPage() {
       </ul>
       <form action={addActionForm} className="flex gap-2">
         <input name="text" placeholder="Add an action…" className="border rounded px-2 py-1 flex-1" />
-        <button className="bg-black text-white rounded px-3 py-1">Add</button>
+        <button className="bg-brass text-ink font-medium rounded px-3 py-1">Add</button>
       </form>
     </main>
   );

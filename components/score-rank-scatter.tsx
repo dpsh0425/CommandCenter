@@ -8,12 +8,12 @@ export function ScoreRankScatter({ schools }: { schools: Point[] }) {
   return (
     <ResponsiveContainer width="100%" height={260}>
       <ScatterChart>
-        <XAxis type="number" dataKey="csranking_nlp_rank" name="CSRankings NLP rank" fontSize={11} reversed />
-        <YAxis type="number" dataKey="composite_score" name="Composite score" fontSize={11} />
-        <Tooltip cursor={{ strokeDasharray: "3 3" }} formatter={(v, n) => [v, n]} labelFormatter={() => ""} />
+        <XAxis type="number" dataKey="csranking_nlp_rank" name="CSRankings NLP rank" fontSize={11} reversed tick={{ fill: "#8b93a3" }} stroke="#313a4a" />
+        <YAxis type="number" dataKey="composite_score" name="Composite score" fontSize={11} tick={{ fill: "#8b93a3" }} stroke="#313a4a" />
+        <Tooltip cursor={{ strokeDasharray: "3 3" }} formatter={(v, n) => [v, n]} labelFormatter={() => ""} contentStyle={{ background: "#212836", border: "1px solid #313a4a", color: "#e9e7de" }} />
         <Scatter data={data}>
           {data.map((d, i) => (
-            <Cell key={i} fill={d.verified_fit ? "#2f6f5e" : "#b5651d"} />
+            <Cell key={i} fill={d.verified_fit ? "#4f9d8a" : "#c98a3e"} />
           ))}
         </Scatter>
       </ScatterChart>

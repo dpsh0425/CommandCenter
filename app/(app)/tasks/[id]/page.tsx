@@ -46,12 +46,12 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
           <option value="">Unassigned</option>
           {(people ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
-        <button className="bg-black text-white rounded px-3 py-1 text-sm">Reassign</button>
+        <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm">Reassign</button>
       </form>
 
       <form action={noteForm} className="flex flex-col gap-2">
         <textarea name="content" placeholder="Add a note or result…" className="border rounded p-2 text-sm" rows={2} />
-        <button className="bg-black text-white rounded px-3 py-1 text-sm self-start">Add to log</button>
+        <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm self-start">Add to log</button>
       </form>
 
       <div>

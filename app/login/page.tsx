@@ -33,7 +33,7 @@ export default function LoginPage() {
         className="border rounded px-3 py-2"
       />
       {error && <p className="text-red-600 text-sm">{error}</p>}
-      <button type="submit" className="bg-black text-white rounded px-3 py-2">
+      <button type="submit" className="bg-brass text-ink font-medium rounded px-3 py-2">
         Send magic link
       </button>
     </form>
