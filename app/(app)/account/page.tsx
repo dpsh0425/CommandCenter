@@ -2,13 +2,21 @@ import { createClient } from "@/lib/supabase/server";
 import { PasswordForm } from "@/components/password-form";
 import { OWNER_USER_ID } from "@/lib/owner";
 
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
+  const { welcome } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   return (
     <main className="p-4 md:p-8 max-w-xl mx-auto flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Account</h1>
+
+      {welcome && (
+        <div className="border border-brass bg-brass-soft rounded p-4 text-sm">
+          <div className="font-medium text-cream">You're in. Set a password to finish.</div>
+          <p className="text-gray-500 mt-1">Choose a password below so you can sign in with your email any time.</p>
+        </div>
+      )}
 
       <section className="border rounded p-4 flex flex-col gap-1 text-sm">
         <div className="text-xs uppercase tracking-wide text-gray-500">Signed in as</div>

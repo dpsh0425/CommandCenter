@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-type Mode = "password" | "magic";
+type Mode = "password" | "magic" | "reset";
 
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("password");
@@ -11,6 +11,12 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("error") === "invalid_link") {
+      setError("That link is invalid or has expired. Request a new one below.");
+    }
+  }, []);
 
   function friendly(message: string, status?: number) {
     const msg = message.toLowerCase();
@@ -31,6 +37,18 @@ export default function LoginPage() {
       return;
     }
     window.location.href = "/";
+  }
+
+  async function handleReset(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setPending(true);
+    const { error } = await createClient().auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/confirm`,
+    });
+    setPending(false);
+    if (error) setError(friendly(error.message, error.status));
+    else setSent(true);
   }
 
   async function handleMagic(e: React.FormEvent) {
@@ -77,7 +95,26 @@ export default function LoginPage() {
             <button type="submit" disabled={pending} className="bg-brass text-ink font-medium rounded px-3 py-2 disabled:opacity-50">
               {pending ? "Signing in…" : "Sign in"}
             </button>
+            <button type="button" onClick={() => { setMode("reset"); setError(null); setSent(false); }} className="text-xs text-gray-500 hover:text-cream self-center">
+              Forgot password?
+            </button>
           </form>
+        ) : mode === "reset" ? (
+          sent ? (
+            <p className="text-sm">If <span className="text-brass">{email}</span> has an account, a reset link is on its way.</p>
+          ) : (
+            <form onSubmit={handleReset} className="flex flex-col gap-3">
+              <p className="text-sm text-gray-500">Enter your email and we'll send a link to choose a new password.</p>
+              <input type="email" required autoFocus autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="border rounded px-3 py-2" />
+              {error && <p className="text-red-600 text-sm">{error}</p>}
+              <button type="submit" disabled={pending} className="bg-brass text-ink font-medium rounded px-3 py-2 disabled:opacity-50">
+                {pending ? "Sending…" : "Send reset link"}
+              </button>
+              <button type="button" onClick={() => { setMode("password"); setError(null); setSent(false); }} className="text-xs text-gray-500 hover:text-cream self-center">
+                Back to sign in
+              </button>
+            </form>
+          )
         ) : sent ? (
           <p className="text-sm">Check <span className="text-brass">{email}</span> for a sign-in link.</p>
         ) : (
@@ -90,11 +127,6 @@ export default function LoginPage() {
           </form>
         )}
 
-        {process.env.NODE_ENV === "development" && (
-          <a href="/auth/dev-login" className="text-xs text-gray-500 border border-dashed border-line rounded px-3 py-2 text-center hover:border-brass">
-            Dev: sign in as owner (skips email)
-          </a>
-        )}
       </div>
     </main>
   );

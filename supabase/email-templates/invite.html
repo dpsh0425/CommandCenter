@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>You've been invited</title></head>
+<body style="margin:0;padding:0;background:#12151c">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#12151c">Accept your invitation and set a password.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#12151c"><tr><td align="center" style="padding:40px 16px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px">
+    <tr><td style="padding:0 4px 20px">
+      <span style="font:italic 26px Georgia,'Times New Roman',serif;color:#e9e7de">Command Center</span>
+      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#c98a3e;margin-left:6px;vertical-align:middle"></span>
+    </td></tr>
+    <tr><td style="background:#1a1f29;border:1px solid #313a4a;border-radius:12px;padding:36px 32px">
+      <p style="margin:0 0 10px;font:11px 'Courier New',monospace;letter-spacing:.2em;text-transform:uppercase;color:#c98a3e">Welcome aboard</p>
+      <h1 style="margin:0 0 16px;font:normal 28px/1.25 Georgia,'Times New Roman',serif;color:#e9e7de">You've been invited</h1>
+      <div style="font:15px/1.7 'Helvetica Neue',Arial,sans-serif;color:#9aa2b1"><p style="margin:0 0 12px">You now have access to <strong style="color:#e9e7de">Command Center</strong>, where you'll see the tasks assigned to you and can log progress, notes and focus sessions.</p>
+             <p style="margin:0">Accept the invitation to get started. You'll be asked to choose a password so you can sign in any time.</p></div>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 8px"><tr><td style="background:#c98a3e;border-radius:6px">
+         <a href="{{ if .RedirectTo }}{{ .RedirectTo }}{{ else }}{{ .SiteURL }}/auth/confirm{{ end }}?token_hash={{ .TokenHash }}&type=invite" style="display:inline-block;padding:13px 26px;font:600 15px 'Helvetica Neue',Arial,sans-serif;color:#12151c;text-decoration:none">Accept invitation</a>
+       </td></tr></table>
+       <p style="margin:12px 0 0;font:12px/1.6 'Helvetica Neue',Arial,sans-serif;color:#6f7686">Button not working? Paste this link into your browser:<br>
+         <a href="{{ if .RedirectTo }}{{ .RedirectTo }}{{ else }}{{ .SiteURL }}/auth/confirm{{ end }}?token_hash={{ .TokenHash }}&type=invite" style="color:#c98a3e;word-break:break-all">{{ if .RedirectTo }}{{ .RedirectTo }}{{ else }}{{ .SiteURL }}/auth/confirm{{ end }}?token_hash={{ .TokenHash }}&type=invite</a></p>
+      <hr style="border:0;border-top:1px solid #313a4a;margin:28px 0 16px"><p style="margin:0;font:12px/1.6 'Helvetica Neue',Arial,sans-serif;color:#6f7686">This invitation link is single-use and expires soon. If you didn't expect this email, you can safely ignore it &mdash; nothing will change.</p>
+    </td></tr>
+    <tr><td style="padding:20px 4px 0;font:12px/1.6 'Helvetica Neue',Arial,sans-serif;color:#6f7686">
+      Your grad-school application workspace &middot; sent by KACOF<br>
+      This is an automated message, please don't reply.
+    </td></tr>
+  </table>
+</td></tr></table></body></html>

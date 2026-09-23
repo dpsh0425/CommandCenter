@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 
 export async function addPerson(data: { name: string; role?: string; area?: string; color?: string }) {
   const supabase = await createClient();
@@ -31,7 +32,11 @@ export async function invitePerson(personId: string, email: string) {
   if (!user || user.id !== OWNER_USER_ID) throw new Error("only the owner can send invites");
 
   const admin = createAdminClient();
-  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email);
+  const h = await headers();
+  const origin = h.get("origin") ?? `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
+  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${origin}/auth/confirm`,
+  });
   if (inviteError) throw new Error(inviteError.message);
 
   const { error } = await supabase.from("people").update({ auth_user_id: invited.user.id }).eq("id", personId);
