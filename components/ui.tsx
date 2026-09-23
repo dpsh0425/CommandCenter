@@ -87,6 +87,10 @@ export const SCHOOL_TABS = [
   { href: "/schools", label: "All schools" },
   { href: "/compare", label: "Compare" },
 ];
+export const MATERIALS_TABS = [
+  { href: "/materials", label: "Documents" },
+  { href: "/materials/resume", label: "Resume builder" },
+];
 export const RESEARCH_TABS = [
   { href: "/research", label: "Milestones" },
   { href: "/links", label: "Library" },
