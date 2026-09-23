@@ -3,8 +3,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { globalSearch } from "@/app/(app)/search-actions";
 
-export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+export function CommandPalette({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Awaited<ReturnType<typeof globalSearch>>>({ schools: [], tasks: [], people: [], milestones: [] });
   const [, startTransition] = useTransition();
@@ -12,15 +11,15 @@ export function CommandPalette() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setOpen((o) => !o);
+        setOpen(!open);
       }
       if (e.key === "Escape") setOpen(false);
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [open, setOpen]);
 
   useEffect(() => {
     if (!open) return;
@@ -38,6 +37,7 @@ export function CommandPalette() {
   const groups: Array<[string, typeof results.schools]> = [
     ["Schools", results.schools], ["Tasks", results.tasks], ["People", results.people], ["Research", results.milestones],
   ];
+  const hasAnyResults = groups.some(([, items]) => items.length > 0);
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-start justify-center pt-24 z-50" onClick={() => setOpen(false)}>
@@ -49,6 +49,9 @@ export function CommandPalette() {
           placeholder="Search schools, tasks, people, research…"
           className="w-full border-b pb-2 mb-2 outline-none text-sm"
         />
+        {query.trim() && !hasAnyResults && (
+          <p className="text-sm text-gray-500 px-1 py-2">No matches for "{query}".</p>
+        )}
         {groups.map(([label, items]) => items.length > 0 && (
           <div key={label} className="mb-2">
             <div className="text-xs uppercase text-gray-400 px-1">{label}</div>
