@@ -22,7 +22,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
     supabase.from("visa_steps").select("*").eq("school_id", id).order("created_at"),
   ]);
 
-  if (!school) return <p className="p-8">Not found.</p>;
+  if (!school) return <p className="p-4 md:p-8">Not found.</p>;
   const isOwner = user?.id === OWNER_USER_ID;
 
   async function addNoteAction(formData: FormData) {
@@ -78,7 +78,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
   const meta = school as any;
 
   return (
-    <main className="p-8 max-w-5xl mx-auto flex flex-col gap-6">
+    <main className="p-4 md:p-8 max-w-5xl mx-auto flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <Link href="/schools" className="text-xs text-gray-500 hover:text-cream self-start">← All schools</Link>
         <div className="flex items-start justify-between gap-4 flex-wrap">

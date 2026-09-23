@@ -37,7 +37,7 @@ export default async function TodayPage() {
   ];
 
   return (
-    <main className="p-8 max-w-xl mx-auto flex flex-col gap-5">
+    <main className="p-4 md:p-8 max-w-xl mx-auto flex flex-col gap-5">
       <div>
         <h1 className="text-2xl font-semibold">Today</h1>
         <p className="text-sm text-gray-500">

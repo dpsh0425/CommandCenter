@@ -7,9 +7,9 @@ export default async function MilestoneDetailPage({ params }: { params: Promise<
     supabase.from("research_milestones").select("*").eq("id", id).single(),
     supabase.from("tasks").select("*").eq("research_milestone_id", id),
   ]);
-  if (!milestone) return <p className="p-8">Not found.</p>;
+  if (!milestone) return <p className="p-4 md:p-8">Not found.</p>;
   return (
-    <main className="p-8 max-w-2xl mx-auto flex flex-col gap-4">
+    <main className="p-4 md:p-8 max-w-2xl mx-auto flex flex-col gap-4">
       <h1 className="text-2xl font-semibold">{milestone.title}</h1>
       <p className="text-gray-600">{milestone.description}</p>
       <div>

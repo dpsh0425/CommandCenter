@@ -35,7 +35,7 @@ export default async function TasksPage() {
   }));
 
   return (
-    <main className="p-8 max-w-6xl mx-auto flex flex-col gap-4">
+    <main className="p-4 md:p-8 max-w-6xl mx-auto flex flex-col gap-4">
       <h1 className="text-2xl font-semibold">Task board</h1>
       {isOwner && (
         <NewTaskForm

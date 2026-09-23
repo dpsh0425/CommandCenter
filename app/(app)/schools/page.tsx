@@ -32,12 +32,12 @@ export default async function SchoolsPage({ searchParams }: { searchParams: Prom
   }
   const { data: schools, error } = await query;
 
-  if (error) return <p className="p-8 text-red-600">Error loading schools: {error.message}</p>;
+  if (error) return <p className="p-4 md:p-8 text-red-600">Error loading schools: {error.message}</p>;
 
   const filtered = Boolean(country || status || q || verified);
 
   return (
-    <main className="p-8 max-w-5xl mx-auto flex flex-col gap-4">
+    <main className="p-4 md:p-8 max-w-5xl mx-auto flex flex-col gap-4">
       <div className="flex items-baseline justify-between">
         <h1 className="text-2xl font-semibold">Target schools</h1>
         <span className="text-sm text-gray-500">

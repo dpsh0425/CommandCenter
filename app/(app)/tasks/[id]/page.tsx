@@ -13,7 +13,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
     supabase.from("people").select("id, name"),
     supabase.from("task_dependencies").select("depends_on_task_id, tasks!task_dependencies_depends_on_task_id_fkey(id, title, status)").eq("task_id", id),
   ]);
-  if (!task) return <p className="p-8">Not found.</p>;
+  if (!task) return <p className="p-4 md:p-8">Not found.</p>;
   const isOwner = user?.id === OWNER_USER_ID;
 
   async function reassignForm(formData: FormData) {
@@ -28,7 +28,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
   }
 
   return (
-    <main className="p-8 max-w-2xl mx-auto flex flex-col gap-4">
+    <main className="p-4 md:p-8 max-w-2xl mx-auto flex flex-col gap-4">
       <h1 className="text-2xl font-semibold">{task.title}</h1>
       <p className="text-gray-600">{task.description}</p>
       {(task as any).schools && <p className="text-sm text-teal-700">Linked to {(task as any).schools.name}</p>}

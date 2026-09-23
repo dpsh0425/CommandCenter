@@ -11,7 +11,9 @@ export default async function DashboardPage() {
   const counts: Record<string, number> = {};
   for (const s of list) counts[s.status] = (counts[s.status] ?? 0) + 1;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const localDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const today = localDate(new Date());
   const { data: openTasks } = await supabase.from("tasks").select("id").not("status", "in", "(done,cancelled)");
   const { data: overdueTasks } = await supabase.from("tasks").select("id").lt("due_date", today).not("status", "in", "(done,cancelled)");
 
@@ -25,7 +27,7 @@ export default async function DashboardPage() {
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() + 14);
-  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  const cutoffStr = localDate(cutoff);
   const { data: dueSoonTasks } = await supabase
     .from("tasks")
     .select("id, title, due_date")
@@ -42,10 +44,10 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <main className="p-8 max-w-5xl mx-auto flex flex-col gap-8">
+    <main className="p-4 md:p-8 max-w-5xl mx-auto flex flex-col gap-8">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {tiles.map(([label, value, href]) => (
           <Link key={label} href={href} className="border rounded p-4 hover:border-brass">
             <div className={`text-2xl font-mono font-semibold ${label === "Overdue" && value > 0 ? "text-red-600" : ""}`}>{value}</div>

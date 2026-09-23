@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CommandPalette } from "./command-palette";
@@ -19,10 +19,16 @@ const WORK = [
 ];
 const MOBILE = [
   { href: "/", label: "Home" },
+  { href: "/today", label: "Today" },
   { href: "/schools", label: "Schools" },
   { href: "/tasks", label: "Tasks" },
+];
+const MORE = [
+  { href: "/timeline", label: "Timeline" },
+  { href: "/wins", label: "Wins" },
   { href: "/research", label: "Research" },
   { href: "/people", label: "People" },
+  { href: "/account", label: "Account" },
 ];
 
 function NavHeading({ children }: { children: React.ReactNode }) {
@@ -51,6 +57,9 @@ export function NavShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  useEffect(() => setMoreOpen(false), [pathname]);
 
   return (
     <div className="flex min-h-screen">
@@ -84,14 +93,55 @@ export function NavShell({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="flex-1 min-w-0 pb-16 md:pb-0">{children}</div>
       <CommandPalette open={paletteOpen} setOpen={setPaletteOpen} />
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t flex justify-around items-center py-2">
+      {moreOpen && (
+        <div className="md:hidden fixed inset-0 z-40" onClick={() => setMoreOpen(false)}>
+          <div
+            className="absolute bottom-14 left-3 right-3 bg-surface-raised border border-line rounded-lg p-2 flex flex-col shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => { setMoreOpen(false); setPaletteOpen(true); }}
+              className="text-left px-3 py-3 rounded text-sm text-gray-500 border border-line mb-1"
+            >
+              Search or jump to…
+            </button>
+            {MORE.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`px-3 py-3 rounded text-sm ${isActive(item.href) ? "text-brass font-medium" : "text-cream"}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+            <button
+              onClick={async () => {
+                await createClient().auth.signOut();
+                window.location.href = "/login";
+              }}
+              className="text-left px-3 py-3 rounded text-sm text-gray-500 border-t border-line mt-1"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-line flex justify-around items-stretch">
         {MOBILE.map((item) => (
-          <Link key={item.href} href={item.href} className={`text-xs px-2 ${isActive(item.href) ? "text-brass font-medium" : "text-gray-400"}`}>
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`flex-1 text-center text-xs py-3.5 ${isActive(item.href) ? "text-brass font-medium" : "text-gray-400"}`}
+          >
             {item.label}
           </Link>
         ))}
-        <button onClick={() => setPaletteOpen(true)} className="text-xs px-2 text-gray-400" aria-label="Search">
-          Search
+        <button
+          onClick={() => setMoreOpen((o) => !o)}
+          aria-expanded={moreOpen}
+          className={`flex-1 text-center text-xs py-3.5 ${moreOpen || MORE.some((m) => isActive(m.href)) ? "text-brass font-medium" : "text-gray-400"}`}
+        >
+          More
         </button>
       </nav>
     </div>

@@ -1,4 +1,7 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+
+type Win = { label: string; content: string; when: string; href: string; kind: "school" | "task" };
 
 export default async function WinsPage() {
   const supabase = await createClient();
@@ -7,21 +10,53 @@ export default async function WinsPage() {
     supabase.from("task_updates").select("*, tasks(title)").eq("is_win", true).order("created_at", { ascending: false }),
   ]);
 
-  const items = [
-    ...(activity ?? []).map((a: any) => ({ label: a.schools?.name ?? "School", content: a.content, when: a.created_at })),
-    ...(taskUpdates ?? []).map((u: any) => ({ label: u.tasks?.title ?? "Task", content: u.content, when: u.created_at })),
+  const items: Win[] = [
+    ...(activity ?? []).map((a: any) => ({
+      label: a.schools?.name ?? "School", content: a.content, when: a.created_at,
+      href: a.school_id ? `/schools/${a.school_id}` : "/schools", kind: "school" as const,
+    })),
+    ...(taskUpdates ?? []).map((u: any) => ({
+      label: u.tasks?.title ?? "Task", content: u.content, when: u.created_at,
+      href: u.task_id ? `/tasks/${u.task_id}` : "/tasks", kind: "task" as const,
+    })),
   ].sort((a, b) => b.when.localeCompare(a.when));
 
+  const byMonth = new Map<string, Win[]>();
+  for (const w of items) {
+    const key = w.when.slice(0, 7);
+    byMonth.set(key, [...(byMonth.get(key) ?? []), w]);
+  }
+
   return (
-    <main className="p-8 max-w-xl mx-auto flex flex-col gap-3">
-      <h1 className="text-2xl font-semibold">Wins</h1>
-      <p className="text-sm text-gray-500">Replies, advances, and results only — the good-news feed.</p>
-      {items.length === 0 && <p className="text-sm text-gray-500">Nothing yet — it's early.</p>}
-      {items.map((item, i) => (
-        <div key={i} className="border rounded p-3 text-sm">
-          <div className="text-xs text-gray-500">{item.label} · {new Date(item.when).toLocaleDateString()}</div>
-          <p className="mt-1">{item.content}</p>
+    <main className="p-4 md:p-8 max-w-xl mx-auto flex flex-col gap-5">
+      <div className="flex items-baseline justify-between">
+        <h1 className="text-2xl font-semibold">Wins</h1>
+        <span className="font-mono text-sm text-brass">{items.length} total</span>
+      </div>
+      <p className="text-sm text-gray-500 -mt-3">Replies, advances, and finished results — the good-news feed.</p>
+
+      {items.length === 0 && (
+        <div className="border border-dashed border-line rounded p-6 text-center text-sm text-gray-500">
+          Nothing yet — it's early. A win is logged when a school moves to replied, submitted, interview or accepted, or when you mark a task result.
         </div>
+      )}
+
+      {Array.from(byMonth.entries()).map(([key, wins]) => (
+        <section key={key} className="flex flex-col gap-2">
+          <h2 className="text-xs uppercase tracking-wide text-gray-500 flex justify-between">
+            <span>{new Date(key + "-01T00:00:00").toLocaleDateString(undefined, { month: "long", year: "numeric" })}</span>
+            <span className="font-mono">{wins.length}</span>
+          </h2>
+          {wins.map((w, i) => (
+            <Link key={i} href={w.href} className="border border-l-4 border-l-brass rounded p-3 text-sm hover:border-brass">
+              <div className="text-xs text-gray-500 flex justify-between gap-2">
+                <span>{w.label}</span>
+                <span className="whitespace-nowrap">{new Date(w.when).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+              </div>
+              <p className="mt-1">{w.content}</p>
+            </Link>
+          ))}
+        </section>
       ))}
     </main>
   );

@@ -31,7 +31,7 @@ export default async function PeoplePage() {
   }
 
   return (
-    <main className="p-8 max-w-3xl mx-auto flex flex-col gap-4">
+    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-4">
       <h1 className="text-2xl font-semibold">People</h1>
       {canInvite && (
         <form action={addPersonForm} className="flex gap-2 flex-wrap border rounded p-3">

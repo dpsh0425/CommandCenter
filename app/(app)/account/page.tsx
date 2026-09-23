@@ -7,7 +7,7 @@ export default async function AccountPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   return (
-    <main className="p-8 max-w-xl mx-auto flex flex-col gap-6">
+    <main className="p-4 md:p-8 max-w-xl mx-auto flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Account</h1>
 
       <section className="border rounded p-4 flex flex-col gap-1 text-sm">

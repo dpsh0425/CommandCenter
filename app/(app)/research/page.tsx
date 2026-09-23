@@ -21,7 +21,7 @@ export default async function ResearchPage() {
   }
 
   return (
-    <main className="p-8 max-w-2xl mx-auto flex flex-col gap-3">
+    <main className="p-4 md:p-8 max-w-2xl mx-auto flex flex-col gap-3">
       <h1 className="text-2xl font-semibold">The Broken Ruler</h1>
       <p className="text-sm text-gray-500">Nepali benchmark measurement-error study — Week 1 foundation milestones.</p>
       {(milestones ?? []).map((m) => (
