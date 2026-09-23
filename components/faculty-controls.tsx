@@ -279,7 +279,7 @@ export function ProfessorCard({ schoolId, prof, departments }: { schoolId: strin
         {prof.homepage_url && <a href={prof.homepage_url} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brass">Homepage</a>}
         {prof.scholar_url && <a href={prof.scholar_url} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brass">Papers</a>}
         {prof.email && <a href={`mailto:${prof.email}`} className="text-gray-500 hover:text-brass">Email</a>}
-        <span className="ml-auto flex gap-3 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <span className="ml-auto flex gap-3 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
           <button onClick={() => setEditing(true)} className="text-gray-500 hover:text-cream">Edit</button>
           <button
             disabled={pending}
@@ -426,7 +426,7 @@ export function FundingCard({ schoolId, funding, scopeLabel, departments, profes
         </select>
         {funding.deadline_date && <span className={d! < 0 ? "text-red-600" : "text-gray-500"}>deadline {funding.deadline_date} ({whenLabel(d!)})</span>}
         {funding.url && <a href={funding.url} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brass">Details ↗</a>}
-        <span className="ml-auto flex gap-3 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <span className="ml-auto flex gap-3 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
           <button onClick={() => setEditing(true)} className="text-gray-500 hover:text-cream">Edit</button>
           <button
             disabled={pending}

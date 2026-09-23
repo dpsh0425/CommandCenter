@@ -41,16 +41,16 @@ function LinkCard({ link }: { link: LinkRow }) {
   const canRefresh = link.kind === "github" || link.kind === "paper";
 
   return (
-    <li className={`border rounded-lg p-3 flex flex-col gap-1.5 ${link.pinned ? "border-brass bg-brass-soft" : "border-line bg-surface-raised"} ${pending ? "opacity-60" : ""}`}>
+    <li className={`group py-3.5 border-b border-line/60 last:border-0 flex flex-col gap-1.5 ${pending ? "opacity-60" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-[10px] uppercase tracking-wide border rounded px-1.5 py-0.5 ${KIND_TONE[link.kind]}`}>{kindLabel(link.kind)}</span>
+          <div className="flex items-baseline gap-2">
+            {link.pinned && <span className="text-brass text-sm" title="Pinned">★</span>}
             <a href={link.url} target="_blank" rel="noopener noreferrer" className="font-medium hover:text-brass break-words">{link.title} <span aria-hidden className="text-gray-400">↗</span></a>
           </div>
-          <div className="text-xs text-gray-400 truncate">{hostOf(link.url)}{link.scopeLabel && <span className="text-brass"> · {link.scopeLabel}</span>}</div>
+          <div className="text-xs text-gray-400 truncate">{hostOf(link.url)} · {kindLabel(link.kind)}{link.scopeLabel && <span className="text-brass"> · {link.scopeLabel}</span>}</div>
         </div>
-        <div className="flex gap-3 text-xs text-gray-500 flex-shrink-0">
+        <div className="flex gap-3 text-xs text-gray-500 flex-shrink-0 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
           <button onClick={() => run(() => togglePinLink(link.id, !link.pinned, scope))} className={link.pinned ? "text-brass" : "hover:text-cream"} title={link.pinned ? "Unpin" : "Pin to top"}>{link.pinned ? "★" : "☆"}</button>
           {canRefresh && <button onClick={() => run(() => refreshLink(link.id, scope))} className="hover:text-cream" title="Refresh details">↻</button>}
           <button onClick={() => setEditing((v) => !v)} className="hover:text-cream">Edit</button>
@@ -70,9 +70,7 @@ function LinkCard({ link }: { link: LinkRow }) {
             {m.license && <span>{m.license}</span>}
             {m.archived && <span className="text-red-600">archived</span>}
           </div>
-          {Array.isArray(m.topics) && m.topics.length > 0 && (
-            <div className="flex flex-wrap gap-1">{m.topics.map((t: string) => <span key={t} className="text-[11px] rounded bg-brass-soft text-brass px-1.5 py-0.5">{t}</span>)}</div>
-          )}
+          {Array.isArray(m.topics) && m.topics.length > 0 && <p className="text-xs text-brass">{m.topics.join(" · ")}</p>}
         </div>
       )}
       {m.unavailable && <p className="text-xs text-gray-400 italic">Repository details unavailable: {String(m.unavailable)}.</p>}

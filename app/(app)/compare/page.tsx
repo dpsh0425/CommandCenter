@@ -13,7 +13,7 @@ const GRE: Record<string, string> = { required: "Required", optional: "Optional"
 const TIER_TONE: Record<string, string> = { reach: "text-red-600", target: "text-brass", safe: "text-teal-600" };
 const FUND_RANK: Record<string, number> = { awarded: 0, applied: 1, eligible: 2, to_research: 3, not_eligible: 4 };
 
-const Unknown = () => <span className="text-gray-400 italic text-xs">unknown</span>;
+const Unknown = () => <span className="text-gray-400 text-sm">Unknown</span>;
 
 export default async function ComparePage() {
   const supabase = await createClient();
@@ -43,7 +43,6 @@ export default async function ComparePage() {
   const rows: Array<{ label: string; cell: (c: (typeof cols)[number]) => React.ReactNode }> = [
     { label: "Fit score", cell: ({ s }) => (s.composite_score != null ? <span className="font-mono">{Number(s.composite_score).toFixed(1)} <span className="text-gray-400 text-xs">rank #{s.csranking_nlp_rank ?? "?"}</span></span> : <Unknown />) },
     { label: "Your call", cell: ({ s }) => (s.tier ? <span className={`uppercase text-xs font-medium ${TIER_TONE[s.tier]}`}>{s.tier}</span> : <Unknown />) },
-    { label: "Location", cell: ({ s }) => s.city ?? <span className="text-xs">{s.country}</span> },
     {
       label: "Deadline",
       cell: ({ s }) => {
@@ -51,7 +50,7 @@ export default async function ComparePage() {
         const d = daysUntil(s.deadline_date, today);
         return (
           <div>
-            <div className="font-mono">{s.deadline_date}</div>
+            <div className="font-serif text-xl leading-tight">{new Date(s.deadline_date + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}</div>
             <div className={`text-xs ${d < 0 ? "text-red-600" : d <= 45 ? "text-brass" : "text-gray-500"}`}>{d < 0 ? `${-d}d ago` : d === 0 ? "today" : `in ${d} days`}</div>
           </div>
         );
@@ -61,7 +60,6 @@ export default async function ComparePage() {
     { label: "GRE", cell: ({ s }) => (s.gre_policy ? GRE[s.gre_policy] : <Unknown />) },
     { label: "English test", cell: ({ s }) => (s.english_test ? <span className="text-xs text-gray-500 line-clamp-4" title={s.english_test}>{s.english_test}</span> : <Unknown />) },
     { label: "Letters", cell: ({ s }) => (s.letters_required != null ? s.letters_required : <Unknown />) },
-    { label: "Program length", cell: ({ s }) => s.program_length ?? <Unknown /> },
     { label: "Funding", cell: ({ s, funds }) => {
         const best = [...funds].sort((a, b) => FUND_RANK[a.status] - FUND_RANK[b.status])[0];
         if (!s.funding_guarantee && !best) return <Unknown />;
@@ -72,15 +70,11 @@ export default async function ComparePage() {
           </div>
         );
       } },
-    { label: "Acceptance", cell: ({ s }) => (s.acceptance_note ? <span className="text-xs text-gray-500 line-clamp-4" title={s.acceptance_note}>{s.acceptance_note}</span> : <Unknown />) },
     { label: "Faculty", cell: ({ profs }) => profs.length === 0 ? <Unknown /> : (
         <div className="text-xs">
           <div>{profs.length} professor{profs.length === 1 ? "" : "s"}</div>
           <div className="text-gray-500">{profs.filter((p) => p.accepting === "yes").length} taking · {profs.filter((p) => p.accepting === "no").length} not taking · {profs.filter((p) => p.accepting === "unknown").length} unknown</div>
         </div>
-      ) },
-    { label: "Outreach", cell: ({ profs }) => profs.length === 0 ? <Unknown /> : (
-        <span className="text-xs text-gray-500">{profs.filter((p) => p.outreach !== "not_contacted").length} contacted · {profs.filter((p) => p.outreach === "replied" || p.outreach === "meeting").length} replied</span>
       ) },
     { label: "Researched", cell: ({ completeness }) => (
         <span className="flex items-center gap-2">
@@ -91,35 +85,33 @@ export default async function ComparePage() {
   ];
 
   return (
-    <main className="p-4 md:p-8 max-w-6xl mx-auto flex flex-col gap-4">
+    <main className="p-4 md:p-8 max-w-6xl mx-auto flex flex-col gap-8">
       <div className="flex flex-col gap-4">
         <PageHeader title="Compare" subtitle="Researched schools side by side, soonest deadline first. Gaps say “unknown”." />
         <SubNav items={SCHOOL_TABS} current="/compare" />
       </div>
 
       {cols.length === 0 ? (
-        <div className="border border-dashed border-line rounded-lg p-8 text-center text-sm text-gray-500">
-          No schools researched yet. Open a school and fill in its Admissions tab, and it will appear here.
-        </div>
+        <p className="text-sm text-gray-500">No schools researched yet. Fill in a school's Admissions tab and it appears here.</p>
       ) : (
-        <div className="overflow-x-auto border border-line rounded-lg bg-surface">
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
           <table className="w-full text-sm border-collapse min-w-[720px]">
             <thead>
               <tr className="border-b border-line">
-                <th className="sticky left-0 bg-surface z-10 w-32 p-3 text-left text-xs uppercase tracking-wide text-gray-500 font-normal" />
+                <th className="sticky left-0 bg-ink z-10 w-28" />
                 {cols.map(({ s }) => (
-                  <th key={s.id} className="p-3 text-left align-bottom min-w-[10rem]">
-                    <Link href={`/schools/${s.id}`} className="font-serif text-lg leading-tight hover:text-brass">{s.name}</Link>
-                    <div className="text-xs text-gray-500 font-normal">{s.country}</div>
+                  <th key={s.id} className="py-3 pr-6 text-left align-bottom min-w-[11rem] font-normal">
+                    <Link href={`/schools/${s.id}`} className="font-serif text-xl leading-tight hover:text-brass">{s.name}</Link>
+                    <div className="text-xs text-gray-500">{s.city ?? s.country}</div>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.label} className="border-b border-line last:border-0 align-top">
-                  <th className="sticky left-0 bg-surface z-10 p-3 text-left text-xs uppercase tracking-wide text-gray-500 font-normal whitespace-nowrap">{r.label}</th>
-                  {cols.map((c) => <td key={c.s.id} className="p-3">{r.cell(c)}</td>)}
+                <tr key={r.label} className="border-b border-line/60 align-top">
+                  <th className="sticky left-0 bg-ink z-10 py-3 pr-4 text-left text-sm text-gray-500 font-normal whitespace-nowrap">{r.label}</th>
+                  {cols.map((c) => <td key={c.s.id} className="py-3 pr-6">{r.cell(c)}</td>)}
                 </tr>
               ))}
             </tbody>
