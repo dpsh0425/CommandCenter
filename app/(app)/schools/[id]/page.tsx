@@ -2,18 +2,21 @@ import { createClient } from "@/lib/supabase/server";
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { addNote, updateContactEmail } from "./actions";
 import { addLetterRequest, updateLetterStatus, createSopVersion, setSchoolSopVersion } from "./logistics-actions";
+import { scheduleInterview, updateVisaStep } from "./interview-actions";
 import Link from "next/link";
 
 export default async function SchoolDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: school }, { data: activity }, { data: linkedTasks }, { data: letters }, { data: people }, { data: sopVersion }] = await Promise.all([
+  const [{ data: school }, { data: activity }, { data: linkedTasks }, { data: letters }, { data: people }, { data: sopVersion }, { data: interviews }, { data: visaSteps }] = await Promise.all([
     supabase.from("schools").select("*").eq("id", id).single(),
     supabase.from("activity_log").select("*").eq("school_id", id).order("occurred_at", { ascending: false }),
     supabase.from("tasks").select("id, title, status").eq("school_id", id),
     supabase.from("letter_requests").select("*, people(name)").eq("school_id", id),
     supabase.from("people").select("id, name"),
     supabase.from("schools").select("sop_version_id, sop_sent_at, sop_versions(label)").eq("id", id).single(),
+    supabase.from("interviews").select("*").eq("school_id", id).order("scheduled_at"),
+    supabase.from("visa_steps").select("*").eq("school_id", id).order("created_at"),
   ]);
 
   if (!school) return <p className="p-8">Not found.</p>;
@@ -52,6 +55,20 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
     if (!label) return;
     const sopId = await createSopVersion(label, description || undefined, link || undefined);
     await setSchoolSopVersion(id, sopId);
+  }
+
+  async function scheduleInterviewAction(formData: FormData) {
+    "use server";
+    const scheduledAt = String(formData.get("scheduled_at") ?? "").trim();
+    const prepNotes = String(formData.get("prep_notes") ?? "").trim();
+    if (scheduledAt) await scheduleInterview(id, scheduledAt, prepNotes || undefined);
+  }
+
+  async function updateVisaStepAction(formData: FormData) {
+    "use server";
+    const stepId = String(formData.get("step_id") ?? "");
+    const status = String(formData.get("status") ?? "not_started") as any;
+    if (stepId) await updateVisaStep(stepId, id, status);
   }
 
   return (
@@ -131,6 +148,48 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
           <button className="bg-black text-white rounded px-3 py-1 text-sm">Record as sent</button>
         </form>
       </div>
+
+      <div>
+        <h2 className="font-medium mb-2">Interviews</h2>
+        <ul className="flex flex-col gap-2 mb-2">
+          {(interviews ?? []).map((iv) => (
+            <li key={iv.id} className="border rounded p-2 text-sm">
+              <div className="flex justify-between">
+                <span>{new Date(iv.scheduled_at).toLocaleString()}</span>
+                <span className="text-xs uppercase text-gray-500">{iv.status.replace("_", " ")}</span>
+              </div>
+              {iv.prep_notes && <p className="text-gray-500 mt-1">{iv.prep_notes}</p>}
+            </li>
+          ))}
+        </ul>
+        <form action={scheduleInterviewAction} className="flex gap-2 flex-wrap items-center">
+          <input type="datetime-local" name="scheduled_at" className="border rounded px-2 py-1 text-sm" required />
+          <input name="prep_notes" placeholder="Prep notes (optional)" className="border rounded px-2 py-1 text-sm flex-1" />
+          <button className="bg-black text-white rounded px-3 py-1 text-sm">Schedule interview</button>
+        </form>
+      </div>
+
+      {visaSteps && visaSteps.length > 0 && (
+        <div>
+          <h2 className="font-medium mb-2">Visa checklist <span className="text-xs text-gray-400 font-normal">— auto-created on acceptance</span></h2>
+          <ul className="flex flex-col gap-2">
+            {visaSteps.map((v) => (
+              <li key={v.id} className="border rounded p-2 text-sm flex justify-between items-center">
+                <span>{v.step_name}</span>
+                <form action={updateVisaStepAction} className="flex items-center gap-1">
+                  <input type="hidden" name="step_id" value={v.id} />
+                  <select name="status" defaultValue={v.status} className="border rounded text-xs px-1 py-0.5">
+                    <option value="not_started">not started</option>
+                    <option value="in_progress">in progress</option>
+                    <option value="done">done</option>
+                  </select>
+                  <button className="text-xs border rounded px-2 py-0.5">Update</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div>
         <h2 className="font-medium mb-2">Activity</h2>

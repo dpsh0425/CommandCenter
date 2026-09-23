@@ -36,6 +36,16 @@ export async function updateSchoolStatus(id: string, status: SchoolStatus) {
     });
   }
 
+  if (status === "accepted") {
+    const { data: existing } = await supabase.from("visa_steps").select("id").eq("school_id", id).limit(1);
+    if (!existing?.length) {
+      const defaultSteps = ["I-20 or equivalent received", "Financial documents submitted", "Visa appointment scheduled", "Visa approved"];
+      await supabase.from("visa_steps").insert(
+        defaultSteps.map((step_name) => ({ owner_id: user.id, school_id: id, step_name }))
+      );
+    }
+  }
+
   revalidatePath("/schools");
   revalidatePath(`/schools/${id}`);
   revalidatePath("/tasks");
