@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 const PRIMARY = [
   { href: "/", label: "Dashboard" },
   { href: "/today", label: "Today" },
+  { href: "/week", label: "This week" },
   { href: "/timeline", label: "Timeline" },
   { href: "/wins", label: "Wins" },
 ];
@@ -28,6 +29,7 @@ const MOBILE = [
   { href: "/tasks", label: "Tasks" },
 ];
 const MORE = [
+  { href: "/week", label: "This week" },
   { href: "/compare", label: "Compare schools" },
   { href: "/outreach", label: "Outreach" },
   { href: "/timeline", label: "Timeline" },
