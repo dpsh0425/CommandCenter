@@ -21,6 +21,20 @@ export async function updateSchoolStatus(id: string, status: SchoolStatus) {
     content: `Status changed to ${status.replace("_", " ")}`,
   });
 
+  if (status === "replied") {
+    const { data: school } = await supabase.from("schools").select("name").eq("id", id).single();
+    const due = new Date();
+    due.setDate(due.getDate() + 3);
+    await supabase.from("tasks").insert({
+      owner_id: user.id,
+      title: `Follow up with ${school?.name ?? "school"}`,
+      school_id: id,
+      priority: "medium",
+      due_date: due.toISOString().slice(0, 10),
+    });
+  }
+
   revalidatePath("/schools");
   revalidatePath(`/schools/${id}`);
+  revalidatePath("/tasks");
 }
