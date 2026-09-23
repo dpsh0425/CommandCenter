@@ -14,11 +14,13 @@ export async function updateSchoolStatus(id: string, status: SchoolStatus) {
   const { error } = await supabase.from("schools").update({ status }).eq("id", id);
   if (error) throw new Error(error.message);
 
+  const POSITIVE_STATUSES: SchoolStatus[] = ["replied", "submitted", "interview", "accepted"];
   await supabase.from("activity_log").insert({
     owner_id: user.id,
     school_id: id,
     type: "status_change",
     content: `Status changed to ${status.replace("_", " ")}`,
+    is_win: POSITIVE_STATUSES.includes(status),
   });
 
   if (status === "replied") {
