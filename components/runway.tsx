@@ -70,7 +70,8 @@ export function Runway({ deadlines, today }: { deadlines: RunwayDeadline[]; toda
         const anchor = c.pct > 88 ? "right-[-8px] text-right" : c.pct < 10 ? "left-[-6px] text-left" : "left-0 -translate-x-1/2 text-center";
         const color = urgency(c.days);
         const first = c.items[0];
-        const label = c.items.map((x) => shortSchoolName(x.name)).join(" · ");
+        const names = c.items.map((x) => shortSchoolName(x.name));
+        const label = names.length > 3 ? `${names.slice(0, 2).join(" · ")} +${names.length - 2}` : names.join(" · ");
         return (
           <div key={first.id} className="absolute inset-y-0" style={{ left: `${c.pct}%` }}>
             <Link

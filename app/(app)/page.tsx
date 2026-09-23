@@ -147,7 +147,7 @@ export default async function DashboardPage() {
                   <span className="font-serif text-2xl text-gray-400">days</span>
                 </p>
               </div>
-              <div className="text-right">
+              <div className="md:text-right">
                 <Link href={`/schools/${first.id}?tab=application`} className="text-lg font-medium hover:text-brass">{first.name}</Link>
                 <p className="text-sm text-gray-500">{new Date(first.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
                 <Link href="/week" className="text-sm text-brass hover:underline">Plan the week →</Link>
