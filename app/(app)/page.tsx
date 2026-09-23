@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { ScoreRankScatter } from "@/components/score-rank-scatter";
+import { DashboardAnalytics } from "@/components/dashboard-analytics";
 
 const localDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -35,7 +35,7 @@ export default async function DashboardPage() {
     { data: schools }, { data: openTasks }, { data: dueTasks }, { data: schoolDeadlines },
     { data: milestones }, { data: letters }, { count: winsA }, { count: winsB },
   ] = await Promise.all([
-    supabase.from("schools").select("id, name, status, country, csranking_nlp_rank, composite_score, verified_fit"),
+    supabase.from("schools").select("id, name, status, country, csranking_nlp_rank, composite_score, verified_fit, faculty, fit_note"),
     supabase.from("tasks").select("id").not("status", "in", "(done,cancelled)"),
     supabase.from("tasks").select("id, title, due_date, priority").not("due_date", "is", null).lte("due_date", cutoff).not("status", "in", "(done,cancelled)"),
     supabase.from("schools").select("id, name, deadline_date").not("deadline_date", "is", null).lte("deadline_date", cutoff),
@@ -44,6 +44,31 @@ export default async function DashboardPage() {
     supabase.from("activity_log").select("id", { count: "exact", head: true }).eq("is_win", true).gte("created_at", monthStart),
     supabase.from("task_updates").select("id", { count: "exact", head: true }).eq("is_win", true).gte("created_at", monthStart),
   ]);
+
+  // Weekly momentum: last 8 weeks, weeks start Monday.
+  const mondayOf = (d: Date) => {
+    const m = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
+    return m;
+  };
+  const thisMonday = mondayOf(now);
+  const firstMonday = new Date(thisMonday);
+  firstMonday.setDate(firstMonday.getDate() - 7 * 7);
+  const [{ data: doneUpdates }, { data: winActivity }] = await Promise.all([
+    supabase.from("task_updates").select("created_at").eq("type", "status_change").eq("is_win", true).gte("created_at", firstMonday.toISOString()),
+    supabase.from("activity_log").select("created_at").eq("is_win", true).gte("created_at", firstMonday.toISOString()),
+  ]);
+  const weekly = Array.from({ length: 8 }, (_, i) => {
+    const start = new Date(firstMonday);
+    start.setDate(start.getDate() + i * 7);
+    return { start, week: start.toLocaleDateString(undefined, { month: "short", day: "numeric" }), tasks: 0, wins: 0 };
+  });
+  const bump = (iso: string, key: "tasks" | "wins") => {
+    const idx = Math.floor((mondayOf(new Date(iso)).getTime() - firstMonday.getTime()) / (7 * 86400000));
+    if (idx >= 0 && idx < 8) weekly[idx][key] += 1;
+  };
+  for (const u of doneUpdates ?? []) bump(u.created_at, "tasks");
+  for (const a of winActivity ?? []) bump(a.created_at, "wins");
 
   const list = schools ?? [];
   const counts: Record<string, number> = {};
@@ -167,11 +192,11 @@ export default async function DashboardPage() {
         </ul>
       </section>
 
-      <section className="border border-line bg-surface rounded-lg p-4">
-        <h2 className="text-xs uppercase tracking-wide text-gray-500 mb-1">Score vs. CSRankings NLP rank</h2>
-        <p className="text-xs text-gray-400 mb-3">Green = verified fit. Score is a heuristic, not a validated ranking.</p>
-        <ScoreRankScatter schools={list as any} />
-      </section>
+      <div className="flex flex-col gap-2">
+        <h2 className="text-xs uppercase tracking-wide text-gray-500">Explore your schools</h2>
+        <DashboardAnalytics schools={list as any} weekly={weekly.map(({ week, tasks, wins }) => ({ week, tasks, wins }))} />
+        <p className="text-xs text-gray-400">Scores are a heuristic, not a validated ranking.</p>
+      </div>
     </main>
   );
 }
