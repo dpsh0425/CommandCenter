@@ -69,7 +69,7 @@ export function AdmissionsPanel({ schoolId, p }: { schoolId: string; p: Profile 
         }}
       >
         <fieldset className="grid gap-2 sm:grid-cols-2">
-          <legend className="text-xs uppercase tracking-wide text-gray-500 mb-1">How to apply</legend>
+          <legend className="font-sans text-[15px] font-semibold text-cream mb-1">How to apply</legend>
           <Field label="Application portal link"><input name="application_url" type="url" defaultValue={p.application_url ?? ""} placeholder="https://" className={input} /></Field>
           <Field label="Admissions page"><input name="admissions_url" type="url" defaultValue={p.admissions_url ?? ""} placeholder="https://" className={input} /></Field>
           <div className="grid grid-cols-[1fr_5rem] gap-2">
@@ -81,7 +81,7 @@ export function AdmissionsPanel({ schoolId, p }: { schoolId: string; p: Profile 
           <Field label="Writing sample / portfolio"><input name="writing_sample" defaultValue={p.writing_sample ?? ""} placeholder="e.g. not required" className={input} /></Field>
         </fieldset>
         <fieldset className="grid gap-2 sm:grid-cols-2">
-          <legend className="text-xs uppercase tracking-wide text-gray-500 mb-1">Requirements</legend>
+          <legend className="font-sans text-[15px] font-semibold text-cream mb-1">Requirements</legend>
           <Field label="GRE">
             <select name="gre_policy" defaultValue={p.gre_policy ?? ""} className={input}>
               <option value="">Not researched</option><option value="required">Required</option><option value="optional">Optional</option><option value="not_accepted">Not accepted</option>
@@ -91,7 +91,7 @@ export function AdmissionsPanel({ schoolId, p }: { schoolId: string; p: Profile 
           <Field label="Minimum GPA"><input name="min_gpa" defaultValue={p.min_gpa ?? ""} placeholder="e.g. 3.0/4.0 or none stated" className={input} /></Field>
         </fieldset>
         <fieldset className="grid gap-2 sm:grid-cols-2">
-          <legend className="text-xs uppercase tracking-wide text-gray-500 mb-1">Program, cost and place</legend>
+          <legend className="font-sans text-[15px] font-semibold text-cream mb-1">Program, cost and place</legend>
           <Field label="City / campus"><input name="city" defaultValue={p.city ?? ""} className={input} /></Field>
           <Field label="Program length"><input name="program_length" defaultValue={p.program_length ?? ""} placeholder="e.g. 5 years PhD" className={input} /></Field>
           <Field label="Funding guarantee"><input name="funding_guarantee" defaultValue={p.funding_guarantee ?? ""} placeholder="e.g. 5 years for admitted PhD students" className={input} /></Field>
@@ -99,12 +99,12 @@ export function AdmissionsPanel({ schoolId, p }: { schoolId: string; p: Profile 
           <Field label="Cost of living"><input name="living_cost_note" defaultValue={p.living_cost_note ?? ""} placeholder="rent, typical monthly cost vs stipend" className={input} /></Field>
         </fieldset>
         <fieldset className="grid gap-2">
-          <legend className="text-xs uppercase tracking-wide text-gray-500 mb-1">Admissions intel</legend>
+          <legend className="font-sans text-[15px] font-semibold text-cream mb-1">Admissions intel</legend>
           <Field label="Acceptance rate / class size"><textarea name="acceptance_note" rows={2} defaultValue={p.acceptance_note ?? ""} className={input} /></Field>
           <Field label="International students (visa support, community, offices)"><textarea name="international_note" rows={2} defaultValue={p.international_note ?? ""} className={input} /></Field>
         </fieldset>
         <fieldset className="grid gap-2">
-          <legend className="text-xs uppercase tracking-wide text-gray-500 mb-1">Your decision</legend>
+          <legend className="font-sans text-[15px] font-semibold text-cream mb-1">Your decision</legend>
           <Field label="Chance">
             <select name="tier" defaultValue={p.tier ?? ""} className={input}>
               <option value="">Not decided</option><option value="reach">Reach</option><option value="target">Target</option><option value="safe">Safe</option>
@@ -130,7 +130,7 @@ export function AdmissionsPanel({ schoolId, p }: { schoolId: string; p: Profile 
       </div>
 
       <div>
-        <h3 className="text-xs uppercase tracking-wide text-gray-500 mb-1">How to apply</h3>
+        <h3 className="font-sans text-[15px] font-semibold text-cream mb-1">How to apply</h3>
         <dl>
           <Row label="Portal">{p.application_url ? <Link_ href={p.application_url}>Open application</Link_> : <Unknown />}</Row>
           <Row label="Admissions page">{p.admissions_url ? <Link_ href={p.admissions_url}>Open admissions page</Link_> : <Unknown />}</Row>
@@ -143,7 +143,7 @@ export function AdmissionsPanel({ schoolId, p }: { schoolId: string; p: Profile 
       </div>
 
       <div>
-        <h3 className="text-xs uppercase tracking-wide text-gray-500 mb-1">Requirements</h3>
+        <h3 className="font-sans text-[15px] font-semibold text-cream mb-1">Requirements</h3>
         <dl>
           <Row label="GRE">{p.gre_policy ? GRE[p.gre_policy] : <Unknown />}</Row>
           <Row label="English test">{p.english_test ?? <Unknown />}</Row>
@@ -152,7 +152,7 @@ export function AdmissionsPanel({ schoolId, p }: { schoolId: string; p: Profile 
       </div>
 
       <div>
-        <h3 className="text-xs uppercase tracking-wide text-gray-500 mb-1">Program, cost and place</h3>
+        <h3 className="font-sans text-[15px] font-semibold text-cream mb-1">Program, cost and place</h3>
         <dl>
           <Row label="Location">{p.city ?? <Unknown />}</Row>
           <Row label="Program length">{p.program_length ?? <Unknown />}</Row>
@@ -163,7 +163,7 @@ export function AdmissionsPanel({ schoolId, p }: { schoolId: string; p: Profile 
       </div>
 
       <div>
-        <h3 className="text-xs uppercase tracking-wide text-gray-500 mb-1">Admissions intel</h3>
+        <h3 className="font-sans text-[15px] font-semibold text-cream mb-1">Admissions intel</h3>
         <dl>
           <Row label="Acceptance">{p.acceptance_note ?? <Unknown />}</Row>
           <Row label="International">{p.international_note ?? <Unknown />}</Row>

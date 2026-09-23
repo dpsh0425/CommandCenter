@@ -98,36 +98,39 @@ export function DepartmentHeader({ schoolId, dept, professorCount }: { schoolId:
     return <DepartmentForm initial={dept} pending={pending} error={error} submitLabel="Save department" onCancel={() => setEditing(false)}
       onSubmit={(x) => run(() => updateDepartment(dept.id, schoolId, x), () => setEditing(false))} />;
   }
+  const detail = dept.requirements || dept.notes;
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
-          <h3 className="font-serif text-xl leading-tight">{dept.name}</h3>
-          <div className="flex flex-wrap gap-2 mt-1 text-xs">
-            {dept.program && <span className="border border-line rounded-full px-2 py-0.5 text-gray-500">{dept.program}</span>}
-            {dept.deadline_date && (
-              <span className={`border rounded-full px-2 py-0.5 font-mono ${d! < 0 ? "text-red-600 border-red-600" : "text-brass border-brass"}`}>
-                deadline {dept.deadline_date} · {whenLabel(d!)}
-              </span>
-            )}
-            <span className="text-gray-400 self-center">{professorCount} professor{professorCount === 1 ? "" : "s"}</span>
-          </div>
+          <h3 className="font-serif text-2xl leading-tight">{dept.name}</h3>
+          <p className="text-sm text-gray-500 flex flex-wrap gap-x-2">
+            {[dept.program, `${professorCount} professor${professorCount === 1 ? "" : "s"}`].filter(Boolean).join(" · ")}
+            {dept.deadline_date && <span className={d! < 0 ? "text-red-600" : "text-brass"}>· deadline {dept.deadline_date} ({whenLabel(d!)})</span>}
+          </p>
         </div>
-        <div className="flex gap-3 text-xs items-center">
-          {dept.url && <a href={dept.url} target="_blank" rel="noopener noreferrer" className="text-brass underline">Website</a>}
-          {dept.admissions_url && <a href={dept.admissions_url} target="_blank" rel="noopener noreferrer" className="text-brass underline">Admissions</a>}
-          <button onClick={() => setEditing(true)} className="text-gray-500 underline hover:text-cream">Edit</button>
+        <div className="flex gap-4 text-sm items-center text-gray-500">
+          {dept.url && <a href={dept.url} target="_blank" rel="noopener noreferrer" className="hover:text-brass">Website</a>}
+          {dept.admissions_url && <a href={dept.admissions_url} target="_blank" rel="noopener noreferrer" className="hover:text-brass">Admissions</a>}
+          <button onClick={() => setEditing(true)} className="hover:text-cream">Edit</button>
           <button
             disabled={pending}
             onClick={() => { if (confirm(`Delete department "${dept.name}"? Its professors and funding stay, moved to school level.`)) run(() => deleteDepartment(dept.id, schoolId)); }}
-            className="text-gray-400 hover:text-red-600"
+            className="hover:text-red-600"
           >
             Delete
           </button>
         </div>
       </div>
-      {dept.requirements && <p className="text-xs text-gray-500"><span className="text-gray-400">Requirements:</span> {dept.requirements}</p>}
-      {dept.notes && <p className="text-xs text-gray-500 whitespace-pre-line">{dept.notes}</p>}
+      {detail && (
+        <details className="text-sm">
+          <summary className="cursor-pointer text-gray-500 hover:text-cream">Requirements and notes</summary>
+          <div className="pt-2 flex flex-col gap-2 text-gray-500">
+            {dept.requirements && <p><span className="text-gray-400">Requirements: </span>{dept.requirements}</p>}
+            {dept.notes && <p className="whitespace-pre-line text-xs">{dept.notes}</p>}
+          </div>
+        </details>
+      )}
       <Err message={error} />
     </div>
   );
@@ -237,51 +240,47 @@ export function ProfessorCard({ schoolId, prof, departments }: { schoolId: strin
       </div>
     );
   }
-  const long = (prof.research_summary?.length ?? 0) > 180;
+  const long = (prof.research_summary?.length ?? 0) > 150;
   return (
-    <div className={`border border-line rounded-lg p-3 bg-surface-raised flex flex-col gap-2 ${pending ? "opacity-60" : ""}`}>
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+    <div className={`group rounded-xl border border-line bg-surface p-4 flex flex-col gap-2.5 transition-colors hover:border-line/80 ${pending ? "opacity-60" : ""}`}>
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="font-medium">{prof.name}</div>
-          <div className="text-xs text-gray-500">{[prof.title, prof.lab_name].filter(Boolean).join(" · ") || "No title yet"}</div>
+          {(prof.title || prof.lab_name) && <div className="text-xs text-gray-500">{[prof.title, prof.lab_name].filter(Boolean).join(" · ")}</div>}
         </div>
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2 text-xs flex-shrink-0">
           {prof.fit_score != null && (
             <span className="font-mono text-brass" title={`Fit ${prof.fit_score}/5`} aria-label={`Fit ${prof.fit_score} of 5`}>
               {"●".repeat(prof.fit_score)}<span className="text-line">{"●".repeat(5 - prof.fit_score)}</span>
             </span>
           )}
-          <span className={`border rounded-full px-2 py-0.5 ${ACCEPTING_TONE[prof.accepting]}`}>{ACCEPTING[prof.accepting]}</span>
+          {prof.accepting !== "unknown" && <span className={prof.accepting === "yes" ? "text-teal-600" : "text-red-600"}>{ACCEPTING[prof.accepting]}</span>}
         </div>
       </div>
 
-      {prof.research_areas.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {prof.research_areas.map((a) => <span key={a} className="text-[11px] rounded bg-brass-soft text-brass px-1.5 py-0.5">{a}</span>)}
-        </div>
-      )}
+      {prof.research_areas.length > 0 && <p className="text-xs text-brass">{prof.research_areas.join(" · ")}</p>}
       {prof.research_summary && (
-        <p className={`text-xs text-gray-500 whitespace-pre-line ${expanded ? "" : "line-clamp-3"}`}>{prof.research_summary}</p>
+        <p className={`text-sm text-gray-500 whitespace-pre-line ${expanded ? "" : "line-clamp-2"}`}>{prof.research_summary}</p>
       )}
-      {long && <button onClick={() => setExpanded((v) => !v)} className="text-xs text-gray-500 underline self-start hover:text-cream">{expanded ? "Show less" : "Read more"}</button>}
+      {long && <button onClick={() => setExpanded((v) => !v)} className="text-xs text-gray-500 hover:text-cream self-start">{expanded ? "Show less" : "Read more"}</button>}
       {prof.notes && <p className="text-xs text-gray-400 whitespace-pre-line border-l-2 border-line pl-2">{prof.notes}</p>}
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs pt-1 border-t border-line">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs pt-2 border-t border-line/60">
         <select
           value={prof.outreach}
           disabled={pending}
           onChange={(e) => run(() => setProfessorOutreach(prof.id, schoolId, e.target.value as OutreachStatus))}
-          className={`border rounded-full px-2 py-0.5 bg-transparent ${outreach.tone}`}
+          className={`rounded-full border px-2 py-0.5 bg-transparent cursor-pointer ${outreach.tone}`}
           aria-label={`Outreach status for ${prof.name}`}
         >
           {OUTREACH.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
         </select>
-        {prof.last_contacted_on && <span className="text-gray-400 font-mono">last {prof.last_contacted_on}</span>}
-        {prof.homepage_url && <a href={prof.homepage_url} target="_blank" rel="noopener noreferrer" className="text-brass underline">Homepage</a>}
-        {prof.scholar_url && <a href={prof.scholar_url} target="_blank" rel="noopener noreferrer" className="text-brass underline">Publications</a>}
-        {prof.email && <a href={`mailto:${prof.email}`} className="text-brass underline">Email</a>}
-        <span className="ml-auto flex gap-3">
-          <button onClick={() => setEditing(true)} className="text-gray-500 underline hover:text-cream">Edit</button>
+        {prof.last_contacted_on && <span className="text-gray-400">last {prof.last_contacted_on}</span>}
+        {prof.homepage_url && <a href={prof.homepage_url} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brass">Homepage</a>}
+        {prof.scholar_url && <a href={prof.scholar_url} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brass">Papers</a>}
+        {prof.email && <a href={`mailto:${prof.email}`} className="text-gray-500 hover:text-brass">Email</a>}
+        <span className="ml-auto flex gap-3 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          <button onClick={() => setEditing(true)} className="text-gray-500 hover:text-cream">Edit</button>
           <button
             disabled={pending}
             onClick={() => { if (confirm(`Remove ${prof.name}?`)) run(() => deleteProfessor(prof.id, schoolId)); }}

@@ -10,11 +10,7 @@ const COLUMNS: Array<{ key: string; label: string; empty: string }> = [
   { key: "done", label: "Done", empty: "Nothing finished yet" },
 ];
 
-const PRIORITY_BAR: Record<string, string> = {
-  high: "border-l-red-600",
-  medium: "border-l-brass",
-  low: "border-l-line",
-};
+const PRIORITY_DOT: Record<string, string> = { high: "bg-red-600", medium: "bg-brass", low: "bg-line" };
 
 type Task = {
   id: string; title: string; status: string; priority: string; due_date: string | null;
@@ -27,40 +23,34 @@ const localToday = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-function DueChip({ date, done }: { date: string; done: boolean }) {
-  const today = localToday();
-  const overdue = !done && date < today;
-  const label = new Date(date + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  return (
-    <span className={`font-mono text-[11px] ${overdue ? "text-red-600" : date === today && !done ? "text-brass" : "text-gray-500"}`}>
-      {overdue ? "overdue · " : ""}{label}
-    </span>
-  );
-}
-
 function TaskCard({ task }: { task: Task }) {
   const [pending, startTransition] = useTransition();
   const done = task.status === "done";
+  const today = localToday();
+  const overdue = !done && task.due_date != null && task.due_date < today;
+  const due = task.due_date ? new Date(task.due_date + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null;
+  const context = task.school_name ?? task.milestone_title;
+  const waiting = task.openDependencies && task.openDependencies.length > 0;
+
   return (
-    <div className={`bg-surface-raised border border-l-4 ${PRIORITY_BAR[task.priority] ?? PRIORITY_BAR.medium} rounded p-2.5 mb-2 text-sm transition-opacity ${pending ? "opacity-50" : ""}`}>
-      <Link href={`/tasks/${task.id}`} className={`font-medium hover:underline ${done ? "line-through text-gray-500" : ""}`}>{task.title}</Link>
-      <div className="flex flex-wrap gap-x-2 mt-1">
-        {task.school_name && <span className="text-xs text-teal-700">{task.school_name}</span>}
-        {task.milestone_title && <span className="text-xs text-violet-700">{task.milestone_title}</span>}
+    <div className={`group rounded-lg border border-line bg-surface p-3 flex flex-col gap-2 transition-colors hover:border-brass ${pending ? "opacity-50" : ""}`}>
+      <div className="flex items-start gap-2">
+        <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${PRIORITY_DOT[task.priority] ?? PRIORITY_DOT.medium}`} title={`${task.priority} priority`} />
+        <Link href={`/tasks/${task.id}`} className={`text-sm font-medium leading-snug hover:text-brass ${done ? "line-through text-gray-500" : ""}`}>{task.title}</Link>
       </div>
-      {task.openDependencies && task.openDependencies.length > 0 && (
-        <div className="text-xs text-amber-700 mt-1">waiting on: {task.openDependencies.map((d) => d.title).join(", ")}</div>
+      {(context || due || waiting) && (
+        <p className="text-xs text-gray-500 pl-4">
+          {[context, due && (overdue ? `overdue · ${due}` : `due ${due}`), waiting && `waiting on ${task.openDependencies!.length}`].filter(Boolean).join(" · ")}
+        </p>
       )}
-      <div className="flex justify-between items-center mt-2 gap-2">
-        <div className="flex flex-col text-xs text-gray-500 min-w-0">
-          <span className="truncate">{task.assignee_name ?? "Unassigned"}</span>
-          {task.due_date && <DueChip date={task.due_date} done={done} />}
-        </div>
+      {overdue && <span className="sr-only">Overdue</span>}
+      <div className="flex items-center justify-between gap-2 pl-4 text-xs text-gray-400">
+        <span className="truncate">{task.assignee_name ?? "Unassigned"}</span>
         <select
           value={task.status}
           disabled={pending}
           onChange={(e) => startTransition(() => updateTaskStatus(task.id, e.target.value as any))}
-          className="border rounded text-xs px-1 py-0.5"
+          className="bg-transparent border border-transparent rounded px-1 py-0.5 text-xs text-gray-500 hover:border-line cursor-pointer"
           aria-label={`Status of ${task.title}`}
         >
           {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
@@ -84,45 +74,34 @@ export function TaskBoard({ tasks }: { tasks: Task[] }) {
   });
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex gap-2 flex-wrap items-center">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter tasks…"
-          className="border rounded px-2 py-1 text-sm w-56"
-        />
-        <select value={assignee} onChange={(e) => setAssignee(e.target.value)} className="border rounded px-2 py-1 text-sm">
-          <option value="">Everyone</option>
-          <option value="__none">Unassigned</option>
-          {assignees.map((a) => <option key={a} value={a}>{a}</option>)}
-        </select>
-        <span className="ml-auto flex gap-3 text-xs text-gray-500">
-          <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-sm bg-red-600" />high</span>
-          <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-sm bg-brass" />medium</span>
-          <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-sm bg-line" />low</span>
-        </span>
-      </div>
+    <div className="flex flex-col gap-5">
+      {tasks.length > 4 && (
+        <div className="flex gap-2 flex-wrap items-center">
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter tasks" className="border rounded px-3 py-1.5 text-sm w-56" />
+          <select value={assignee} onChange={(e) => setAssignee(e.target.value)} className="border rounded px-2 py-1.5 text-sm bg-transparent">
+            <option value="">Everyone</option>
+            <option value="__none">Unassigned</option>
+            {assignees.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-x-5 gap-y-8 items-start">
         {COLUMNS.map((col) => {
           const colTasks = visible.filter((t) => t.status === col.key);
           return (
-            <div key={col.key} className="border rounded p-2 bg-gray-50 min-h-[8rem]">
-              <div className="text-xs uppercase text-gray-500 mb-2 flex justify-between px-0.5">
-                <span>{col.label}</span><span className="font-mono">{colTasks.length}</span>
-              </div>
-              {colTasks.length === 0 ? (
-                <p className="text-xs text-gray-400 border border-dashed border-line rounded p-3 text-center">{col.empty}</p>
-              ) : (
-                colTasks.map((t) => <TaskCard key={t.id} task={t} />)
-              )}
-            </div>
+            <section key={col.key} className="flex flex-col gap-3">
+              <h2 className="font-sans text-[15px] font-semibold text-cream border-b border-line pb-2 flex justify-between items-baseline">
+                <span>{col.label}</span>
+                <span className="font-mono text-xs text-gray-500 font-normal">{colTasks.length}</span>
+              </h2>
+              {colTasks.length === 0 ? <p className="text-sm text-gray-400 py-2">{col.empty}</p> : colTasks.map((t) => <TaskCard key={t.id} task={t} />)}
+            </section>
           );
         })}
       </div>
 
-      {cancelled > 0 && <p className="text-xs text-gray-500">{cancelled} cancelled task{cancelled === 1 ? "" : "s"} hidden from the board.</p>}
+      {cancelled > 0 && <p className="text-xs text-gray-500">{cancelled} cancelled task{cancelled === 1 ? "" : "s"} hidden.</p>}
     </div>
   );
 }

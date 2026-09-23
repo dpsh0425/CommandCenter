@@ -258,11 +258,9 @@ export default async function SchoolDetailPage({
 
       {isOwner && tab === "faculty" && (
         <div className="flex flex-col gap-6">
-          <p className="text-sm text-gray-500 max-w-2xl">
-            Map where your research fits. Add the departments that offer your program, then the professors in each, with what they work on and whether they take students. Professors can sit directly under the school if you don't need departments.
-          </p>
+          <p className="text-sm text-gray-500 max-w-2xl">Group professors by department, or keep them directly under the school.</p>
           {groups.filter((g) => g.dept || g.list.length > 0).map((g) => (
-            <section key={g.dept?.id ?? "school"} className="border border-line bg-surface rounded-lg p-4 flex flex-col gap-4">
+            <section key={g.dept?.id ?? "school"} className="flex flex-col gap-4 pb-6 border-b border-line last:border-0">
               {g.dept ? (
                 <DepartmentHeader schoolId={id} dept={g.dept} professorCount={g.list.length} />
               ) : (
@@ -291,11 +289,9 @@ export default async function SchoolDetailPage({
       {isOwner && tab === "funding" && (
         <div className="flex flex-col gap-4">
           {meta.funding_guarantee && (
-            <div className="border border-teal-600 rounded-lg p-3 text-sm"><span className="text-xs uppercase tracking-wide text-teal-600">Guarantee · </span>{meta.funding_guarantee}</div>
+            <p className="text-sm"><span className="text-teal-600">Guaranteed: </span>{meta.funding_guarantee}</p>
           )}
-          <p className="text-sm text-gray-500 max-w-2xl">
-            Track every way this school could pay for you, whether it's school-wide, tied to a department, or a professor's grant. Set the status as you learn whether you're eligible and when you apply.
-          </p>
+          <p className="text-sm text-gray-500 max-w-2xl">Every way this school could pay for you: school-wide, by department, or a professor's grant.</p>
           {sortedFunds.length === 0 ? <Empty>No funding tracked yet.</Empty> : (
             <div className="grid gap-3 md:grid-cols-2">
               {sortedFunds.map((f) => (
@@ -321,12 +317,11 @@ export default async function SchoolDetailPage({
 
       {isOwner && tab === "application" && (
         <div className="flex flex-col gap-6">
-          <section className="border border-line bg-surface rounded-lg p-4 flex flex-col gap-3">
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-xs uppercase tracking-wide text-gray-500">Application readiness</h2>
-              <span className="font-mono text-sm">{readyCount}/{checklist.length}</span>
+          <section className="flex flex-col gap-3">
+            <div className="flex items-baseline justify-between border-b border-line pb-2">
+              <h2 className="font-sans text-[15px] font-semibold text-cream">Readiness</h2>
+              <span className="font-mono text-xs text-gray-500">{readyCount} of {checklist.length}</span>
             </div>
-            <div className="h-1.5 rounded bg-surface-raised overflow-hidden"><div className="h-full bg-teal-600" style={{ width: `${(readyCount / checklist.length) * 100}%` }} /></div>
             <ul className="flex flex-wrap gap-2 text-xs">
               {checklist.map((c) => (
                 <li key={c.label} className={`border rounded-full px-2.5 py-1 flex items-center gap-1.5 ${c.done ? "text-teal-600 border-teal-600" : "text-gray-500 border-line"}`}>
@@ -371,11 +366,11 @@ export default async function SchoolDetailPage({
 
 function Section({ title, count, children }: { title: string; count?: number | string; children: React.ReactNode }) {
   return (
-    <section className="border border-line bg-surface rounded-lg p-4">
-      <h2 className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex justify-between">
-        <span>{title}</span>
-        {count !== undefined && <span className="font-mono normal-case">{count}</span>}
-      </h2>
+    <section className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-3 border-b border-line pb-2">
+        <h2 className="font-sans text-[15px] font-semibold text-cream">{title}</h2>
+        {count !== undefined && <span className="font-mono text-xs text-gray-500">{count}</span>}
+      </div>
       {children}
     </section>
   );

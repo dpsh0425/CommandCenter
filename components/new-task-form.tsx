@@ -31,7 +31,7 @@ export function NewTaskForm({
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm self-start">
+      <button onClick={() => setOpen(true)} className="bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm whitespace-nowrap">
         + New task
       </button>
     );
@@ -40,7 +40,9 @@ export function NewTaskForm({
   const linkOptions = linkType === "school" ? schools : linkType === "milestone" ? milestones : [];
 
   return (
-    <form onSubmit={handleSubmit} className="border border-line rounded p-3 flex flex-col gap-2 bg-surface">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-20 px-4" onClick={() => setOpen(false)}>
+    <form onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg border border-line rounded-xl p-5 flex flex-col gap-3 bg-surface-raised shadow-xl">
+      <h2 className="font-sans text-base font-semibold text-cream">New task</h2>
       <input name="title" placeholder="Task title" className="border rounded px-2 py-1 text-sm" required autoFocus />
       <textarea name="description" placeholder="Description (optional)" className="border rounded px-2 py-1 text-sm" rows={2} />
       <div className="flex gap-2 flex-wrap">
@@ -77,5 +79,6 @@ export function NewTaskForm({
         <button type="button" onClick={() => setOpen(false)} className="text-sm text-gray-500">Cancel</button>
       </div>
     </form>
+    </div>
   );
 }

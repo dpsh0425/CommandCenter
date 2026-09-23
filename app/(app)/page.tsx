@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardAnalytics } from "@/components/dashboard-analytics";
-import { Fold, PageHeader, Section } from "@/components/ui";
+import { Fold, Section } from "@/components/ui";
+import { Runway } from "@/components/runway";
+import { WeekRhythm } from "@/components/week-rhythm";
 
 export const metadata = { title: "Dashboard" };
 
@@ -42,7 +44,7 @@ export default async function DashboardPage() {
     supabase.from("tasks").select("id").not("status", "in", "(done,cancelled)"),
     supabase.from("tasks").select("id, title, due_date, priority").not("due_date", "is", null).lte("due_date", cutoff).not("status", "in", "(done,cancelled)"),
     supabase.from("schools").select("id, name, deadline_date").not("deadline_date", "is", null).lte("deadline_date", cutoff),
-    supabase.from("schools").select("id, name, deadline_date").not("deadline_date", "is", null).gte("deadline_date", localDate(now)).order("deadline_date").limit(3),
+    supabase.from("schools").select("id, name, deadline_date").not("deadline_date", "is", null).gte("deadline_date", localDate(now)).order("deadline_date").limit(12),
     supabase.from("research_milestones").select("id, title, target_date").not("target_date", "is", null).lte("target_date", cutoff).neq("status", "done"),
     supabase.from("letter_requests").select("id, school_id, status, letter_deadline, people(name), schools(name)").not("letter_deadline", "is", null).lte("letter_deadline", cutoff).neq("status", "submitted"),
     supabase.from("activity_log").select("id", { count: "exact", head: true }).eq("is_win", true).gte("created_at", monthStart),
@@ -58,9 +60,11 @@ export default async function DashboardPage() {
   const thisMonday = mondayOf(now);
   const firstMonday = new Date(thisMonday);
   firstMonday.setDate(firstMonday.getDate() - 7 * 7);
-  const [{ data: doneUpdates }, { data: winActivity }] = await Promise.all([
+  const weekStart = localDate(mondayOf(now));
+  const [{ data: doneUpdates }, { data: winActivity }, { data: contactedProfs }] = await Promise.all([
     supabase.from("task_updates").select("created_at").eq("type", "status_change").eq("is_win", true).gte("created_at", firstMonday.toISOString()),
     supabase.from("activity_log").select("created_at").eq("is_win", true).gte("created_at", firstMonday.toISOString()),
+    supabase.from("professors").select("last_contacted_on").gte("last_contacted_on", weekStart),
   ]);
   const weekly = Array.from({ length: 8 }, (_, i) => {
     const start = new Date(firstMonday);
@@ -105,54 +109,109 @@ export default async function DashboardPage() {
 
   const total = list.length || 1;
 
-  const headline = overdue.length > 0
-    ? `${overdue.length} thing${overdue.length === 1 ? " is" : "s are"} overdue.`
-    : attention.length > 0
-      ? `${attention.length} thing${attention.length === 1 ? "" : "s"} need${attention.length === 1 ? "s" : ""} you in the next 3 days.`
-      : "Nothing urgent. Good time to move an application forward.";
+  // This week's rhythm: a day counts when something moved forward.
+  const activeDates = new Set<string>([
+    ...(doneUpdates ?? []).map((u) => localDate(new Date(u.created_at))),
+    ...(winActivity ?? []).map((a) => localDate(new Date(a.created_at))),
+    ...((contactedProfs ?? []) as any[]).map((p) => p.last_contacted_on as string),
+  ]);
+  const rhythmDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(thisMonday);
+    d.setDate(d.getDate() + i);
+    const key = localDate(d);
+    return { label: d.toLocaleDateString(undefined, { weekday: "narrow" }), date: key, active: activeDates.has(key), isToday: key === today, future: key > today };
+  });
+
+  const deadlines = (nextDeadlines ?? []).map((d) => ({ id: d.id as string, name: d.name as string, date: d.deadline_date as string }));
+  const first = deadlines[0];
+  const firstDays = first ? daysFrom(today, first.date) : null;
+  const focus = rows[0];
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
-    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-8">
-      <PageHeader
-        title="Home"
-        subtitle={now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
-      />
+    <main className="p-4 md:p-8 max-w-4xl mx-auto flex flex-col gap-10">
+      <header>
+        <p className="text-sm text-gray-500">{now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
+        <h1 className="text-4xl md:text-5xl leading-tight mt-1">{greeting}.</h1>
+      </header>
 
-      <div>
-        <p className="text-xl font-serif">{headline}</p>
-        <p className="text-sm text-gray-500 mt-2 flex flex-wrap gap-x-5 gap-y-1">
-          <Link href="/schools" className="hover:text-cream"><span className="font-mono text-cream">{list.length}</span> schools ({active} in progress)</Link>
-          <Link href="/tasks" className="hover:text-cream"><span className="font-mono text-cream">{openTasks?.length ?? 0}</span> open tasks</Link>
-          <Link href="/wins" className="hover:text-cream"><span className="font-mono text-cream">{wins}</span> wins this month</Link>
-        </p>
-      </div>
+      <section className="hero-glow border border-line rounded-2xl p-6 md:p-8 flex flex-col gap-6">
+        {first ? (
+          <>
+            <div className="flex items-end justify-between gap-6 flex-wrap">
+              <div>
+                <p className="text-sm text-gray-500">Your first application deadline is in</p>
+                <p className="flex items-baseline gap-3 leading-none mt-2">
+                  <span className="font-serif italic text-7xl md:text-8xl text-cream">{firstDays}</span>
+                  <span className="font-serif text-2xl text-gray-400">days</span>
+                </p>
+              </div>
+              <div className="text-right">
+                <Link href={`/schools/${first.id}?tab=application`} className="text-lg font-medium hover:text-brass">{first.name}</Link>
+                <p className="text-sm text-gray-500">{new Date(first.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
+                <Link href="/week" className="text-sm text-brass hover:underline">Plan the week →</Link>
+              </div>
+            </div>
+            <Runway deadlines={deadlines} today={today} />
+          </>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <p className="font-serif text-3xl">No deadlines set yet.</p>
+            <p className="text-sm text-gray-500">Open a school and add its deadline in the Admissions tab, and your runway appears here.</p>
+            <Link href="/schools?sort=deadline" className="text-sm text-brass hover:underline self-start">Go to schools →</Link>
+          </div>
+        )}
+      </section>
 
-      {(nextDeadlines ?? []).length > 0 && (
-        <Section title="Application deadlines" action={<Link href="/week" className="hover:text-cream">See the week →</Link>}>
-          <ul className="flex flex-col">
-            {(nextDeadlines ?? []).map((d) => {
-              const n = daysFrom(today, d.deadline_date as string);
-              return (
-                <li key={d.id} className="border-b border-line/60 last:border-0">
-                  <Link href={`/schools/${d.id}`} className="flex justify-between gap-4 py-2.5 hover:text-brass">
-                    <span className="font-medium truncate">{d.name}</span>
-                    <span className={`text-sm whitespace-nowrap ${n <= 14 ? "text-red-600" : n <= 30 ? "text-brass" : "text-gray-500"}`}>{n} days · {(d.deadline_date as string).slice(5)}</span>
+      <div className="grid gap-8 md:grid-cols-2 items-start">
+        <section className="flex flex-col gap-3">
+          <h2 className="font-sans text-[15px] font-semibold text-cream border-b border-line pb-2">Next up</h2>
+          {focus ? (
+            <Link href={focus.href} className="group flex flex-col gap-1 rounded-xl border border-line bg-surface p-4 transition-colors hover:border-brass">
+              <span className={`text-xs ${focus.date < today ? "text-red-600" : "text-brass"}`}>{when(daysFrom(today, focus.date))}</span>
+              <span className="font-serif text-2xl leading-snug">{focus.label}</span>
+              <span className="text-sm text-gray-500">{focus.sub}</span>
+              <span className="text-sm text-brass mt-2 group-hover:translate-x-1 transition-transform">Open →</span>
+            </Link>
+          ) : (
+            <div className="rounded-xl border border-dashed border-line p-4 text-sm text-gray-500">
+              Nothing urgent. A good moment to <Link href="/outreach" className="text-brass hover:underline">email a professor</Link> or <Link href="/schools?sort=researched" className="text-brass hover:underline">research a school</Link>.
+            </div>
+          )}
+          {attention.length > 1 && (
+            <ul className="flex flex-col">
+              {attention.slice(1, 5).map((r, i) => (
+                <li key={i}>
+                  <Link href={r.href} className="flex justify-between gap-4 py-2 -mx-2 px-2 rounded text-sm transition-colors hover:bg-surface-raised">
+                    <span className="truncate">{r.label}</span>
+                    <span className={`whitespace-nowrap ${r.date < today ? "text-red-600" : "text-gray-400"}`}>{when(daysFrom(today, r.date))}</span>
                   </Link>
                 </li>
-              );
-            })}
-          </ul>
-        </Section>
-      )}
+              ))}
+            </ul>
+          )}
+        </section>
 
-      {(attention.length > 0 || upcoming.length > 0) && (
-        <Section title="Coming up" hint="next 14 days">
+        <section className="flex flex-col gap-3">
+          <h2 className="font-sans text-[15px] font-semibold text-cream border-b border-line pb-2">This week</h2>
+          <WeekRhythm days={rhythmDays} />
+          <p className="text-sm text-gray-500 flex flex-wrap gap-x-5 gap-y-1 pt-2">
+            <Link href="/schools" className="hover:text-cream"><span className="font-mono text-cream">{list.length}</span> schools ({active} in progress)</Link>
+            <Link href="/tasks" className="hover:text-cream"><span className="font-mono text-cream">{openTasks?.length ?? 0}</span> open tasks</Link>
+            <Link href="/wins" className="hover:text-cream"><span className="font-mono text-cream">{wins}</span> wins this month</Link>
+          </p>
+        </section>
+      </div>
+
+      {upcoming.length > 0 && (
+        <Section title="Coming up" hint="next 14 days" action={<Link href="/week" className="hover:text-cream">See the week →</Link>}>
           <ul className="flex flex-col">
-            {[...attention, ...upcoming].slice(0, 7).map((r, i) => (
-              <li key={i} className="border-b border-line/60 last:border-0">
-                <Link href={r.href} className="flex justify-between gap-4 py-2.5 hover:text-brass">
+            {upcoming.slice(0, 6).map((r, i) => (
+              <li key={i}>
+                <Link href={r.href} className="flex justify-between gap-4 py-2.5 -mx-2 px-2 rounded transition-colors hover:bg-surface-raised">
                   <span className="truncate">{r.label}</span>
-                  <span className={`text-sm whitespace-nowrap ${r.date < today ? "text-red-600" : "text-gray-400"}`}>{when(daysFrom(today, r.date))}</span>
+                  <span className="text-sm whitespace-nowrap text-gray-400">{when(daysFrom(today, r.date))}</span>
                 </Link>
               </li>
             ))}
@@ -161,9 +220,9 @@ export default async function DashboardPage() {
       )}
 
       <Section title="Your applications" action={<Link href="/schools" className="hover:text-cream">All schools →</Link>}>
-        <div className="flex h-2 rounded overflow-hidden bg-surface-raised">
+        <div className="flex h-2.5 rounded-full overflow-hidden bg-surface-raised">
           {PIPELINE.filter((p) => counts[p.key]).map((p) => (
-            <Link key={p.key} href={`/schools?status=${p.key}`} title={`${p.label}: ${counts[p.key]}`} style={{ width: `${(counts[p.key] / total) * 100}%`, background: p.color }} className="min-w-[3px] hover:opacity-80" />
+            <Link key={p.key} href={`/schools?status=${p.key}`} title={`${p.label}: ${counts[p.key]}`} style={{ width: `${(counts[p.key] / total) * 100}%`, background: p.color }} className="min-w-[3px] transition-opacity hover:opacity-80" />
           ))}
         </div>
         <p className="text-sm text-gray-500 flex flex-wrap gap-x-4 gap-y-1">

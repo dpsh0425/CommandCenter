@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { Avatar } from "@/components/avatar";
 import { AddPersonForm } from "@/components/person-controls";
+import { PageHeader } from "@/components/ui";
 
 export const metadata = { title: "People" };
 
@@ -41,16 +42,8 @@ export default async function PeoplePage() {
   const maxOpen = Math.max(1, ...list.map((p) => get(p.id).open));
 
   return (
-    <main className="p-4 md:p-8 max-w-4xl mx-auto flex flex-col gap-5">
-      <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold">People</h1>
-          <p className="text-sm text-gray-500">Collaborators, recommenders and anyone you assign work to.</p>
-        </div>
-        <span className="text-sm text-gray-500 font-mono">{list.length} {list.length === 1 ? "person" : "people"}</span>
-      </div>
-
-      {isOwner && <AddPersonForm />}
+    <main className="p-4 md:p-8 max-w-4xl mx-auto flex flex-col gap-8">
+      <PageHeader title="People" subtitle="Collaborators, recommenders and anyone you assign work to." actions={isOwner ? <AddPersonForm /> : undefined} />
 
       {list.length === 0 ? (
         <div className="border border-dashed border-line rounded-lg p-8 text-center text-sm text-gray-500 flex flex-col gap-2 items-center">
