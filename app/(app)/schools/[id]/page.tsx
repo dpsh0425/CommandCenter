@@ -12,6 +12,7 @@ import {
 } from "@/components/faculty-controls";
 import { AdmissionsPanel, type Profile } from "@/components/admissions-panel";
 import { researchGaps } from "@/lib/school-research";
+import { LinksPanel } from "@/components/links-panel";
 
 const localDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -42,7 +43,7 @@ export default async function SchoolDetailPage({
   const [
     { data: { user } }, { data: school }, { data: activity }, { data: linkedTasks }, { data: letters },
     { data: people }, { data: sop }, { data: interviews }, { data: visaSteps },
-    { data: departments }, { data: professors }, { data: fundings },
+    { data: departments }, { data: professors }, { data: fundings }, { data: schoolLinks },
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("schools").select("*").eq("id", id).single(),
@@ -56,6 +57,7 @@ export default async function SchoolDetailPage({
     supabase.from("departments").select("*").eq("school_id", id).order("name"),
     supabase.from("professors").select("*").eq("school_id", id).order("name"),
     supabase.from("fundings").select("*").eq("school_id", id),
+    supabase.from("links").select("*").eq("school_id", id),
   ]);
 
   if (!school) {
@@ -266,6 +268,16 @@ export default async function SchoolDetailPage({
               )}
               {isOwner && <SchoolTaskForm schoolId={id} people={people ?? []} />}
             </Section>
+            {isOwner && (
+              <Section title="Links" count={(schoolLinks ?? []).length}>
+                <LinksPanel
+                  links={(schoolLinks ?? []) as any}
+                  scope={{ schoolId: id }}
+                  placeholder="Paste a lab page, funding page, paper or program page…"
+                  emptyText="No links yet. Save the lab pages, funding pages and papers you rely on."
+                />
+              </Section>
+            )}
             {isOwner && (
               <Section title="Activity" count={(activity ?? []).length}>
                 <NoteForm schoolId={id} />

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { OWNER_USER_ID } from "@/lib/owner";
+import { LinksPanel } from "@/components/links-panel";
 import { DeleteMilestoneButton, MilestoneEditForm, MilestoneStatusSelect, MilestoneTaskForm } from "@/components/milestone-controls";
 
 const localDate = (d: Date) =>
@@ -16,12 +17,13 @@ const TASK_TONE: Record<string, string> = {
 export default async function MilestoneDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: { user } }, { data: milestone }, { data: tasks }, { data: people }, { data: siblings }] = await Promise.all([
+  const [{ data: { user } }, { data: milestone }, { data: tasks }, { data: people }, { data: siblings }, { data: milestoneLinks }] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("research_milestones").select("*").eq("id", id).single(),
     supabase.from("tasks").select("id, title, status, priority, due_date, people(name)").eq("research_milestone_id", id).order("due_date", { ascending: true, nullsFirst: false }),
     supabase.from("people").select("id, name").order("name"),
     supabase.from("research_milestones").select("id, title").order("target_date", { ascending: true, nullsFirst: false }),
+    supabase.from("links").select("*").eq("milestone_id", id),
   ]);
   if (!milestone) return <p className="p-4 md:p-8">Not found.</p>;
 
@@ -99,6 +101,18 @@ export default async function MilestoneDetailPage({ params }: { params: Promise<
         )}
         {isOwner && <MilestoneTaskForm milestoneId={id} people={people ?? []} />}
       </section>
+
+      {isOwner && (
+        <section className="border border-line bg-surface rounded-lg p-4 flex flex-col gap-3">
+          <h2 className="text-xs uppercase tracking-wide text-gray-500">Links for this milestone</h2>
+          <LinksPanel
+            links={(milestoneLinks ?? []) as any}
+            scope={{ milestoneId: id }}
+            placeholder="Paste a commit, pull request, paper, dataset or doc link…"
+            emptyText="No links yet. Attach the repo, PR or paper this milestone depends on."
+          />
+        </section>
+      )}
 
       <div className="flex justify-between gap-3 text-xs">
         {prev ? <Link href={`/research/${prev.id}`} className="text-gray-500 hover:text-cream">← {prev.title}</Link> : <span />}

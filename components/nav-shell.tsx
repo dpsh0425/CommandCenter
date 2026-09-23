@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CommandPalette } from "./command-palette";
+import { QuickAdd } from "./quick-add";
 import { createClient } from "@/lib/supabase/client";
 
 const PRIMARY = [
@@ -17,6 +18,7 @@ const WORK = [
   { href: "/outreach", label: "Outreach" },
   { href: "/tasks", label: "Tasks" },
   { href: "/research", label: "Research" },
+  { href: "/links", label: "Library" },
   { href: "/people", label: "People" },
 ];
 const MOBILE = [
@@ -31,6 +33,7 @@ const MORE = [
   { href: "/timeline", label: "Timeline" },
   { href: "/wins", label: "Wins" },
   { href: "/research", label: "Research" },
+  { href: "/links", label: "Library" },
   { href: "/people", label: "People" },
   { href: "/account", label: "Account" },
 ];
@@ -57,11 +60,12 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
   );
 }
 
-export function NavShell({ children }: { children: React.ReactNode }) {
+export function NavShell({ children, isOwner }: { children: React.ReactNode; isOwner: boolean }) {
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
 
   useEffect(() => setMoreOpen(false), [pathname]);
 
@@ -76,6 +80,15 @@ export function NavShell({ children }: { children: React.ReactNode }) {
           <span>Search or jump to…</span>
           <kbd className="text-[10px] border border-line rounded px-1">Ctrl K</kbd>
         </button>
+        {isOwner && (
+          <button
+            onClick={() => setQuickOpen(true)}
+            className="flex items-center justify-between text-left bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm"
+          >
+            <span>+ Quick add</span>
+            <kbd className="text-[10px] border border-ink/30 rounded px-1">Ctrl J</kbd>
+          </button>
+        )}
         <nav className="flex flex-col gap-0.5">
           <NavHeading>Overview</NavHeading>
           {PRIMARY.map((item) => <NavLink key={item.href} {...item} active={isActive(item.href)} />)}
@@ -97,12 +110,21 @@ export function NavShell({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="flex-1 min-w-0 pb-16 md:pb-0">{children}</div>
       <CommandPalette open={paletteOpen} setOpen={setPaletteOpen} />
+      {isOwner && <QuickAdd open={quickOpen} setOpen={setQuickOpen} />}
       {moreOpen && (
         <div className="md:hidden fixed inset-0 z-40" onClick={() => setMoreOpen(false)}>
           <div
             className="absolute bottom-14 left-3 right-3 bg-surface-raised border border-line rounded-lg p-2 flex flex-col shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
+            {isOwner && (
+              <button
+                onClick={() => { setMoreOpen(false); setQuickOpen(true); }}
+                className="text-left px-3 py-3 rounded text-sm bg-brass text-ink font-medium mb-1"
+              >
+                + Quick add
+              </button>
+            )}
             <button
               onClick={() => { setMoreOpen(false); setPaletteOpen(true); }}
               className="text-left px-3 py-3 rounded text-sm text-gray-500 border border-line mb-1"

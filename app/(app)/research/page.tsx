@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { addMilestone } from "./actions";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { MilestoneStatusSelect } from "@/components/milestone-controls";
+import { LinksPanel } from "@/components/links-panel";
 
 export const metadata = { title: "Research" };
 
@@ -21,10 +22,11 @@ const STATUS_TONE: Record<string, string> = {
 
 export default async function ResearchPage() {
   const supabase = await createClient();
-  const [{ data: { user } }, { data: milestones }, { data: tasks }] = await Promise.all([
+  const [{ data: { user } }, { data: milestones }, { data: tasks }, { data: projectLinks }] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("research_milestones").select("*").order("target_date", { ascending: true, nullsFirst: false }),
     supabase.from("tasks").select("research_milestone_id, status").not("research_milestone_id", "is", null),
+    supabase.from("links").select("*").is("school_id", null).is("milestone_id", null).is("professor_id", null),
   ]);
   const isOwner = user?.id === OWNER_USER_ID;
   const today = localDate(new Date());
@@ -77,6 +79,21 @@ export default async function ResearchPage() {
           {next && <span className="ml-auto">next: <span className="text-cream">{next.title}</span> · {relative(daysBetween(today, next.target_date as string))}</span>}
         </div>
       </section>
+
+      {isOwner && (
+        <section className="border border-line bg-surface rounded-lg p-4 flex flex-col gap-3">
+          <div>
+            <h2 className="text-xs uppercase tracking-wide text-gray-500">Project links</h2>
+            <p className="text-xs text-gray-400">Your GitHub repo, papers, datasets and docs for this study, in one place.</p>
+          </div>
+          <LinksPanel
+            links={(projectLinks ?? []) as any}
+            scope={{}}
+            placeholder="Paste your GitHub repo, arXiv paper, dataset or doc link…"
+            emptyText="No links yet. Paste your project's GitHub repository to start."
+          />
+        </section>
+      )}
 
       {list.length === 0 && (
         <p className="text-sm text-gray-500 border border-dashed border-line rounded p-6 text-center">No milestones yet. Add the first one below.</p>
