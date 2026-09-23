@@ -6,8 +6,7 @@ ap-northeast-1) rather than creating a new one.
 
 - `.env.local` is populated with the project URL, anon key, and service_role key.
 - Email auth is enabled (`external_email_enabled: true`).
-- Owner account created: `devdipeshdigital@gmail.com` (login email updated
-  from `dbhatta245@gmail.com` after creation), user id
+- Owner account created: `dbhatta245@gmail.com`, user id
   `41781551-3aca-4a59-b517-16189aa9c896` — this is the `--owner-id` value every
   later seed script in the plan (Tasks 6, 15) needs.
 - The Management API token used to do this is stored in `.supabase-token`
