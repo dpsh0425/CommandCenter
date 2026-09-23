@@ -11,6 +11,7 @@ import {
   type DepartmentRow, type FundingRow, type ProfessorRow,
 } from "@/components/faculty-controls";
 import { AdmissionsPanel, type Profile } from "@/components/admissions-panel";
+import { researchGaps } from "@/lib/school-research";
 
 const localDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -109,23 +110,7 @@ export default async function SchoolDetailPage({
   const bestFunding = [...funds].sort((a, b) => FUNDING_RANK[a.status] - FUNDING_RANK[b.status])[0];
 
   // What the applicant still doesn't know, each pointing to where to fill it in.
-  const gaps: Array<{ text: string; tab: TabKey }> = [];
-  if (!meta.deadline_date && !depts.some((d) => d.deadline_date)) gaps.push({ text: "Application deadline", tab: "admissions" });
-  if (!meta.gre_policy) gaps.push({ text: "GRE policy", tab: "admissions" });
-  if (!meta.english_test) gaps.push({ text: "English test requirement", tab: "admissions" });
-  if (meta.letters_required == null) gaps.push({ text: "How many letters are required", tab: "admissions" });
-  if (meta.application_fee == null && !meta.fee_waiver) gaps.push({ text: "Application fee and waiver", tab: "admissions" });
-  if (!meta.application_url) gaps.push({ text: "Application portal link", tab: "admissions" });
-  if (!meta.funding_guarantee && funds.length === 0) gaps.push({ text: "Whether funding is guaranteed", tab: "funding" });
-  if (funds.length === 0) gaps.push({ text: "Funding options (assistantships, fellowships)", tab: "funding" });
-  if (!meta.living_cost_note && !meta.city) gaps.push({ text: "Location and cost of living", tab: "admissions" });
-  if (depts.length === 0) gaps.push({ text: "Which department(s) your research fits", tab: "faculty" });
-  if (profs.length === 0) gaps.push({ text: "Professors whose work matches yours", tab: "faculty" });
-  if (openingsUnknown > 0) gaps.push({ text: `${openingsUnknown} professor${openingsUnknown === 1 ? "" : "s"}: are they taking students?`, tab: "faculty" });
-  if (profs.length > 0 && contacted === 0) gaps.push({ text: "You haven't contacted any professor yet", tab: "faculty" });
-  if (!meta.tier) gaps.push({ text: "Your chance call (reach / target / safe)", tab: "admissions" });
-  const TRACKED = 13;
-  const completeness = Math.max(0, Math.round(((TRACKED - Math.min(gaps.length, TRACKED)) / TRACKED) * 100));
+  const { gaps, completeness } = researchGaps(meta, depts.length, profs, funds.length, depts.filter((d) => d.deadline_date).length);
 
   const tabHref = (t: TabKey) => `/schools/${id}${t === "overview" ? "" : `?tab=${t}`}`;
 
@@ -201,7 +186,7 @@ export default async function SchoolDetailPage({
                 <Glance title="Requirements" href={tabHref("admissions")}>
                   <ul className="text-xs flex flex-col gap-1">
                     <li>GRE: {meta.gre_policy ? <b className="font-medium">{meta.gre_policy.replace("_", " ")}</b> : <Muted inline>unknown</Muted>}</li>
-                    <li>English: {meta.english_test ? <b className="font-medium">{meta.english_test}</b> : <Muted inline>unknown</Muted>}</li>
+                    <li className="line-clamp-2" title={meta.english_test ?? undefined}>English: {meta.english_test ? <b className="font-medium">{meta.english_test}</b> : <Muted inline>unknown</Muted>}</li>
                     <li>Letters: {meta.letters_required != null ? <b className="font-medium">{meta.letters_required}</b> : <Muted inline>unknown</Muted>} · Fee: {meta.application_fee != null ? <b className="font-medium">{meta.fee_currency} {Number(meta.application_fee).toLocaleString()}</b> : <Muted inline>unknown</Muted>}</li>
                   </ul>
                 </Glance>
