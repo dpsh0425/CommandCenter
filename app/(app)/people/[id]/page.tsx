@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { Avatar } from "@/components/avatar";
 import { DeletePersonButton, EditPersonForm, InviteForm } from "@/components/person-controls";
+import { Fold, Meta, Section } from "@/components/ui";
 
 const localDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -30,103 +31,96 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   const letterList = (letters ?? []) as any[];
 
   return (
-    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        <Link href="/people" className="text-xs text-gray-500 hover:text-cream self-start">← All people</Link>
-        <div className="flex items-center gap-4">
-          <Avatar name={person.name} color={person.color} size={56} />
-          <div className="min-w-0">
-            <h1 className="text-3xl font-semibold truncate">{person.name}</h1>
-            <p className="text-sm text-gray-500">{[person.role, person.area].filter(Boolean).join(" · ") || "No role set"}</p>
-            {person.email && <a href={`mailto:${person.email}`} className="text-xs text-brass underline">{person.email}</a>}
+    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-8">
+      <div className="flex flex-col gap-4">
+        <Link href="/people" className="text-xs text-gray-500 hover:text-cream self-start">← People</Link>
+        <div className="flex items-center gap-5">
+          <Avatar name={person.name} color={person.color} size={64} />
+          <div className="min-w-0 flex flex-col gap-1">
+            <h1 className="text-4xl leading-tight truncate">{person.name}</h1>
+            <Meta
+              items={[
+                [person.role, person.area].filter(Boolean).join(" · ") || "No role set",
+                person.email && <a href={`mailto:${person.email}`} className="text-brass hover:underline">{person.email}</a>,
+                person.auth_user_id && <span className="text-teal-600">can sign in</span>,
+              ]}
+            />
           </div>
         </div>
         {isOwner && (
           <EditPersonForm id={person.id} name={person.name} role={person.role} area={person.area} email={person.email} color={person.color} />
         )}
+        <p className="text-sm text-gray-500">
+          <span className="font-mono text-cream">{open.length}</span> open
+          {overdue.length > 0 && <> · <span className="text-red-600"><span className="font-mono">{overdue.length}</span> overdue</span></>}
+          {" · "}<span className="font-mono text-cream">{done.length}</span> completed
+        </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: "Open tasks", value: open.length, tone: "" },
-          { label: "Overdue", value: overdue.length, tone: overdue.length ? "text-red-600" : "text-teal-600" },
-          { label: "Completed", value: done.length, tone: "" },
-        ].map((s) => (
-          <div key={s.label} className="border border-line bg-surface rounded-lg p-3">
-            <div className={`text-2xl font-mono font-semibold ${s.tone}`}>{s.value}</div>
-            <div className="text-xs text-gray-500 uppercase">{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <section className="border border-line bg-surface rounded-lg p-4">
-        <h2 className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex justify-between">
-          <span>Assigned tasks</span><span className="font-mono">{all.length}</span>
-        </h2>
+      <Section title="Assigned tasks" hint={all.length ? `${all.length}` : undefined}>
         {all.length === 0 ? (
-          <p className="text-xs text-gray-400 border border-dashed border-line rounded p-4 text-center">
-            No tasks assigned yet. Assign one from the <Link href="/tasks" className="underline">task board</Link>.
+          <p className="text-sm text-gray-500">
+            No tasks yet. Assign one from a task's page, or add one on the <Link href="/tasks" className="underline hover:text-cream">task board</Link>.
           </p>
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col">
             {all.map((t) => {
               const late = t.due_date && t.due_date < today && t.status !== "done" && t.status !== "cancelled";
               const context = [t.schools?.name, t.research_milestones?.title].filter(Boolean).join(" · ");
               return (
-                <li key={t.id}>
-                  <Link href={`/tasks/${t.id}`} className="border rounded p-2.5 text-sm flex justify-between gap-3 items-center hover:border-brass">
+                <li key={t.id} className="border-b border-line/60 last:border-0">
+                  <Link href={`/tasks/${t.id}`} className="flex items-baseline justify-between gap-4 py-2.5 -mx-2 px-2 rounded transition-colors hover:bg-surface-raised">
                     <span className="min-w-0">
                       <span className={`block truncate ${t.status === "done" ? "line-through text-gray-500" : ""}`}>{t.title}</span>
-                      <span className="block text-xs text-gray-500 truncate">
-                        {context && `${context} · `}{t.priority}
-                        {t.due_date && <span className={late ? "text-red-600" : ""}> · due {t.due_date}</span>}
-                      </span>
+                      {context && <span className="block text-xs text-gray-500 truncate">{context}</span>}
                     </span>
-                    <span className={`text-xs uppercase whitespace-nowrap ${TASK_TONE[t.status]}`}>{t.status.replace("_", " ")}</span>
+                    <span className="text-sm whitespace-nowrap text-right">
+                      <span className={`block text-xs ${TASK_TONE[t.status]}`}>{t.status.replace("_", " ")}</span>
+                      {t.due_date && <span className={`block text-xs ${late ? "text-red-600" : "text-gray-400"}`}>due {t.due_date.slice(5)}</span>}
+                    </span>
                   </Link>
                 </li>
               );
             })}
           </ul>
         )}
-      </section>
+      </Section>
 
       {letterList.length > 0 && (
-        <section className="border border-line bg-surface rounded-lg p-4">
-          <h2 className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex justify-between">
-            <span>Recommendation letters</span><span className="font-mono">{letterList.length}</span>
-          </h2>
-          <ul className="flex flex-col gap-2">
+        <Section title="Recommendation letters" hint={`${letterList.length}`}>
+          <ul className="flex flex-col">
             {letterList.map((l) => (
-              <li key={l.id}>
-                <Link href={`/schools/${l.school_id}`} className="border rounded p-2.5 text-sm flex justify-between gap-3 hover:border-brass">
-                  <span className="truncate">{l.schools?.name ?? "School"}{l.letter_deadline && <span className="text-xs text-gray-500"> · due {l.letter_deadline}</span>}</span>
-                  <span className="text-xs uppercase text-gray-500 whitespace-nowrap">{String(l.status).replace("_", " ")}</span>
+              <li key={l.id} className="border-b border-line/60 last:border-0">
+                <Link href={`/schools/${l.school_id}?tab=application`} className="flex justify-between gap-4 py-2.5 -mx-2 px-2 rounded transition-colors hover:bg-surface-raised">
+                  <span className="truncate">{l.schools?.name ?? "School"}{l.letter_deadline && <span className="text-sm text-gray-500"> · due {l.letter_deadline}</span>}</span>
+                  <span className="text-sm text-gray-400 whitespace-nowrap">{String(l.status).replace("_", " ")}</span>
                 </Link>
               </li>
             ))}
           </ul>
-        </section>
+        </Section>
       )}
 
       {isOwner && (
-        <section className="border border-line bg-surface rounded-lg p-4 flex flex-col gap-3">
-          <h2 className="text-xs uppercase tracking-wide text-gray-500">Sign-in access</h2>
+        <Fold title="Sign-in access" summary={person.auth_user_id ? "account linked" : "no login"} defaultOpen={!person.auth_user_id}>
           {person.auth_user_id ? (
-            <p className="text-sm">
-              <span className="text-teal-600">Account linked.</span>{" "}
-              <span className="text-gray-500">They can sign in and see only the tasks assigned to them{person.email ? ` (${person.email})` : ""}.</span>
+            <p className="text-sm text-gray-500">
+              {person.name.split(" ")[0]} can sign in and sees only the tasks assigned to them{person.email ? ` (${person.email})` : ""}.
             </p>
           ) : (
-            <>
-              <p className="text-sm text-gray-500">Invite {person.name.split(" ")[0]} to sign in. They'll only see tasks assigned to them, plus the school or milestone each links to.</p>
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-gray-500">Invite {person.name.split(" ")[0]} to sign in. They'll see only tasks assigned to them, plus the school or milestone each links to.</p>
               <InviteForm personId={person.id} defaultEmail={person.email} />
-            </>
+            </div>
           )}
-        </section>
+        </Fold>
       )}
 
-      {isOwner && <DeletePersonButton id={person.id} name={person.name} openTasks={open.length} />}
+      {isOwner && (
+        <div className="pt-2">
+          <DeletePersonButton id={person.id} name={person.name} openTasks={open.length} />
+        </div>
+      )}
     </main>
   );
 }
