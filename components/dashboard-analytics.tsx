@@ -31,20 +31,8 @@ type ColorBy = "fit" | "status" | "country";
 const colorOf = (s: AnalyticsSchool, by: ColorBy) =>
   by === "fit" ? (s.verified_fit ? "#5cae97" : "#c98a3e") : by === "status" ? STATUS_COLOR[s.status] : COUNTRY_COLOR[s.country] ?? "#8b93a3";
 
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`px-2.5 py-1 rounded-full text-xs border ${active ? "bg-brass text-ink font-medium border-brass" : "hover:border-brass"}`}
-    >
-      {children}
-    </button>
-  );
-}
-
 function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="text-xs text-gray-400 border border-dashed border-line rounded p-8 text-center">{children}</p>;
+  return <p className="text-sm text-gray-400 py-10 text-center">{children}</p>;
 }
 
 export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsSchool[]; weekly: WeekPoint[] }) {
@@ -102,7 +90,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
       key={t}
       type="button"
       onClick={() => setTab(t)}
-      className={`flex-1 py-1.5 text-sm rounded ${tab === t ? "bg-surface-raised text-cream font-medium" : "text-gray-500 hover:text-cream"}`}
+      className={`pb-2 text-sm border-b-2 -mb-px ${tab === t ? "border-brass text-cream font-medium" : "border-transparent text-gray-500 hover:text-cream"}`}
     >
       {label}
     </button>
@@ -111,8 +99,8 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
   const momentumEmpty = weekly.every((w) => w.tasks === 0 && w.wins === 0);
 
   return (
-    <section className="border border-line bg-surface rounded-lg p-4 flex flex-col gap-4">
-      <div className="flex gap-1 border border-line rounded p-1">
+    <section className="flex flex-col gap-5">
+      <div className="flex gap-5 border-b border-line">
         {tabBtn("fit", "Fit map")}
         {tabBtn("pipeline", "Pipeline")}
         {tabBtn("scores", "Scores")}
@@ -120,28 +108,25 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
       </div>
 
       {tab !== "momentum" && (
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-2 items-center">
-            <Chip active={country === "all"} onClick={() => setCountry("all")}>All countries</Chip>
-            {COUNTRIES.map((c) => <Chip key={c} active={country === c} onClick={() => setCountry(c)}>{c}</Chip>)}
-            <span className="w-px h-4 bg-line" />
-            <Chip active={verifiedOnly} onClick={() => setVerifiedOnly((v) => !v)}>Verified fit only</Chip>
-            <span className="ml-auto text-xs text-gray-500 font-mono">{filtered.length} of {schools.length} schools</span>
-          </div>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <select value={country} onChange={(e) => setCountry(e.target.value)} className="border rounded px-2 py-1.5 bg-transparent" aria-label="Country">
+            <option value="all">All countries</option>
+            {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <label className="flex items-center gap-1.5 text-gray-500 cursor-pointer">
+            <input type="checkbox" checked={verifiedOnly} onChange={(e) => setVerifiedOnly(e.target.checked)} /> Verified fit only
+          </label>
           {tab === "fit" && (
-            <div className="flex flex-wrap gap-2 items-center">
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Highlight a school or faculty…"
-                className="border rounded px-2 py-1 text-xs w-56"
-              />
-              <span className="text-xs text-gray-500 ml-1">Colour by</span>
-              {(["fit", "status", "country"] as ColorBy[]).map((c) => (
-                <Chip key={c} active={colorBy === c} onClick={() => setColorBy(c)}>{c}</Chip>
-              ))}
-            </div>
+            <>
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Highlight a school or professor" className="border rounded px-3 py-1.5 w-56 max-w-full" />
+              <select value={colorBy} onChange={(e) => setColorBy(e.target.value as ColorBy)} className="border rounded px-2 py-1.5 bg-transparent" aria-label="Colour by">
+                <option value="fit">Colour by fit</option>
+                <option value="status">Colour by status</option>
+                <option value="country">Colour by country</option>
+              </select>
+            </>
           )}
+          <span className="ml-auto text-xs text-gray-400 font-mono">{filtered.length} of {schools.length}</span>
         </div>
       )}
 
@@ -214,33 +199,31 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
 
             <div className="flex flex-col gap-3 min-w-0">
               {selected ? (
-                <div className="border border-brass rounded-lg p-3 flex flex-col gap-2 text-sm">
+                <div className="flex flex-col gap-2 border-l-2 border-brass pl-4">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="font-medium">{selected.name}</div>
+                    <h3 className="font-serif text-2xl leading-tight">{selected.name}</h3>
                     <button onClick={() => setSelectedId(null)} className="text-xs text-gray-500 hover:text-cream" aria-label="Clear selection">✕</button>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {selected.country} · {selected.status.replace("_", " ")} · {selected.verified_fit ? "verified fit" : "heuristic"}
-                  </div>
-                  <div className="font-mono text-xs">score {selected.composite_score?.toFixed(1) ?? "—"} · NLP rank #{selected.csranking_nlp_rank ?? "?"}</div>
-                  {selected.faculty && <div className="text-xs"><strong>{selected.faculty}</strong></div>}
-                  {selected.fit_note && <p className="text-xs text-gray-500 line-clamp-4">{selected.fit_note}</p>}
-                  <Link href={`/schools/${selected.id}`} className="bg-brass text-ink font-medium rounded px-3 py-1.5 text-xs self-start">Open school →</Link>
+                  <p className="text-sm text-gray-500">{selected.country} · {selected.status.replace("_", " ")} · {selected.verified_fit ? "verified fit" : "heuristic"}</p>
+                  <p className="text-sm font-mono">score {selected.composite_score?.toFixed(1) ?? "—"} · NLP rank #{selected.csranking_nlp_rank ?? "?"}</p>
+                  {selected.faculty && <p className="text-sm">{selected.faculty}</p>}
+                  {selected.fit_note && <p className="text-sm text-gray-500 line-clamp-3">{selected.fit_note}</p>}
+                  <Link href={`/schools/${selected.id}`} className="text-sm text-brass hover:underline self-start">Open school →</Link>
                 </div>
               ) : (
-                <div className="text-xs text-gray-400 border border-dashed border-line rounded-lg p-3">Click a point or a row to see details here.</div>
+                <p className="text-sm text-gray-400">Click a point or a name to see details here.</p>
               )}
               <div>
-                <div className="text-xs uppercase tracking-wide text-gray-500 mb-1.5">Top matches{q ? " for your search" : ""}</div>
+                <h3 className="font-sans text-[15px] font-semibold text-cream mb-1 border-b border-line pb-2">Top matches{q ? " for your search" : ""}</h3>
                 {shortlist.length === 0 ? (
                   <p className="text-xs text-gray-400">Nothing matches.</p>
                 ) : (
-                  <ol className="flex flex-col divide-y divide-line">
+                  <ol className="flex flex-col divide-y divide-line/60">
                     {shortlist.map((s, i) => (
                       <li key={s.id}>
                         <button
                           onClick={() => setSelectedId(s.id)}
-                          className={`w-full flex items-center gap-2 py-1.5 text-left text-xs hover:text-brass ${s.id === selectedId ? "text-brass" : ""}`}
+                          className={`w-full flex items-center gap-3 py-2 -mx-2 px-2 rounded text-left text-sm transition-colors hover:bg-surface-raised ${s.id === selectedId ? "text-brass" : ""}`}
                         >
                           <span className="font-mono text-gray-400 w-4">{i + 1}</span>
                           <i className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: colorOf(s, colorBy) }} />
