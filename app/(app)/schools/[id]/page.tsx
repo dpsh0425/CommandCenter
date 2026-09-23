@@ -3,12 +3,15 @@ import { ActivityTimeline } from "@/components/activity-timeline";
 import { addNote, updateContactEmail } from "./actions";
 import { addLetterRequest, updateLetterStatus, createSopVersion, setSchoolSopVersion } from "./logistics-actions";
 import { scheduleInterview, updateVisaStep } from "./interview-actions";
+import { StatusSelect } from "@/components/status-select";
+import { OWNER_USER_ID } from "@/lib/owner";
 import Link from "next/link";
 
 export default async function SchoolDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: school }, { data: activity }, { data: linkedTasks }, { data: letters }, { data: people }, { data: sopVersion }, { data: interviews }, { data: visaSteps }] = await Promise.all([
+  const [{ data: { user } }, { data: school }, { data: activity }, { data: linkedTasks }, { data: letters }, { data: people }, { data: sopVersion }, { data: interviews }, { data: visaSteps }] = await Promise.all([
+    supabase.auth.getUser(),
     supabase.from("schools").select("*").eq("id", id).single(),
     supabase.from("activity_log").select("*").eq("school_id", id).order("occurred_at", { ascending: false }),
     supabase.from("tasks").select("id, title, status").eq("school_id", id),
@@ -20,6 +23,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
   ]);
 
   if (!school) return <p className="p-8">Not found.</p>;
+  const isOwner = user?.id === OWNER_USER_ID;
 
   async function addNoteAction(formData: FormData) {
     "use server";
@@ -71,46 +75,82 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
     if (stepId) await updateVisaStep(stepId, id, status);
   }
 
+  const meta = school as any;
+
   return (
-    <main className="p-8 max-w-2xl mx-auto flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">{school.name}</h1>
-        <p className="text-gray-600">{school.faculty} — {school.fit_note}</p>
+    <main className="p-8 max-w-5xl mx-auto flex flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <Link href="/schools" className="text-xs text-gray-500 hover:text-cream self-start">← All schools</Link>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-0">
+            <h1 className="text-3xl font-semibold">{school.name}</h1>
+            <div className="flex flex-wrap gap-2 mt-2 text-xs">
+              <Chip>{school.country}</Chip>
+              {meta.verified_fit && <Chip tone="text-teal-600 border-teal-600">verified fit</Chip>}
+              {meta.csranking_nlp_rank != null && <Chip>NLP rank #{meta.csranking_nlp_rank}</Chip>}
+              {meta.composite_score != null && <Chip>score {Number(meta.composite_score).toFixed(1)}</Chip>}
+              {meta.deadline_date && <Chip tone="text-brass border-brass">deadline {meta.deadline_date}</Chip>}
+            </div>
+          </div>
+          {isOwner && <StatusSelect schoolId={school.id} value={meta.status} />}
+        </div>
+        {(school.faculty || school.fit_note) && (
+          <div className="border border-line bg-surface rounded p-4 text-sm">
+            {school.faculty && <div className="font-medium text-cream">{school.faculty}</div>}
+            {school.fit_note && <p className="text-gray-500 mt-1">{school.fit_note}</p>}
+          </div>
+        )}
       </div>
 
-      <form action={updateEmailAction} className="flex gap-2 items-center">
-        <label className="text-sm text-gray-500">Contact email</label>
-        <input
-          name="contact_email"
-          defaultValue={school.contact_email ?? ""}
-          placeholder="faculty@university.edu"
-          className="border rounded px-2 py-1 text-sm flex-1"
-        />
-        <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm">Save</button>
-      </form>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start">
+      <div className="flex flex-col gap-6 min-w-0">
+      <Section title="Linked tasks" count={(linkedTasks ?? []).length}>
+        {(linkedTasks ?? []).length === 0 ? <Empty>No tasks linked to this school yet.</Empty> : (
+          <ul className="flex flex-col gap-2">
+            {(linkedTasks ?? []).map((t) => (
+              <li key={t.id} className="border rounded p-2 text-sm flex justify-between gap-2">
+                <Link href={`/tasks/${t.id}`} className="hover:underline">{t.title}</Link>
+                <span className="text-xs uppercase text-gray-500 whitespace-nowrap">{t.status.replace("_", " ")}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
 
-      <form action={addNoteAction} className="flex flex-col gap-2">
-        <textarea name="content" placeholder="Add a note…" className="border rounded p-2 text-sm" rows={3} />
-        <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm self-start">Add note</button>
-      </form>
-
-      <div>
-        <h2 className="font-medium mb-2">Linked tasks ({(linkedTasks ?? []).length})</h2>
-        <ul className="flex flex-col gap-2">
-          {(linkedTasks ?? []).map((t) => (
-            <li key={t.id} className="border rounded p-2 text-sm flex justify-between">
-              <Link href={`/tasks/${t.id}`} className="hover:underline">{t.title}</Link>
-              <span className="text-xs uppercase text-gray-500">{t.status.replace("_", " ")}</span>
-            </li>
-          ))}
-        </ul>
+      {isOwner && (
+      <Section title="Activity" count={(activity ?? []).length}>
+        <form action={addNoteAction} className="flex flex-col gap-2 mb-4">
+          <textarea name="content" placeholder="Log a note, call, or outreach…" className="border rounded p-2 text-sm" rows={3} />
+          <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm self-start">Add note</button>
+        </form>
+        {(activity ?? []).length === 0 ? <Empty>No activity yet.</Empty> : <ActivityTimeline items={activity ?? []} />}
+      </Section>
+      )}
       </div>
 
-      <div>
-        <h2 className="font-medium mb-2">Recommendation letters</h2>
+      {isOwner && (
+      <div className="flex flex-col gap-6 min-w-0">
+      <Section title="Contact">
+        <form action={updateEmailAction} className="flex gap-2 items-center">
+          <input
+            name="contact_email"
+            type="email"
+            defaultValue={school.contact_email ?? ""}
+            placeholder="faculty@university.edu"
+            className="border rounded px-2 py-1 text-sm flex-1 min-w-0"
+          />
+          <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm">Save</button>
+        </form>
+        {school.contact_email && (
+          <a href={`mailto:${school.contact_email}`} className="text-xs text-brass underline mt-2 inline-block">Compose email</a>
+        )}
+      </Section>
+
+      <Section title="Recommendation letters" count={(letters ?? []).length}>
+        {(letters ?? []).length === 0 && <div className="mb-3"><Empty>No letters requested.</Empty></div>}
         <ul className="flex flex-col gap-2 mb-2">
           {(letters ?? []).map((l: any) => (
-            <li key={l.id} className="border rounded p-2 text-sm flex justify-between items-center">
+            <li key={l.id} className="border rounded p-2 text-sm flex justify-between items-center gap-2 flex-wrap">
               <span>{l.people?.name ?? "Unknown"}{l.letter_deadline && ` — due ${l.letter_deadline}`}</span>
               <form action={updateLetterStatusAction} className="flex items-center gap-1">
                 <input type="hidden" name="letter_id" value={l.id} />
@@ -125,7 +165,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
             </li>
           ))}
         </ul>
-        <form action={addLetterAction} className="flex gap-2 items-center">
+        <form action={addLetterAction} className="flex gap-2 items-center flex-wrap">
           <select name="recommender_id" className="border rounded px-2 py-1 text-sm" required>
             <option value="">Choose recommender…</option>
             {(people ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -133,28 +173,29 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
           <input type="date" name="letter_deadline" className="border rounded px-2 py-1 text-sm" />
           <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm">Request letter</button>
         </form>
-      </div>
+      </Section>
 
-      <div>
-        <h2 className="font-medium mb-2">SOP sent</h2>
+      <Section title="SOP sent">
         {sopVersion?.sop_version_id ? (
-          <p className="text-sm text-gray-600 mb-2">{(sopVersion as any).sop_versions?.label} — sent {sopVersion.sop_sent_at}</p>
+          <p className="text-sm text-gray-500 mb-3">
+            <span className="text-cream">{(sopVersion as any).sop_versions?.label}</span> — sent {sopVersion.sop_sent_at}
+          </p>
         ) : (
-          <p className="text-sm text-gray-500 mb-2">No SOP version recorded yet.</p>
+          <div className="mb-3"><Empty>No SOP version recorded yet.</Empty></div>
         )}
-        <form action={addSopVersionAction} className="flex gap-2 flex-wrap">
+        <form action={addSopVersionAction} className="flex flex-col gap-2">
           <input name="label" placeholder="Version label, e.g. v3 — AU variant" className="border rounded px-2 py-1 text-sm" required />
           <input name="external_link" placeholder="Link (optional)" className="border rounded px-2 py-1 text-sm" />
-          <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm">Record as sent</button>
+          <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm self-start">Record as sent</button>
         </form>
-      </div>
+      </Section>
 
-      <div>
-        <h2 className="font-medium mb-2">Interviews</h2>
-        <ul className="flex flex-col gap-2 mb-2">
+      <Section title="Interviews" count={(interviews ?? []).length}>
+        {(interviews ?? []).length === 0 && <div className="mb-3"><Empty>No interviews scheduled.</Empty></div>}
+        <ul className="flex flex-col gap-2 mb-3">
           {(interviews ?? []).map((iv) => (
             <li key={iv.id} className="border rounded p-2 text-sm">
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-2">
                 <span>{new Date(iv.scheduled_at).toLocaleString()}</span>
                 <span className="text-xs uppercase text-gray-500">{iv.status.replace("_", " ")}</span>
               </div>
@@ -162,20 +203,22 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
             </li>
           ))}
         </ul>
-        <form action={scheduleInterviewAction} className="flex gap-2 flex-wrap items-center">
+        <form action={scheduleInterviewAction} className="flex flex-col gap-2">
           <input type="datetime-local" name="scheduled_at" className="border rounded px-2 py-1 text-sm" required />
-          <input name="prep_notes" placeholder="Prep notes (optional)" className="border rounded px-2 py-1 text-sm flex-1" />
-          <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm">Schedule interview</button>
+          <input name="prep_notes" placeholder="Prep notes (optional)" className="border rounded px-2 py-1 text-sm" />
+          <button className="bg-brass text-ink font-medium rounded px-3 py-1 text-sm self-start">Schedule interview</button>
         </form>
-      </div>
+      </Section>
 
       {visaSteps && visaSteps.length > 0 && (
-        <div>
-          <h2 className="font-medium mb-2">Visa checklist <span className="text-xs text-gray-400 font-normal">— auto-created on acceptance</span></h2>
+        <Section
+          title="Visa checklist"
+          count={`${visaSteps.filter((v) => v.status === "done").length}/${visaSteps.length}`}
+        >
           <ul className="flex flex-col gap-2">
             {visaSteps.map((v) => (
-              <li key={v.id} className="border rounded p-2 text-sm flex justify-between items-center">
-                <span>{v.step_name}</span>
+              <li key={v.id} className="border rounded p-2 text-sm flex justify-between items-center gap-2">
+                <span className={v.status === "done" ? "line-through text-gray-500" : ""}>{v.step_name}</span>
                 <form action={updateVisaStepAction} className="flex items-center gap-1">
                   <input type="hidden" name="step_id" value={v.id} />
                   <select name="status" defaultValue={v.status} className="border rounded text-xs px-1 py-0.5">
@@ -188,13 +231,31 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ i
               </li>
             ))}
           </ul>
-        </div>
+        </Section>
       )}
-
-      <div>
-        <h2 className="font-medium mb-2">Activity</h2>
-        <ActivityTimeline items={activity ?? []} />
+      </div>
+      )}
       </div>
     </main>
   );
+}
+
+function Section({ title, count, children }: { title: string; count?: number | string; children: React.ReactNode }) {
+  return (
+    <section className="border border-line bg-surface rounded-lg p-4">
+      <h2 className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex justify-between">
+        <span>{title}</span>
+        {count !== undefined && <span className="font-mono">{count}</span>}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return <p className="text-xs text-gray-400 border border-dashed border-line rounded p-3 text-center">{children}</p>;
+}
+
+function Chip({ children, tone = "text-gray-500 border-line" }: { children: React.ReactNode; tone?: string }) {
+  return <span className={`border rounded-full px-2.5 py-0.5 ${tone}`}>{children}</span>;
 }

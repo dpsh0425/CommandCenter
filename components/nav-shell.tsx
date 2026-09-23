@@ -25,11 +25,22 @@ const MOBILE = [
   { href: "/people", label: "People" },
 ];
 
+function NavHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      aria-hidden
+      className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray-400 px-3 pt-5 pb-1.5 first:pt-1 select-none pointer-events-none"
+    >
+      {children}
+    </div>
+  );
+}
+
 function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
   return (
     <Link
       href={href}
-      className={`block px-3 py-2 rounded text-sm ${active ? "bg-surface-raised text-cream font-medium border-l-2 border-brass" : "text-gray-500 hover:bg-gray-50"}`}
+      className={`block px-3 py-1.5 rounded text-sm border-l-2 ${active ? "bg-surface-raised text-cream font-medium border-brass" : "border-transparent text-gray-500 hover:text-cream hover:bg-surface-raised"}`}
     >
       {label}
     </Link>
@@ -52,20 +63,24 @@ export function NavShell({ children }: { children: React.ReactNode }) {
           <span>Search or jump to…</span>
           <kbd className="text-[10px] border border-line rounded px-1">Ctrl K</kbd>
         </button>
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-col gap-0.5">
+          <NavHeading>Overview</NavHeading>
           {PRIMARY.map((item) => <NavLink key={item.href} {...item} active={isActive(item.href)} />)}
-          <div className="text-xs uppercase text-gray-400 px-3 pt-3 pb-1">Work</div>
+          <NavHeading>Work</NavHeading>
           {WORK.map((item) => <NavLink key={item.href} {...item} active={isActive(item.href)} />)}
         </nav>
-        <button
-          onClick={async () => {
-            await createClient().auth.signOut();
-            window.location.href = "/login";
-          }}
-          className="mt-auto text-left px-3 py-2 rounded text-sm text-gray-500 hover:bg-gray-50"
-        >
-          Sign out
-        </button>
+        <div className="mt-auto flex flex-col gap-0.5 border-t border-line pt-3">
+          <NavLink href="/account" label="Account" active={isActive("/account")} />
+          <button
+            onClick={async () => {
+              await createClient().auth.signOut();
+              window.location.href = "/login";
+            }}
+            className="text-left px-3 py-2 rounded text-sm text-gray-500 hover:text-cream"
+          >
+            Sign out
+          </button>
+        </div>
       </aside>
       <div className="flex-1 min-w-0 pb-16 md:pb-0">{children}</div>
       <CommandPalette open={paletteOpen} setOpen={setPaletteOpen} />
