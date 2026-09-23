@@ -1,3 +1,5 @@
+import { ApplyingToggle, ChecklistRows } from "@/components/readiness-controls";
+import { assess, buildItems, RISK_LABEL, RISK_TONE } from "@/lib/readiness";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ActivityTimeline } from "@/components/activity-timeline";
@@ -85,6 +87,17 @@ export default async function SchoolDetailPage({
   const deptOptions = depts.map((d) => ({ id: d.id, name: d.name }));
   const profOptions = profs.map((p) => ({ id: p.id, name: p.name }));
 
+  const { data: checkRows } = await supabase.from("application_checks").select("item, done").eq("school_id", id);
+  const checkMap: Record<string, boolean> = {};
+  (checkRows ?? []).forEach((c: any) => { checkMap[c.item] = c.done; });
+  const readinessItems = buildItems(
+    { id, name: meta.name, deadline_date: meta.deadline_date, status: meta.status, gre_policy: meta.gre_policy, english_test: meta.english_test, letters_required: meta.letters_required, sop_version_id: (sop as any)?.sop_version_id ?? null },
+    letterList, checkMap
+  );
+  const verdict = assess(
+    { id, name: meta.name, deadline_date: meta.deadline_date, status: meta.status, gre_policy: meta.gre_policy, english_test: meta.english_test, letters_required: meta.letters_required, sop_version_id: (sop as any)?.sop_version_id ?? null },
+    readinessItems, today
+  );
   const lettersConfirmed = letterList.filter((l) => l.status === "confirmed" || l.status === "submitted").length;
   const lettersReady = letterList.length > 0 && lettersConfirmed === letterList.length;
   const checklist = [
@@ -312,11 +325,30 @@ export default async function SchoolDetailPage({
 
       {isOwner && tab === "application" && (
         <div className="max-w-3xl flex flex-col gap-8">
-          <p className="text-sm text-gray-500">
-            {readyCount === checklist.length
-              ? "Everything on the checklist is ready."
-              : `${readyCount} of ${checklist.length} ready. Still to do: ${checklist.filter((c) => !c.done).map((c) => c.label.toLowerCase()).join(", ")}.`}
-          </p>
+          <section className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line pb-2">
+              <h2 className="font-sans text-[15px] font-semibold text-cream">
+                {meta.applying ? "Submission checklist" : "Are you applying here?"}
+              </h2>
+              {meta.applying && (
+                <span className={`text-sm ${RISK_TONE[verdict.risk]}`}>
+                  {RISK_LABEL[verdict.risk]}
+                  {verdict.days != null && verdict.risk !== "submitted" && <span className="text-gray-400"> · {verdict.days < 0 ? `${-verdict.days}d ago` : `${verdict.days} days left`}</span>}
+                </span>
+              )}
+            </div>
+            {meta.applying ? (
+              <>
+                <ChecklistRows schoolId={id} items={readinessItems} />
+                <div className="pt-2"><ApplyingToggle schoolId={id} applying /></div>
+              </>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-gray-500">Track this school on your Readiness page with a checklist and a deadline warning.</p>
+                <ApplyingToggle schoolId={id} applying={false} />
+              </div>
+            )}
+          </section>
 
           <Step
             done={lettersReady}

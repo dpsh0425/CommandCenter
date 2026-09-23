@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { DashboardAnalytics } from "@/components/dashboard-analytics";
 import { Fold, Section } from "@/components/ui";
 import { Runway } from "@/components/runway";
+import { loadReadiness } from "@/lib/readiness-data";
+import { RISK_LABEL, RISK_TONE } from "@/lib/readiness";
 import { WeekRhythm } from "@/components/week-rhythm";
 
 export const metadata = { title: "Dashboard" };
@@ -61,6 +63,8 @@ export default async function DashboardPage() {
   const firstMonday = new Date(thisMonday);
   firstMonday.setDate(firstMonday.getDate() - 7 * 7);
   const weekStart = localDate(mondayOf(now));
+  const readiness = await loadReadiness(supabase, today);
+  const atRisk = readiness.filter((r) => r.risk === "overdue" || r.risk === "urgent" || r.risk === "watch");
   const [{ data: doneUpdates }, { data: winActivity }, { data: contactedProfs }] = await Promise.all([
     supabase.from("task_updates").select("created_at").eq("type", "status_change").eq("is_win", true).gte("created_at", firstMonday.toISOString()),
     supabase.from("activity_log").select("created_at").eq("is_win", true).gte("created_at", firstMonday.toISOString()),
@@ -163,6 +167,28 @@ export default async function DashboardPage() {
           </div>
         )}
       </section>
+
+      {atRisk.length > 0 && (
+        <section className="flex flex-col gap-1">
+          <div className="flex items-baseline justify-between border-b border-line pb-2">
+            <h2 className="font-sans text-[15px] font-semibold text-cream">Needs attention</h2>
+            <Link href="/readiness" className="text-xs text-gray-500 hover:text-cream">All applications →</Link>
+          </div>
+          <ul className="flex flex-col">
+            {atRisk.slice(0, 4).map((r) => (
+              <li key={r.school.id} className="border-b border-line/60 last:border-0">
+                <Link href={`/schools/${r.school.id}?tab=application`} className="flex items-baseline justify-between gap-4 py-2.5 -mx-2 px-2 rounded transition-colors hover:bg-surface-raised">
+                  <span className="min-w-0">
+                    <span className="block truncate">{r.school.name}</span>
+                    <span className="block text-xs text-gray-500 truncate">Still to do: {r.pending.map((p) => p.label.replace(/ \(.*\)$/, "").toLowerCase()).join(", ")}</span>
+                  </span>
+                  <span className={`text-sm whitespace-nowrap ${RISK_TONE[r.risk]}`}>{RISK_LABEL[r.risk]}{r.days != null && <span className="text-gray-400"> · {r.days < 0 ? `${-r.days}d ago` : `${r.days}d`}</span>}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="grid gap-8 md:grid-cols-2 items-start">
         <section className="flex flex-col gap-3">

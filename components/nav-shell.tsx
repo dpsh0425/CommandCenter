@@ -11,7 +11,7 @@ const PRIMARY = [
   { href: "/today", label: "Today", also: ["/week", "/timeline", "/wins"] },
 ];
 const WORK = [
-  { href: "/schools", label: "Schools", also: ["/compare"] },
+  { href: "/schools", label: "Schools", also: ["/compare", "/readiness"] },
   { href: "/outreach", label: "Outreach" },
   { href: "/materials", label: "Materials" },
   { href: "/tasks", label: "Tasks" },
@@ -27,6 +27,7 @@ const MOBILE = [
 const MORE = [
   { href: "/week", label: "This week" },
   { href: "/compare", label: "Compare schools" },
+  { href: "/readiness", label: "Readiness" },
   { href: "/outreach", label: "Outreach" },
   { href: "/materials", label: "Materials" },
   { href: "/research", label: "Research" },

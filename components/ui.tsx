@@ -86,6 +86,7 @@ export const TODAY_TABS = [
 export const SCHOOL_TABS = [
   { href: "/schools", label: "All schools" },
   { href: "/compare", label: "Compare" },
+  { href: "/readiness", label: "Readiness" },
 ];
 export const MATERIALS_TABS = [
   { href: "/materials", label: "Documents" },
