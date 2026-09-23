@@ -1,10 +1,5 @@
-import { CommandPalette } from "@/components/command-palette";
+import { NavShell } from "@/components/nav-shell";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      {children}
-      <CommandPalette />
-    </>
-  );
+  return <NavShell>{children}</NavShell>;
 }
