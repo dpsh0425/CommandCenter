@@ -4,7 +4,7 @@ import { ActivityTimeline } from "@/components/activity-timeline";
 import { StatusSelect } from "@/components/status-select";
 import { OWNER_USER_ID } from "@/lib/owner";
 import {
-  AddLetterForm, InterviewRow, LetterRow, NoteForm, ScheduleInterviewForm, SchoolDetailsForm, SchoolTaskForm, SopForm, VisaStepRow,
+  AddLetterForm, InterviewRow, LetterRow, NoteForm, ScheduleInterviewForm, SchoolTaskForm, SopForm, VisaStepRow,
 } from "@/components/school-controls";
 import {
   AddDepartmentButton, AddFundingButton, AddProfessorButton, DepartmentHeader, FundingCard, ProfessorCard,
@@ -288,10 +288,11 @@ export default async function SchoolDetailPage({
 
       {isOwner && tab === "funding" && (
         <div className="flex flex-col gap-4">
-          {meta.funding_guarantee && (
-            <p className="text-sm"><span className="text-teal-600">Guaranteed: </span>{meta.funding_guarantee}</p>
+          {meta.funding_guarantee ? (
+            <p className="font-serif text-2xl leading-snug max-w-2xl"><span className="text-teal-600">Guaranteed. </span>{meta.funding_guarantee}</p>
+          ) : (
+            <p className="text-sm text-gray-500 max-w-2xl">Every way this school could pay for you: school-wide, by department, or a professor's grant.</p>
           )}
-          <p className="text-sm text-gray-500 max-w-2xl">Every way this school could pay for you: school-wide, by department, or a professor's grant.</p>
           {sortedFunds.length === 0 ? <Empty>No funding tracked yet.</Empty> : (
             <div className="grid gap-3 md:grid-cols-2">
               {sortedFunds.map((f) => (
@@ -304,63 +305,94 @@ export default async function SchoolDetailPage({
       )}
 
       {isOwner && tab === "admissions" && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start">
-          <Section title="Admissions facts"><AdmissionsPanel schoolId={id} p={profile} /></Section>
-          <Section title="Basics">
-            <SchoolDetailsForm
-              schoolId={id} deadlineDate={meta.deadline_date} deadlineNote={meta.deadline_note}
-              contactEmail={school.contact_email} faculty={school.faculty} fitNote={school.fit_note}
-            />
-          </Section>
+        <div className="max-w-3xl">
+          <AdmissionsPanel schoolId={id} p={profile} />
         </div>
       )}
 
       {isOwner && tab === "application" && (
-        <div className="flex flex-col gap-6">
-          <section className="flex flex-col gap-3">
-            <div className="flex items-baseline justify-between border-b border-line pb-2">
-              <h2 className="font-sans text-[15px] font-semibold text-cream">Readiness</h2>
-              <span className="font-mono text-xs text-gray-500">{readyCount} of {checklist.length}</span>
-            </div>
-            <ul className="flex flex-wrap gap-2 text-xs">
-              {checklist.map((c) => (
-                <li key={c.label} className={`border rounded-full px-2.5 py-1 flex items-center gap-1.5 ${c.done ? "text-teal-600 border-teal-600" : "text-gray-500 border-line"}`}>
-                  <span aria-hidden>{c.done ? "✓" : "○"}</span>{c.label}
-                </li>
-              ))}
-            </ul>
-          </section>
-          <div className="grid gap-6 lg:grid-cols-2 items-start">
-            <div className="flex flex-col gap-6 min-w-0">
-              <Section title="Recommendation letters" count={letterList.length}>
-                {letterList.length === 0 && <div className="mb-3"><Empty>No letters requested yet.</Empty></div>}
-                <ul className="flex flex-col gap-2 mb-3">
-                  {letterList.map((l) => <LetterRow key={l.id} id={l.id} schoolId={id} name={l.people?.name ?? "Unknown recommender"} deadline={l.letter_deadline} status={l.status} />)}
-                </ul>
-                <AddLetterForm schoolId={id} people={people ?? []} />
-              </Section>
-              <Section title="SOP sent">
-                <SopForm schoolId={id} current={hasSop ? { label: sopLabel ?? "Recorded version", sentAt: (sop as any).sop_sent_at } : null} />
-              </Section>
-            </div>
-            <div className="flex flex-col gap-6 min-w-0">
-              <Section title="Interviews" count={(interviews ?? []).length}>
-                {(interviews ?? []).length === 0 && <div className="mb-3"><Empty>No interviews yet.</Empty></div>}
-                <ul className="flex flex-col gap-2 mb-3">
-                  {(interviews ?? []).map((iv) => <InterviewRow key={iv.id} id={iv.id} schoolId={id} when={iv.scheduled_at} prep={iv.prep_notes} outcome={iv.outcome_notes} status={iv.status} />)}
-                </ul>
-                <ScheduleInterviewForm schoolId={id} />
-              </Section>
-              {visaSteps && visaSteps.length > 0 && (
-                <Section title="Visa checklist" count={`${visaSteps.filter((v) => v.status === "done").length}/${visaSteps.length}`}>
-                  <ul className="flex flex-col gap-2">{visaSteps.map((v) => <VisaStepRow key={v.id} id={v.id} schoolId={id} name={v.step_name} status={v.status} />)}</ul>
-                </Section>
-              )}
-            </div>
-          </div>
+        <div className="max-w-3xl flex flex-col gap-8">
+          <p className="text-sm text-gray-500">
+            {readyCount === checklist.length
+              ? "Everything on the checklist is ready."
+              : `${readyCount} of ${checklist.length} ready. Still to do: ${checklist.filter((c) => !c.done).map((c) => c.label.toLowerCase()).join(", ")}.`}
+          </p>
+
+          <Step
+            done={lettersReady}
+            title="Recommendation letters"
+            summary={letterList.length === 0 ? (meta.letters_required ? `None requested yet (${meta.letters_required} needed)` : "None requested yet") : `${lettersConfirmed} of ${letterList.length} confirmed${meta.letters_required ? ` · ${meta.letters_required} needed` : ""}`}
+          >
+            {letterList.length > 0 && (
+              <ul className="flex flex-col gap-2">
+                {letterList.map((l) => <LetterRow key={l.id} id={l.id} schoolId={id} name={l.people?.name ?? "Unknown recommender"} deadline={l.letter_deadline} status={l.status} />)}
+              </ul>
+            )}
+            <details className="text-sm">
+              <summary className="cursor-pointer text-gray-500 hover:text-cream">+ Request a letter</summary>
+              <div className="pt-3"><AddLetterForm schoolId={id} people={people ?? []} /></div>
+            </details>
+          </Step>
+
+          <Step done={hasSop} title="Statement of purpose" summary={hasSop ? "Recorded" : "Not recorded yet"}>
+            {hasSop ? (
+              <SopForm schoolId={id} current={{ label: sopLabel ?? "Recorded version", sentAt: (sop as any).sop_sent_at }} />
+            ) : (
+              <details className="text-sm">
+                <summary className="cursor-pointer text-gray-500 hover:text-cream">+ Record what you sent</summary>
+                <div className="pt-3"><SopForm schoolId={id} current={null} /></div>
+              </details>
+            )}
+          </Step>
+
+          <Step
+            done={(interviews ?? []).some((i) => i.status === "completed")}
+            title="Interviews"
+            summary={(interviews ?? []).length === 0 ? "None yet" : `${(interviews ?? []).length} on record`}
+          >
+            {(interviews ?? []).length > 0 && (
+              <ul className="flex flex-col gap-2">
+                {(interviews ?? []).map((iv) => <InterviewRow key={iv.id} id={iv.id} schoolId={id} when={iv.scheduled_at} prep={iv.prep_notes} outcome={iv.outcome_notes} status={iv.status} />)}
+              </ul>
+            )}
+            <details className="text-sm">
+              <summary className="cursor-pointer text-gray-500 hover:text-cream">+ Schedule an interview</summary>
+              <div className="pt-3"><ScheduleInterviewForm schoolId={id} /></div>
+            </details>
+          </Step>
+
+          {visaSteps && visaSteps.length > 0 && (
+            <Step
+              done={visaSteps.every((v) => v.status === "done")}
+              title="Visa"
+              summary={`${visaSteps.filter((v) => v.status === "done").length} of ${visaSteps.length} steps done`}
+            >
+              <ul className="flex flex-col gap-2">{visaSteps.map((v) => <VisaStepRow key={v.id} id={v.id} schoolId={id} name={v.step_name} status={v.status} />)}</ul>
+            </Step>
+          )}
         </div>
       )}
     </main>
+  );
+}
+
+function Step({ done, title, summary, children }: { done: boolean; title: string; summary: string; children: React.ReactNode }) {
+  return (
+    <section className="flex gap-4">
+      <span
+        aria-hidden
+        className={`mt-0.5 w-6 h-6 rounded-full border flex-shrink-0 flex items-center justify-center text-xs ${done ? "bg-teal-600 border-teal-600 text-ink" : "border-line text-transparent"}`}
+      >
+        ✓
+      </span>
+      <div className="flex-1 min-w-0 flex flex-col gap-3 pb-8 border-b border-line">
+        <div>
+          <h2 className="font-sans text-[15px] font-semibold text-cream">{title}</h2>
+          <p className="text-sm text-gray-500">{summary}</p>
+        </div>
+        {children}
+      </div>
+    </section>
   );
 }
 

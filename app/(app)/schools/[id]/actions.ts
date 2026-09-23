@@ -32,6 +32,7 @@ export async function updateSchoolDetails(schoolId: string, fields: {
 }
 
 export type SchoolProfileInput = {
+  deadlineDate: string | null; deadlineNote: string | null; contactEmail: string | null; faculty: string | null; fitNote: string | null;
   city: string | null; applicationUrl: string | null; admissionsUrl: string | null;
   applicationFee: number | null; feeCurrency: string; feeWaiver: string | null;
   grePolicy: "required" | "optional" | "not_accepted" | null; englishTest: string | null; minGpa: string | null;
@@ -44,6 +45,7 @@ export type SchoolProfileInput = {
 export async function updateSchoolProfile(schoolId: string, p: SchoolProfileInput) {
   const supabase = await createClient();
   const { error } = await supabase.from("schools").update({
+    deadline_date: p.deadlineDate, deadline_note: p.deadlineNote, contact_email: p.contactEmail, faculty: p.faculty, fit_note: p.fitNote,
     city: p.city, application_url: p.applicationUrl, admissions_url: p.admissionsUrl,
     application_fee: p.applicationFee, fee_currency: (p.feeCurrency || "USD").toUpperCase(), fee_waiver: p.feeWaiver,
     gre_policy: p.grePolicy, english_test: p.englishTest, min_gpa: p.minGpa, letters_required: p.lettersRequired,
@@ -54,6 +56,10 @@ export async function updateSchoolProfile(schoolId: string, p: SchoolProfileInpu
   if (error) throw new Error(error.message);
   revalidatePath(`/schools/${schoolId}`);
   revalidatePath("/schools");
+  revalidatePath("/");
+  revalidatePath("/today");
+  revalidatePath("/week");
+  revalidatePath("/timeline");
 }
 
 export async function deleteNote(schoolId: string, activityId: string) {

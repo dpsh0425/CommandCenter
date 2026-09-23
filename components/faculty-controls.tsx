@@ -399,37 +399,35 @@ export function FundingCard({ schoolId, funding, scopeLabel, departments, profes
   }
   const d = funding.deadline_date ? daysUntil(funding.deadline_date) : null;
   return (
-    <div className={`border border-line rounded-lg p-3 bg-surface-raised flex flex-col gap-1.5 ${pending ? "opacity-60" : ""}`}>
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+    <div className={`group rounded-xl border border-line bg-surface p-4 flex flex-col gap-2.5 ${pending ? "opacity-60" : ""}`}>
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="font-medium">{funding.name}</div>
           <div className="text-xs text-gray-500">{fundingTypeLabel(funding.type)} · {scopeLabel}</div>
         </div>
         {funding.amount != null && (
-          <div className="font-mono text-right">
-            <div className="text-brass">{funding.currency} {Number(funding.amount).toLocaleString()}</div>
-            {funding.period && <div className="text-[10px] text-gray-400">per {funding.period}</div>}
+          <div className="text-right flex-shrink-0">
+            <div className="font-serif text-2xl leading-none text-brass">{funding.currency} {Number(funding.amount).toLocaleString()}</div>
+            {funding.period && <div className="text-xs text-gray-400 mt-1">per {funding.period}</div>}
           </div>
         )}
       </div>
-      {funding.covers && <p className="text-xs text-gray-500">Covers: {funding.covers}</p>}
+      {funding.covers && <p className="text-sm text-gray-500">{funding.covers}</p>}
       {funding.notes && <p className="text-xs text-gray-400 whitespace-pre-line">{funding.notes}</p>}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs pt-1 border-t border-line">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs pt-2 border-t border-line/60">
         <select
           value={funding.status}
           disabled={pending}
           onChange={(e) => run(() => setFundingStatus(funding.id, schoolId, e.target.value as FundingStatus))}
-          className={`border rounded-full px-2 py-0.5 bg-transparent ${status.tone}`}
+          className={`rounded-full border px-2 py-0.5 bg-transparent cursor-pointer ${status.tone}`}
           aria-label={`Status of ${funding.name}`}
         >
           {FUNDING_STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
         </select>
-        {funding.deadline_date && (
-          <span className={`font-mono ${d! < 0 ? "text-red-600" : "text-gray-500"}`}>deadline {funding.deadline_date} · {whenLabel(d!)}</span>
-        )}
-        {funding.url && <a href={funding.url} target="_blank" rel="noopener noreferrer" className="text-brass underline">Details</a>}
-        <span className="ml-auto flex gap-3">
-          <button onClick={() => setEditing(true)} className="text-gray-500 underline hover:text-cream">Edit</button>
+        {funding.deadline_date && <span className={d! < 0 ? "text-red-600" : "text-gray-500"}>deadline {funding.deadline_date} ({whenLabel(d!)})</span>}
+        {funding.url && <a href={funding.url} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brass">Details ↗</a>}
+        <span className="ml-auto flex gap-3 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          <button onClick={() => setEditing(true)} className="text-gray-500 hover:text-cream">Edit</button>
           <button
             disabled={pending}
             onClick={() => { if (confirm(`Remove "${funding.name}"?`)) run(() => deleteFunding(funding.id, schoolId)); }}
