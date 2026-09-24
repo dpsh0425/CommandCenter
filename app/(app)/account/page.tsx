@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { PasswordForm } from "@/components/password-form";
 import { OWNER_USER_ID } from "@/lib/owner";
+import { DigestControls } from "@/components/digest-controls";
+import { emailConfigured } from "@/lib/email";
 
 export const metadata = { title: "Account" };
 
@@ -25,6 +27,16 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <div>{user?.email}</div>
         <div className="text-xs text-gray-500">{user?.id === OWNER_USER_ID ? "Owner — full access" : "Collaborator — assigned tasks only"}</div>
       </section>
+
+      {user?.id === OWNER_USER_ID && (
+        <section className="flex flex-col gap-3">
+          <div>
+            <h2 className="font-medium">Monday email</h2>
+            <p className="text-sm text-gray-500">A weekly summary sent to {user?.email}: applications at risk, deadlines, tasks, professors to follow up, and last week&rsquo;s research.</p>
+          </div>
+          <DigestControls configured={emailConfigured()} />
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <div>

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { formatMinutes, kindLabel } from "@/lib/research";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -81,4 +82,25 @@ export async function loadResearchWeek(supabase: SupabaseClient, start: string, 
       upcoming,
     };
   });
+}
+
+// The plain-language lines shown for one project's week, on the weekly page and in the Monday email.
+export function summarizeProjectWeek(r: ProjectWeek, isPast: boolean): Array<{ k: string; v: string }> {
+  const out: Array<{ k: string; v: string }> = [];
+  if (r.minutes > 0) {
+    const diff = r.minutes - r.prevMinutes;
+    const vs = r.prevMinutes > 0 ? ` (${diff >= 0 ? "+" : "-"}${formatMinutes(Math.abs(diff))} vs the week before)` : "";
+    out.push({ k: "Time", v: `${formatMinutes(r.minutes)} across ${r.entryCount} ${r.entryCount === 1 ? "entry" : "entries"}${vs}. ${r.byKind.slice(0, 4).map((x) => `${kindLabel(x.kind)} ${formatMinutes(x.minutes)}`).join(", ")}` });
+  } else if (r.entryCount > 0) out.push({ k: "Time", v: `${r.entryCount} ${r.entryCount === 1 ? "entry" : "entries"} logged, no minutes recorded` });
+  if (r.byPerson.length > 1) out.push({ k: "Who", v: r.byPerson.map((x) => `${x.name} ${formatMinutes(x.minutes)}`).join(", ") });
+  if (r.finished.length > 0) out.push({ k: "Experiments finished", v: r.finished.map((x) => `${x.name}${x.status === "failed" ? " (failed)" : x.outcome ? ` (${x.outcome})` : ""}`).join("; ") });
+  if (r.started.length > 0) out.push({ k: "Experiments run", v: r.started.map((x) => x.name).join("; ") });
+  if (!isPast && r.running > 0) out.push({ k: "Still running", v: `${r.running} experiment${r.running === 1 ? "" : "s"}` });
+  if (r.meetings.length > 0) out.push({ k: "Meetings", v: r.meetings.map((m) => m.title).join("; ") });
+  if (r.tasksDone > 0) out.push({ k: "Tasks done", v: String(r.tasksDone) });
+  const lib = [r.filesAdded && `${r.filesAdded} file${r.filesAdded === 1 ? "" : "s"}`, r.linksAdded && `${r.linksAdded} link${r.linksAdded === 1 ? "" : "s"}`, r.papersAdded && `${r.papersAdded} paper${r.papersAdded === 1 ? "" : "s"} on the reading list`].filter(Boolean);
+  if (lib.length > 0) out.push({ k: "Added", v: lib.join(", ") });
+  if (r.sectionsEdited > 0 || (!isPast && r.words > 0)) out.push({ k: "Writing", v: `${r.sectionsEdited} section${r.sectionsEdited === 1 ? "" : "s"} edited${!isPast && r.words ? `, ${r.words.toLocaleString()}${r.targetWords ? ` of ${r.targetWords.toLocaleString()}` : ""} words in total` : ""}` });
+  if (!isPast && r.upcoming.length > 0) out.push({ k: "Next", v: r.upcoming.map((u) => `${u.label} (${u.days < 0 ? `${-u.days}d overdue` : u.days === 0 ? "today" : `in ${u.days}d`})`).join("; ") });
+  return out;
 }

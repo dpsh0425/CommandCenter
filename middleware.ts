@@ -26,7 +26,9 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/auth");
+    request.nextUrl.pathname.startsWith("/auth") ||
+    // The digest route checks its own credentials (a scheduler secret, or the owner's session).
+    request.nextUrl.pathname === "/api/digest";
 
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();
