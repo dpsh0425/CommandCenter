@@ -63,7 +63,7 @@ function refresh(scope: LinkScope) {
   if (scope.projectId) revalidatePath(`/research/projects/${scope.projectId}`);
 }
 
-export async function addLink(input: { url: string; title?: string; notes?: string; kind?: LinkKind } & LinkScope) {
+export async function addLink(input: { url: string; title?: string; notes?: string; kind?: LinkKind; folder?: string; tags?: string[] } & LinkScope) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("not authenticated");
@@ -78,6 +78,7 @@ export async function addLink(input: { url: string; title?: string; notes?: stri
   const { error } = await supabase.from("links").insert({
     owner_id: user.id, url, title, kind, notes: input.notes?.trim() || null, meta,
     school_id: input.schoolId ?? null, milestone_id: input.milestoneId ?? null, professor_id: input.professorId ?? null, project_id: input.projectId ?? null,
+    folder: input.folder?.trim() || null, tags: (input.tags ?? []).map((t) => t.trim()).filter(Boolean),
   });
   if (error) throw new Error(error.message);
   refresh(input);

@@ -49,6 +49,9 @@ export async function updateProject(id: string, f: {
 
 export async function deleteProject(id: string) {
   const { supabase } = await owner();
+  // Files live in storage, so remove them before the rows that point at them disappear.
+  const { data: files } = await supabase.from("documents").select("storage_path").eq("project_id", id);
+  if (files && files.length) await supabase.storage.from("materials").remove(files.map((f) => f.storage_path));
   const { error } = await supabase.from("research_projects").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/research");

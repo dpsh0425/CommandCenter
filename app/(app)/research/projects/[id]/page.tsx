@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { Avatar } from "@/components/avatar";
-import { LinksPanel } from "@/components/links-panel";
+import { ProjectLibrary, type LibItem } from "@/components/project-library";
 import { MilestoneStatusSelect } from "@/components/milestone-controls";
 import {
   AddMemberForm, AddMilestoneForm, AddTaskForm, DeleteProjectButton, EntryForm, EntryRow, MeetingCard, MeetingForm, PaperForm, PaperRow,
@@ -15,6 +15,7 @@ const TABS = [
   { key: "overview", label: "Overview" },
   { key: "plan", label: "Plan" },
   { key: "journal", label: "Journal" },
+  { key: "library", label: "Library" },
   { key: "reading", label: "Reading" },
   { key: "meetings", label: "Meetings" },
   { key: "team", label: "Team" },
@@ -41,7 +42,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
 
   const { data: milestones } = await supabase.from("research_milestones").select("*").eq("project_id", id).order("target_date", { ascending: true, nullsFirst: false });
   const msIds = (milestones ?? []).map((m) => m.id);
-  const [{ data: tasksA }, { data: tasksB }, { data: entries }, { data: papers }, { data: meetings }, { data: members }, { data: people }, { data: links }] = await Promise.all([
+  const [{ data: tasksA }, { data: tasksB }, { data: entries }, { data: papers }, { data: meetings }, { data: members }, { data: people }, { data: links }, { data: docs }] = await Promise.all([
     supabase.from("tasks").select("id, title, status, priority, due_date, assignee_id, research_milestone_id, people(name)").eq("project_id", id),
     msIds.length ? supabase.from("tasks").select("id, title, status, priority, due_date, assignee_id, research_milestone_id, people(name)").in("research_milestone_id", msIds) : Promise.resolve({ data: [] as any[] }),
     supabase.from("research_entries").select("*").eq("project_id", id).order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).limit(300),
@@ -50,6 +51,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
     supabase.from("research_project_members").select("person_id, role").eq("project_id", id),
     supabase.from("people").select("id, name, color, role").order("name"),
     supabase.from("links").select("*").eq("project_id", id),
+    supabase.from("documents").select("*").eq("project_id", id),
   ]);
 
   const personById = new Map((people ?? []).map((p) => [p.id, p]));
@@ -65,9 +67,19 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const peopleOpts = (people ?? []).map((p) => ({ id: p.id, name: p.name }));
   const msOpts = (milestones ?? []).map((m) => ({ id: m.id, name: m.title }));
   const base = `/research/projects/${id}`;
+  const libItems: LibItem[] = [
+    ...((docs ?? []) as any[]).map((d): LibItem => ({
+      id: d.id, source: "file", title: d.title, kind: d.kind, folder: d.folder, tags: d.tags ?? [], notes: d.notes, pinned: d.pinned, created_at: d.created_at,
+      file_name: d.file_name, mime_type: d.mime_type, size_bytes: d.size_bytes, is_current: d.is_current, replaces_id: d.replaces_id, version_note: d.version_note,
+    })),
+    ...((links ?? []) as any[]).map((l): LibItem => ({
+      id: l.id, source: "link", title: l.title, kind: l.kind, folder: l.folder, tags: l.tags ?? [], notes: l.notes, pinned: l.pinned, created_at: l.created_at, url: l.url, meta: l.meta ?? {},
+    })),
+  ];
+  const pinnedItems = libItems.filter((i) => i.pinned).slice(0, 4);
 
   return (
-    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-8">
+    <main className={`p-4 md:p-8 ${tab === "library" ? "max-w-7xl" : "max-w-3xl"} mx-auto flex flex-col gap-8`}>
       <div className="flex flex-col gap-4">
         <Link href="/research" className="text-xs text-gray-500 hover:text-cream self-start">← All projects</Link>
         <div>
@@ -120,8 +132,19 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
             )}
           </Section>
 
-          <Section title="Links" hint="repo, papers, datasets, docs">
-            <LinksPanel links={(links ?? []) as any} scope={{ projectId: id }} placeholder="Paste your GitHub repo, arXiv paper, dataset or doc link…" emptyText="No links yet. Paste the project's GitHub repository to start." />
+          <Section title="Library" action={<Link href={`${base}?tab=library`} className="text-xs text-gray-500 hover:text-cream">Open library →</Link>}>
+            {libItems.length === 0 ? (
+              <p className="text-sm text-gray-500">Nothing in the library yet. Keep the project&rsquo;s papers, data, code links and figures in one place.</p>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500">{libItems.filter((i) => i.source === "file" && i.is_current !== false).length} files · {libItems.filter((i) => i.source === "link").length} links{pinnedItems.length ? " · pinned:" : ""}</p>
+                {pinnedItems.length > 0 && (
+                  <ul className="flex flex-col">
+                    {pinnedItems.map((i) => <li key={i.id} className="py-1.5 border-b border-line/60 last:border-0 text-sm"><Link href={`${base}?tab=library`} className="hover:text-brass">★ {i.title}</Link></li>)}
+                  </ul>
+                )}
+              </>
+            )}
           </Section>
 
           <Fold title="Project details" summary="title, question, dates, venue">
@@ -213,6 +236,8 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           </div>
         );
       })()}
+
+      {tab === "library" && <ProjectLibrary projectId={id} userId={user.id} items={libItems} />}
 
       {tab === "reading" && (
         <div className="flex flex-col gap-6">

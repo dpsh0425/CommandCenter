@@ -9,7 +9,7 @@ export default async function MaterialsPage() {
   const supabase = await createClient();
   const [{ data: { user } }, { data: docs }, { data: schools }] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from("documents").select("*").order("created_at", { ascending: false }),
+    supabase.from("documents").select("*").is("project_id", null).order("created_at", { ascending: false }),
     supabase.from("schools").select("id, name").order("name"),
   ]);
   if (!user || user.id !== OWNER_USER_ID) {
