@@ -57,4 +57,4 @@ for (const f of files) {
 }
 
 console.log(`\n${total - failed} passed, ${failed} failed`);
-process.exit(failed ? 1 : 0);
+process.exitCode = failed ? 1 : 0;
