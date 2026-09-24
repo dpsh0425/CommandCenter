@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { addPaperTemplate, addSection, deleteSection, moveSection, saveSectionDraft, updateSection } from "@/app/(app)/research/experiment-actions";
-import { SECTION_STATUS, countWords } from "@/lib/research";
-import { useUnsavedGuard } from "@/lib/use-unsaved-guard";
+import { SECTION_STATUS } from "@/lib/research";
+import { RichDraft } from "@/components/rich-draft";
+import { htmlToText, toEditorHtml } from "@/lib/rich-text";
 
 export type SectionRow = {
-  id: string; name: string; status: string; position: number; target_words: number | null; words: number; body: string; notes: string | null; due_date: string | null; person_id: string | null;
+  id: string; name: string; status: string; position: number; target_words: number | null; words: number; body: string; body_version: number; notes: string | null; due_date: string | null; person_id: string | null;
 };
 type Opt = { id: string; name: string };
 
@@ -21,39 +22,6 @@ function useRun() {
     start(async () => { try { await fn(); after?.(); } catch (e) { setError(e instanceof Error ? e.message : "Something went wrong"); } });
   };
   return { pending, error, run };
-}
-
-function Draft({ id, initial, onWords }: { id: string; initial: string; onWords: (n: number) => void }) {
-  const [text, setText] = useState(initial);
-  const [state, setState] = useState<"saved" | "dirty" | "saving" | "error">("saved");
-  const first = useRef(true);
-  // Latest text and an "unsaved" flag live in refs so leaving the page inside the autosave delay still saves.
-  const latest = useRef(text);
-  latest.current = text;
-  const unsaved = useRef(false);
-  useEffect(() => {
-    if (first.current) { first.current = false; return; }
-    setState("dirty");
-    unsaved.current = true;
-    const t = setTimeout(async () => {
-      setState("saving");
-      try { onWords(await saveSectionDraft(id, text)); unsaved.current = false; setState("saved"); } catch { setState("error"); }
-    }, 1500);
-    return () => clearTimeout(t);
-    // onWords is stable enough for this purpose; re-running on it would restart the timer.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, id]);
-  useEffect(() => () => { if (unsaved.current) saveSectionDraft(id, latest.current).catch(() => {}); }, [id]);
-  useUnsavedGuard(state !== "saved");
-  return (
-    <div className="flex flex-col gap-1">
-      <textarea value={text} onChange={(e) => { setText(e.target.value); onWords(countWords(e.target.value)); }} rows={14} placeholder="Write here. It saves on its own." className={field + " font-serif text-base leading-relaxed"} aria-label="Draft" />
-      <div className="text-xs text-gray-400 flex justify-between">
-        <span>{num(countWords(text))} words</span>
-        <span className={state === "error" ? "text-red-600" : ""}>{state === "saved" ? "Saved" : state === "saving" ? "Saving…" : state === "dirty" ? "Unsaved changes" : "Could not save. Copy your text before leaving."}</span>
-      </div>
-    </div>
-  );
 }
 
 function Section({ s, projectId, people, first, last }: { s: SectionRow; projectId: string; people: Opt[]; first: boolean; last: boolean }) {
@@ -81,7 +49,7 @@ function Section({ s, projectId, people, first, last }: { s: SectionRow; project
 
       {open && (
         <div className="flex flex-col gap-4 pt-4 text-sm">
-          <Draft id={s.id} initial={s.body} onWords={setWords} />
+          <RichDraft kind="section" id={s.id} initial={s.body} version={s.body_version} save={saveSectionDraft} onWords={setWords} label={`Draft of ${s.name}`} variant="full" minHeight="18rem" />
           <form
             className="grid gap-3 sm:grid-cols-2"
             onSubmit={(e) => {
@@ -157,7 +125,7 @@ export function WritingBoard({ projectId, sections, people, venue, deadlineText 
             <button
               type="button"
               onClick={async () => {
-                const md = sections.map((s) => `## ${s.name}\n\n${s.body.trim()}`).join("\n\n");
+                const md = sections.map((s) => `## ${s.name}\n\n${htmlToText(toEditorHtml(s.body)).trim()}`).join("\n\n");
                 try { await navigator.clipboard.writeText(md); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { setCopied(false); }
               }}
               className="text-gray-500 hover:text-cream"

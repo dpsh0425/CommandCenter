@@ -2,7 +2,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { revalidatePath } from "next/cache";
-import { EXPERIMENT_OUTCOME, EXPERIMENT_STATUS, PAPER_TEMPLATE, SECTION_STATUS, countWords, type Metric } from "@/lib/research";
+import { EXPERIMENT_OUTCOME, EXPERIMENT_STATUS, PAPER_TEMPLATE, SECTION_STATUS, type Metric } from "@/lib/research";
+import { countWordsHtml, toEditorHtml } from "@/lib/rich-text";
+import { sanitizeHtml } from "@/lib/rich-text-server";
+import type { SaveResult } from "@/lib/save-result";
 
 async function owner() {
   const supabase = await createClient();
@@ -93,13 +96,21 @@ export async function updateSection(id: string, projectId: string, f: { name?: s
   refresh(projectId);
 }
 
-// Called on every autosave, so it deliberately does not revalidate the page.
-export async function saveSectionDraft(id: string, body: string) {
-  const { supabase } = await owner();
-  const words = countWords(body);
-  const { error } = await supabase.from("research_sections").update({ body, words }).eq("id", id);
-  if (error) throw new Error(error.message);
-  return words;
+// Called on every autosave, so it deliberately does not revalidate the page. Never throws.
+export async function saveSectionDraft(id: string, body: string, baseVersion: number): Promise<SaveResult> {
+  let supabase;
+  try { ({ supabase } = await owner()); } catch (e) { return { ok: false, reason: "error", message: e instanceof Error ? e.message : "Not allowed." }; }
+  const clean = sanitizeHtml(toEditorHtml(body));
+  const words = countWordsHtml(clean);
+  const { data, error } = await supabase
+    .from("research_sections")
+    .update({ body: clean, words, body_version: baseVersion + 1 })
+    .eq("id", id)
+    .eq("body_version", baseVersion)
+    .select("body_version");
+  if (error) return { ok: false, reason: "error", message: error.message };
+  if (!data || data.length === 0) return { ok: false, reason: "stale", message: "This was changed somewhere else." };
+  return { ok: true, words, version: data[0].body_version as number };
 }
 
 export async function moveSection(id: string, projectId: string, dir: -1 | 1) {
