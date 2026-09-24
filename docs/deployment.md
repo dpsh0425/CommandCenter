@@ -22,7 +22,11 @@ Generate a `CRON_SECRET` with: `node -e "console.log(require('crypto').randomByt
 Do this before deploying: once the app is deployed the project URL and anon key are public, so anyone could otherwise create an account by calling the sign-up endpoint directly.
 
 1. Create the staging project (see "Staging project" below).
-2. On staging run `SUPABASE_PROJECT_REF=<staging-ref> npm run check:auth -- --fix`. Then confirm that an existing user can still sign in by email link and by password, and that an invite sent from the People page still arrives.
+2. On staging run `SUPABASE_PROJECT_REF=<staging-ref> npm run check:auth -- --fix`. Then confirm that an existing user can still sign in by email link and by password, and that an invite sent from the People page still arrives. Staging starts empty, so to do this:
+   - Create a user on the staging project in the Supabase dashboard (Authentication, Users, Add user), with an email address you can read and a password.
+   - Run the app locally against staging: temporarily set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` to the staging project's values (keep a copy of the production values and restore them afterwards), run `npm run dev`, and sign in as that user by email link and by password.
+   - The staging user is not treated as the workspace owner (its ID differs from the owner ID built into the app), so owner-only pages will say they are not available. That is expected: this check only needs sign-in and the invite email to work.
+   - A new Supabase project uses Supabase's default email sender, which is rate-limited and only sends to project team members. For a representative invite test, copy the same custom SMTP settings (the Resend sender) into the staging project under Authentication, SMTP settings. Otherwise treat the staging invite test as approximate and repeat it on production, with your own address, after deployment.
 3. Only then run `SUPABASE_PROJECT_REF=<prod-ref> npm run check:auth -- --fix`. This changes a live security setting and is done by the owner.
 4. Confirm a stranger cannot sign up: request an email link for an address that has no account and check that sign-ups are refused.
 
