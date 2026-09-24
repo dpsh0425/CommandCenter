@@ -39,7 +39,7 @@ function Btn({ title, active, disabled, onClick, children }: { title: string; ac
       disabled={disabled}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className={`shrink-0 min-w-8 h-8 px-2 rounded text-sm border ${active ? "bg-brass text-black border-brass" : "border-transparent text-ink hover:bg-brass-soft"} ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+      className={`shrink-0 min-w-8 h-8 px-2 rounded text-sm border ${active ? "bg-brass text-black border-brass" : "border-transparent text-cream hover:bg-brass-soft"} ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
     >
       {children}
     </button>
@@ -104,7 +104,7 @@ function Toolbar({ editor, variant }: { editor: Editor; variant: "full" | "compa
           title="Paragraph style"
           value={s.block}
           onChange={(e) => setBlock(e.target.value as Block)}
-          className="shrink-0 h-8 rounded border border-line bg-surface text-ink text-sm px-1"
+          className="shrink-0 h-8 rounded border border-line bg-surface text-cream text-sm px-1"
         >
           <option value="p">Paragraph</option>
           <option value="h1">Heading 1</option>
