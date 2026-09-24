@@ -91,6 +91,8 @@ export const SCHOOL_TABS = [
 export const MATERIALS_TABS = [
   { href: "/materials", label: "Documents" },
   { href: "/materials/resume", label: "Resume builder" },
+  { href: "/materials/statements", label: "Statements" },
+  { href: "/materials/letters", label: "Letters" },
 ];
 export const RESEARCH_TABS = [
   { href: "/research", label: "Projects" },

@@ -42,3 +42,6 @@ scripts/low_confidence_matches.csv
 scripts/__pycache__/
 scripts/.pytest_cache/
 *.pyc
+
+# database backups (contain personal data)
+backups/

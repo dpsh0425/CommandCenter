@@ -67,10 +67,11 @@ details > summary::-webkit-details-marker { display: none; }
 .resume-paper h2 { font-family: inherit; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #111; margin: 0 0 3px; color: #111; }
 .resume-paper ul { margin: 2px 0 0 16px; list-style: disc; padding: 0; }
 .resume-paper p { margin: 0; }
+/* Only pages that contain a resume switch to "print just the resume"; every other page prints normally. */
 @media print {
-  body * { visibility: hidden; }
-  .resume-print, .resume-print * { visibility: visible; }
-  .resume-print { position: absolute; left: 0; top: 0; width: 100%; }
+  body:has(.resume-print) * { visibility: hidden; }
+  body:has(.resume-print) .resume-print, body:has(.resume-print) .resume-print * { visibility: visible; }
+  body:has(.resume-print) .resume-print { position: absolute; left: 0; top: 0; width: 100%; }
   .resume-paper { border-radius: 0; padding: 0; }
   @page { margin: 16mm; }
 }

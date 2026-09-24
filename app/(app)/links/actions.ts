@@ -1,6 +1,7 @@
 "use server";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { fetchPageTitle } from "@/lib/web-meta";
 import { detectKind, fallbackTitle, normalizeUrl, parseArxivId, parseGithubRepo, type LinkKind } from "@/lib/links";
 
 export type LinkScope = { schoolId?: string; milestoneId?: string; professorId?: string; projectId?: string };
@@ -53,7 +54,9 @@ async function resolve(url: string, kind: LinkKind): Promise<{ title?: string; m
   if (kind === "github" && gh) return githubMeta(gh.owner, gh.repo);
   const ax = parseArxivId(url);
   if (kind === "paper" && ax) return arxivMeta(ax);
-  return { meta: {} };
+  // Anything else: use the page's own title instead of showing the bare address.
+  const title = await fetchPageTitle(url);
+  return { title: title ?? undefined, meta: {} };
 }
 
 function refresh(scope: LinkScope) {

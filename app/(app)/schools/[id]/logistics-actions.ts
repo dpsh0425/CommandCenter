@@ -1,8 +1,8 @@
 "use server";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-
-type LetterStatus = "not_asked" | "asked" | "confirmed" | "submitted";
+import { isLetterStatus, letterStatusChange } from "@/lib/letters";
+import { todayString } from "@/lib/digest";
 
 const localDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -24,11 +24,16 @@ export async function addLetterRequest(schoolId: string, recommenderId: string, 
   refresh(schoolId);
 }
 
-export async function updateLetterStatus(id: string, schoolId: string, status: LetterStatus) {
+export async function updateLetterStatus(id: string, schoolId: string, status: string) {
+  if (!isLetterStatus(status)) throw new Error("Unknown letter status.");
   const supabase = await createClient();
-  const { error } = await supabase.from("letter_requests").update({ status }).eq("id", id);
+  const { data: cur } = await supabase.from("letter_requests").select("asked_on, received_on").eq("id", id).single();
+  if (!cur) throw new Error("Letter request not found.");
+  const { error } = await supabase.from("letter_requests").update(letterStatusChange(status, todayString(), cur)).eq("id", id);
   if (error) throw new Error(error.message);
   refresh(schoolId);
+  revalidatePath("/materials/letters");
+  revalidatePath("/week");
 }
 
 export async function removeLetterRequest(id: string, schoolId: string) {
