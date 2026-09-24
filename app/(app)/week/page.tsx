@@ -5,6 +5,7 @@ import { Fold, PageHeader, Section, SubNav, TODAY_TABS } from "@/components/ui";
 import { CopyUpdate } from "@/components/copy-update";
 import { loadResearchWeek, summarizeProjectWeek, type ProjectWeek } from "@/lib/research-week";
 import { formatMinutes, projectStatusLabel } from "@/lib/research";
+import { FLAG_LABEL, lettersToChase, type ChaseInput } from "@/lib/letters";
 
 export const metadata = { title: "This week" };
 
@@ -49,7 +50,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
     supabase.from("schools").select("id, name, deadline_date, application_url, status, sop_version_id").not("deadline_date", "is", null),
     supabase.from("departments").select("id, name, deadline_date, school_id, schools(name)").not("deadline_date", "is", null),
     supabase.from("fundings").select("id, name, deadline_date, status, school_id, schools(name)").not("deadline_date", "is", null).neq("status", "not_eligible"),
-    supabase.from("letter_requests").select("id, school_id, status, letter_deadline, people(name), schools(name)"),
+    supabase.from("letter_requests").select("id, school_id, recommender_id, status, letter_deadline, asked_on, last_reminded_on, people(name), schools(name)"),
     supabase.from("research_milestones").select("id, title, target_date").not("target_date", "is", null).neq("status", "done"),
     supabase.from("interviews").select("id, school_id, scheduled_at, status, schools(name)").eq("status", "scheduled").not("scheduled_at", "is", null),
     supabase.from("professors").select("id, name, school_id, accepting, fit_score, outreach, last_contacted_on, research_areas, schools(name, deadline_date)"),
@@ -57,6 +58,15 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
     supabase.from("task_updates").select("created_at").eq("type", "status_change").eq("is_win", true).gte("created_at", new Date(lastWeekStart + "T00:00:00").toISOString()),
     supabase.from("activity_log").select("created_at").eq("is_win", true).gte("created_at", new Date(lastWeekStart + "T00:00:00").toISOString()),
   ]);
+
+  const chase = lettersToChase(
+    ((letters ?? []) as any[]).map((l): ChaseInput => ({
+      id: l.id, school_id: l.school_id, school_name: l.schools?.name ?? "School", recommender_id: l.recommender_id,
+      recommender_name: l.people?.name ?? "Recommender", status: l.status, letter_deadline: l.letter_deadline,
+      asked_on: l.asked_on, last_reminded_on: l.last_reminded_on,
+    })),
+    today,
+  );
 
   // ---- Everything dated ----
   const all: Item[] = [
@@ -170,6 +180,25 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
               );
             })}
           </ul>
+        </Section>
+      )}
+
+      {offset === 0 && chase.length > 0 && (
+        <Section title="Recommenders to chase" hint={`${chase.length}`}>
+          <ul className="flex flex-col">
+            {chase.slice(0, 8).map(({ letter, flag, reason }) => (
+              <li key={letter.id} className="border-b border-line/60 last:border-0">
+                <Link href={`/materials/letters${letter.recommender_id ? `?focus=${letter.recommender_id}` : ""}`} className="flex items-baseline justify-between gap-4 py-3 hover:text-brass">
+                  <span className="min-w-0">
+                    <span className="block font-medium truncate">{letter.recommender_name}: {letter.school_name}</span>
+                    <span className="block text-sm text-gray-500">{reason}</span>
+                  </span>
+                  <span className={`text-xs whitespace-nowrap ${flag === "overdue" ? "text-red-600" : "text-brass"}`}>{FLAG_LABEL[flag]}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {chase.length > 8 && <span className="text-xs text-gray-400">and {chase.length - 8} more on the Letters tab</span>}
         </Section>
       )}
 

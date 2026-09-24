@@ -3,6 +3,7 @@ import { loadReadiness } from "@/lib/readiness-data";
 import { RISK_LABEL } from "@/lib/readiness";
 import { loadResearchWeek, summarizeProjectWeek } from "@/lib/research-week";
 import { projectStatusLabel } from "@/lib/research";
+import { FLAG_LABEL, lettersToChase, type ChaseInput } from "@/lib/letters";
 
 type Row = { primary: string; secondary?: string; right?: string; href?: string };
 export type DigestSection = { title: string; note?: string; rows: Row[]; kv?: Array<{ k: string; v: string }> };
@@ -31,7 +32,7 @@ export async function buildDigest(supabase: SupabaseClient, appUrl: string): Pro
   const lastMonday = addDays(mondayOf(today), -7);
   const link = (p: string) => (appUrl ? `${appUrl.replace(/\/$/, "")}${p}` : undefined);
 
-  const [readiness, research, { data: tasks }, { data: schools }, { data: letters }, { data: funds }, { data: profs }, { data: milestones }] = await Promise.all([
+  const [readiness, research, { data: tasks }, { data: schools }, { data: letters }, { data: funds }, { data: profs }, { data: milestones }, { data: allLetters }] = await Promise.all([
     loadReadiness(supabase, today),
     loadResearchWeek(supabase, lastMonday, today),
     supabase.from("tasks").select("id, title, due_date, priority, schools(name), research_milestones(title)").not("due_date", "is", null).not("status", "in", "(done,cancelled)"),
@@ -40,6 +41,7 @@ export async function buildDigest(supabase: SupabaseClient, appUrl: string): Pro
     supabase.from("fundings").select("school_id, name, deadline_date, schools(name)").not("deadline_date", "is", null).gte("deadline_date", today).lte("deadline_date", in14).neq("status", "not_eligible"),
     supabase.from("professors").select("id, name, outreach, last_contacted_on, schools(name)"),
     supabase.from("research_milestones").select("id, title, target_date").not("target_date", "is", null).neq("status", "done").lte("target_date", weekEnd),
+    supabase.from("letter_requests").select("id, school_id, recommender_id, status, letter_deadline, asked_on, last_reminded_on, people(name), schools(name)"),
   ]);
 
   const sections: DigestSection[] = [];
@@ -66,6 +68,26 @@ export async function buildDigest(supabase: SupabaseClient, appUrl: string): Pro
   ].sort((a, b) => a.date.localeCompare(b.date));
   if (dated.length > 0) {
     sections.push({ title: "Deadlines in the next two weeks", rows: dated.slice(0, 8).map((d) => ({ primary: d.primary, secondary: d.secondary, right: `${shortDate(d.date)}, ${rel(daysBetween(today, d.date))}`, href: d.href })) });
+  }
+
+  // 2b. Recommenders to chase
+  const chase = lettersToChase(
+    ((allLetters ?? []) as any[]).map((l): ChaseInput => ({
+      id: l.id, school_id: l.school_id, school_name: l.schools?.name ?? "School", recommender_id: l.recommender_id,
+      recommender_name: l.people?.name ?? "Recommender", status: l.status, letter_deadline: l.letter_deadline,
+      asked_on: l.asked_on, last_reminded_on: l.last_reminded_on,
+    })),
+    today,
+  );
+  if (chase.length > 0) {
+    sections.push({
+      title: "Recommenders to chase",
+      note: chase.length > 6 ? `${chase.length} letters need action in total.` : undefined,
+      rows: chase.slice(0, 6).map(({ letter, flag, reason }) => ({
+        primary: `${letter.recommender_name}: ${letter.school_name}`, secondary: reason, right: FLAG_LABEL[flag],
+        href: link(`/materials/letters${letter.recommender_id ? `?focus=${letter.recommender_id}` : ""}`),
+      })),
+    });
   }
 
   // 3. Tasks and research milestones
@@ -103,7 +125,7 @@ export async function buildDigest(supabase: SupabaseClient, appUrl: string): Pro
   const urgent = atRisk.filter((r) => r.risk !== "watch").length;
   const dueCount = overdue.length + thisWeek.length;
   const dateLabel = new Date(today + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-  const bits = [urgent && `${urgent} application${urgent === 1 ? "" : "s"} at risk`, dated.length && `${dated.length} deadline${dated.length === 1 ? "" : "s"} soon`, dueCount && `${dueCount} task${dueCount === 1 ? "" : "s"} due`].filter(Boolean) as string[];
+  const bits = [urgent && `${urgent} application${urgent === 1 ? "" : "s"} at risk`, dated.length && `${dated.length} deadline${dated.length === 1 ? "" : "s"} soon`, chase.length && `${chase.length} letter${chase.length === 1 ? "" : "s"} to chase`,dueCount && `${dueCount} task${dueCount === 1 ? "" : "s"} due`].filter(Boolean) as string[];
   const subject = bits.length ? `Your week: ${bits.join(", ")}` : `Your week ahead, ${shortDate(today)}`;
   const preheader = sections.length ? "Applications, deadlines, tasks, professors and last week's research, in one place." : "A quiet week: nothing urgent is due.";
 
