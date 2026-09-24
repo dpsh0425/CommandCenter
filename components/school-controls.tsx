@@ -1,5 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
+import Link from "next/link";
+import { FLAG_LABEL, letterFlags, type LetterStatus } from "@/lib/letters";
 import { addNote, deleteNote, updateSchoolDetails } from "@/app/(app)/schools/[id]/actions";
 import { addLetterRequest, clearSchoolSop, recordSopSent, removeLetterRequest, updateLetterStatus } from "@/app/(app)/schools/[id]/logistics-actions";
 import { deleteInterview, scheduleInterview, updateInterview, updateVisaStep, type InterviewStatus } from "@/app/(app)/schools/[id]/interview-actions";
@@ -155,10 +157,24 @@ const LETTER_STATUSES = [
   { key: "confirmed", label: "Confirmed" }, { key: "submitted", label: "Submitted" },
 ] as const;
 
+const letterDate = (d: string) => new Date(d + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+
 export function LetterRow({
-  id, schoolId, name, deadline, status,
-}: { id: string; schoolId: string; name: string; deadline: string | null; status: string }) {
+  id, schoolId, name, deadline, status, recommenderId, askedOn, lastRemindedOn, reminderCount, receivedOn, today,
+}: {
+  id: string; schoolId: string; name: string; deadline: string | null; status: string;
+  recommenderId?: string | null; askedOn?: string | null; lastRemindedOn?: string | null;
+  reminderCount?: number; receivedOn?: string | null; today?: string;
+}) {
   const { pending, error, run } = useRun();
+  const facts = [
+    askedOn ? `asked ${letterDate(askedOn)}` : null,
+    reminderCount && reminderCount > 0 ? `reminded ${reminderCount}×${lastRemindedOn ? ` · last ${letterDate(lastRemindedOn)}` : ""}` : null,
+    receivedOn ? `received ${letterDate(receivedOn)}` : null,
+  ].filter(Boolean);
+  const flags = today
+    ? letterFlags({ status: status as LetterStatus, letter_deadline: deadline, asked_on: askedOn ?? null, last_reminded_on: lastRemindedOn ?? null }, today)
+    : [];
   return (
     <li className={`border rounded p-2 text-sm flex flex-col gap-1 ${pending ? "opacity-60" : ""}`}>
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -183,6 +199,13 @@ export function LetterRow({
           </button>
         </span>
       </div>
+      {(facts.length > 0 || flags.length > 0 || recommenderId) && (
+        <div className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
+          {facts.length > 0 && <span>{facts.join(" · ")}</span>}
+          {flags.map((f) => <span key={f} className="border rounded px-1.5 py-0.5">{FLAG_LABEL[f]}</span>)}
+          {recommenderId && <Link href={`/materials/letters?focus=${recommenderId}`} className="underline">Draft email →</Link>}
+        </div>
+      )}
       <Err message={error} />
     </li>
   );

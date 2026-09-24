@@ -362,7 +362,7 @@ export default async function SchoolDetailPage({
           >
             {letterList.length > 0 && (
               <ul className="flex flex-col gap-2">
-                {letterList.map((l) => <LetterRow key={l.id} id={l.id} schoolId={id} name={l.people?.name ?? "Unknown recommender"} deadline={l.letter_deadline} status={l.status} />)}
+                {letterList.map((l) => <LetterRow key={l.id} id={l.id} schoolId={id} name={l.people?.name ?? "Unknown recommender"} deadline={l.letter_deadline} status={l.status} recommenderId={l.recommender_id} askedOn={l.asked_on} lastRemindedOn={l.last_reminded_on} reminderCount={l.reminder_count} receivedOn={l.received_on} today={today} />)}
               </ul>
             )}
             <details className="text-sm">
