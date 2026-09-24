@@ -75,3 +75,33 @@ details > summary::-webkit-details-marker { display: none; }
   .resume-paper { border-radius: 0; padding: 0; }
   @page { margin: 16mm; }
 }
+
+/* The writing page: paper on the dark app. */
+.paper {
+  background: #f6f2e7;
+  color: #1d2027;
+  border: 1px solid #d8d2c2;
+  border-radius: 4px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25), 0 14px 30px -18px rgba(0, 0, 0, 0.7);
+}
+.paper-page { padding: 1.25rem 1.25rem 2rem; }
+@media (min-width: 640px) { .paper-page { padding: 2.25rem 2.75rem 3rem; } }
+textarea.paper { padding: 1.25rem; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.65; }
+textarea.paper::placeholder { color: #8c8674; }
+
+.paper-content { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; line-height: 1.7; color: #1d2027; overflow-wrap: anywhere; }
+.paper-content:focus, .paper-content .ProseMirror:focus { outline: none; }
+.paper-content p { margin: 0 0 0.9em; }
+.paper-content h1, .paper-content h2, .paper-content h3 { font-family: Georgia, 'Times New Roman', serif; font-weight: 700; line-height: 1.25; margin: 1.1em 0 0.4em; letter-spacing: 0; }
+.paper-content h1 { font-size: 1.6em; }
+.paper-content h2 { font-size: 1.35em; }
+.paper-content h3 { font-size: 1.15em; }
+.paper-content ul, .paper-content ol { margin: 0 0 0.9em; padding-left: 1.5em; }
+.paper-content ul { list-style: disc; }
+.paper-content ol { list-style: decimal; }
+.paper-content li > p { margin: 0 0 0.3em; }
+.paper-content blockquote { margin: 0 0 0.9em; padding-left: 1em; border-left: 3px solid #cbb98d; color: #4b4f5a; }
+.paper-content hr { border: 0; border-top: 1px solid #cfc8b4; margin: 1.2em 0; }
+.paper-content a { color: #8a5a1c; text-decoration: underline; }
+.paper-content .ProseMirror-selectednode { outline: 2px solid #c98a3e; }
+.paper-content p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; pointer-events: none; color: #8c8674; }
