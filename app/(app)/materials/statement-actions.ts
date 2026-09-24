@@ -59,7 +59,7 @@ export async function createStatement(input: { kind: string; schoolId?: string |
   return data.id as string;
 }
 
-export async function updateStatementMeta(id: string, f: { title?: string; kind?: string; prompt?: string | null; wordLimit?: number | null }) {
+export async function updateStatementMeta(id: string, f: { title?: string; kind?: string; prompt?: string | null; wordLimit?: number | null; charLimit?: number | null }) {
   const { supabase } = await owner();
   const row: Record<string, unknown> = {};
   if (f.title !== undefined) {
@@ -72,6 +72,7 @@ export async function updateStatementMeta(id: string, f: { title?: string; kind?
   }
   if (f.prompt !== undefined) row.prompt = (f.prompt ?? "").trim() || null;
   if (f.wordLimit !== undefined) row.word_limit = f.wordLimit && f.wordLimit > 0 ? Math.round(f.wordLimit) : null;
+  if (f.charLimit !== undefined) row.char_limit = f.charLimit && f.charLimit > 0 ? Math.round(f.charLimit) : null;
   const { data, error } = await supabase.from("statements").update(row).eq("id", id).select("school_id").single();
   if (error) {
     if (error.code === "23505") throw new Error("This school already has a statement of that type.");

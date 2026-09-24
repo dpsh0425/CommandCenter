@@ -13,7 +13,7 @@ import { STATEMENT_KINDS, STATEMENT_STATUS, limitState, statementKindLabel, type
 import { useUnsavedGuard } from "@/lib/use-unsaved-guard";
 
 export type EditorStatement = {
-  id: string; kind: string; title: string; prompt: string | null; word_limit: number | null; body: string; status: string; sent_on: string | null;
+  id: string; kind: string; title: string; prompt: string | null; word_limit: number | null; char_limit: number | null; body: string; status: string; sent_on: string | null;
   school_id: string | null; schoolName: string | null; body_version: number;
 };
 export type EditorSnapshot = { id: string; body: string; words: number; note: string | null; created_at: string; html: string };
@@ -37,6 +37,7 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
   const { pending, error, run } = useRun();
   const [text, setText] = useState(statement.body);
   const [limit, setLimit] = useState<number | null>(statement.word_limit);
+  const [charLimit, setCharLimit] = useState<number | null>(statement.char_limit);
   const [saveState, setSaveState] = useState<"saved" | "dirty" | "saving" | "error" | "conflict">("saved");
   const version = useRef(statement.body_version);
   const [resetKey, setResetKey] = useState(0);
@@ -195,15 +196,16 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
       </section>
 
       <details className="text-sm group">
-        <summary className="cursor-pointer text-gray-500 hover:text-cream list-none border-b border-line pb-2">Details: title, type, prompt, word limit</summary>
+        <summary className="cursor-pointer text-gray-500 hover:text-cream list-none border-b border-line pb-2">Details: title, type, prompt, limits</summary>
         <form
           className="grid gap-3 sm:grid-cols-2 pt-4"
           onSubmit={(e) => {
             e.preventDefault();
             const f = new FormData(e.currentTarget); const v = (k: string) => String(f.get(k) ?? "").trim();
             const wl = Number(v("limit")) || null;
+            const cl = Number(v("charlimit")) || null;
             setMetaSaved(false);
-            run(() => updateStatementMeta(statement.id, { title: v("title"), kind: v("kind"), prompt: v("prompt") || null, wordLimit: wl }), () => { setLimit(wl); setMetaSaved(true); router.refresh(); });
+            run(() => updateStatementMeta(statement.id, { title: v("title"), kind: v("kind"), prompt: v("prompt") || null, wordLimit: wl, charLimit: cl }), () => { setLimit(wl); setCharLimit(cl); setMetaSaved(true); router.refresh(); });
           }}
         >
           <label className="sm:col-span-2 flex flex-col gap-1 text-gray-500">Title<input name="title" defaultValue={statement.title} required className={field + " text-cream"} /></label>
@@ -211,6 +213,7 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
             <select name="kind" defaultValue={statement.kind} className={field + " text-cream bg-transparent"}>{STATEMENT_KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}</select>
           </label>
           <label className="flex flex-col gap-1 text-gray-500">Word limit<input name="limit" type="number" min={1} defaultValue={statement.word_limit ?? ""} placeholder="No limit" className={field + " text-cream"} /></label>
+          <label className="flex flex-col gap-1 text-gray-500">Character limit<input name="charlimit" type="number" min={1} defaultValue={statement.char_limit ?? ""} placeholder="No limit" className={field + " text-cream"} /></label>
           <label className="sm:col-span-2 flex flex-col gap-1 text-gray-500">The school&rsquo;s prompt<textarea name="prompt" defaultValue={statement.prompt ?? ""} rows={4} placeholder="Paste the question or instructions from the application" className={field + " text-cream"} /></label>
           <div className="sm:col-span-2 flex items-center gap-3">
             <button disabled={pending} className={primary}>Save details</button>
