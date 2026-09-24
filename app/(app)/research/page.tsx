@@ -1,120 +1,76 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { addMilestone } from "./actions";
 import { OWNER_USER_ID } from "@/lib/owner";
-import { MilestoneStatusSelect } from "@/components/milestone-controls";
-import { LinksPanel } from "@/components/links-panel";
-import { PageHeader, RESEARCH_TABS, Section, SubNav } from "@/components/ui";
+import { NewProjectForm } from "@/components/research-forms";
+import { PageHeader, RESEARCH_TABS, SubNav } from "@/components/ui";
+import { daysBetween, formatMinutes, localDate, projectStatusLabel, relative } from "@/lib/research";
 
 export const metadata = { title: "Research" };
 
-const localDate = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const daysBetween = (from: string, to: string) =>
-  Math.round((new Date(to + "T00:00:00").getTime() - new Date(from + "T00:00:00").getTime()) / 86400000);
-const relative = (d: number) => (d === 0 ? "today" : d === 1 ? "tomorrow" : d < 0 ? `${-d}d overdue` : `in ${d}d`);
-
-const STATUS_TONE: Record<string, string> = {
-  not_started: "text-gray-500 border-line",
-  in_progress: "text-brass border-brass",
-  blocked: "text-red-600 border-red-600",
-  done: "text-teal-600 border-teal-600",
-};
-
 export default async function ResearchPage() {
   const supabase = await createClient();
-  const [{ data: { user } }, { data: milestones }, { data: tasks }, { data: projectLinks }] = await Promise.all([
+  const today = localDate(new Date());
+  const weekAgo = localDate(new Date(Date.now() - 6 * 86400000));
+  const [{ data: { user } }, { data: projects }, { data: milestones }, { data: entries }, { data: members }, { data: tasks }] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from("research_milestones").select("*").order("target_date", { ascending: true, nullsFirst: false }),
-    supabase.from("tasks").select("research_milestone_id, status").not("research_milestone_id", "is", null),
-    supabase.from("links").select("*").is("school_id", null).is("milestone_id", null).is("professor_id", null),
+    supabase.from("research_projects").select("*").order("created_at"),
+    supabase.from("research_milestones").select("id, project_id, title, status, target_date"),
+    supabase.from("research_entries").select("project_id, minutes").gte("occurred_on", weekAgo),
+    supabase.from("research_project_members").select("project_id"),
+    supabase.from("tasks").select("project_id, research_milestone_id, status").not("status", "in", "(done,cancelled)"),
   ]);
   const isOwner = user?.id === OWNER_USER_ID;
-  const today = localDate(new Date());
-
-  const progress = new Map<string, { done: number; total: number }>();
-  for (const t of tasks ?? []) {
-    const p = progress.get(t.research_milestone_id as string) ?? { done: 0, total: 0 };
-    if (t.status !== "cancelled") {
-      p.total += 1;
-      if (t.status === "done") p.done += 1;
-    }
-    progress.set(t.research_milestone_id as string, p);
+  if (!isOwner) {
+    return <main className="p-4 md:p-8 max-w-xl mx-auto text-sm text-gray-500">Research projects are only available to the workspace owner.</main>;
   }
-
-  const list = milestones ?? [];
-  const doneCount = list.filter((m) => m.status === "done").length;
-  const blocked = list.filter((m) => m.status === "blocked").length;
-  const overdue = list.filter((m) => m.status !== "done" && m.target_date && m.target_date < today).length;
-  const next = list.find((m) => m.status !== "done" && m.target_date && m.target_date >= today);
-  const pct = list.length ? Math.round((doneCount / list.length) * 100) : 0;
-
-  async function addMilestoneAction(formData: FormData) {
-    "use server";
-    const title = String(formData.get("title") ?? "").trim();
-    if (!title) return;
-    const description = String(formData.get("description") ?? "").trim();
-    const targetDate = String(formData.get("target_date") ?? "").trim();
-    await addMilestone(title, description || undefined, targetDate || undefined);
-  }
+  const list = projects ?? [];
+  const msByProject = (id: string) => (milestones ?? []).filter((m) => m.project_id === id);
 
   return (
     <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-8">
       <div className="flex flex-col gap-4">
-        <PageHeader
-          title="The Broken Ruler"
-          subtitle={list.length === 0 ? "Nepali benchmark measurement-error study." : `${doneCount} of ${list.length} milestones done${next ? ` · next: ${next.title} ${relative(daysBetween(today, next.target_date as string))}` : ""}${overdue > 0 ? ` · ${overdue} overdue` : ""}${blocked > 0 ? ` · ${blocked} blocked` : ""}`}
-        />
+        <PageHeader title="Research" subtitle="Every project you run, alone or with a team: plan, journal, reading, meetings." />
         <SubNav items={RESEARCH_TABS} current="/research" />
       </div>
 
-      {isOwner && (
-        <Section title="Project links" hint="repo, papers, datasets, docs">
-          <LinksPanel
-            links={(projectLinks ?? []) as any}
-            scope={{}}
-            placeholder="Paste your GitHub repo, arXiv paper, dataset or doc link…"
-            emptyText="No links yet. Paste your project's GitHub repository to start."
-          />
-        </Section>
-      )}
+      <NewProjectForm />
 
-      <Section title="Milestones" hint={list.length ? `${pct}% complete` : undefined}>
-        {list.length === 0 && <p className="text-sm text-gray-500">No milestones yet. Add the first one below.</p>}
+      {list.length === 0 ? (
+        <p className="text-sm text-gray-500">No projects yet. Create one to start planning and logging your work.</p>
+      ) : (
         <ul className="flex flex-col">
-          {list.map((m) => {
-            const p = progress.get(m.id) ?? { done: 0, total: 0 };
-            const late = m.status !== "done" && m.target_date && m.target_date < today;
+          {list.map((p) => {
+            const ms = msByProject(p.id);
+            const done = ms.filter((m) => m.status === "done").length;
+            const next = ms.filter((m) => m.status !== "done" && m.target_date).sort((a, b) => a.target_date.localeCompare(b.target_date))[0];
+            const late = ms.filter((m) => m.status !== "done" && m.target_date && m.target_date < today).length;
+            const mins = (entries ?? []).filter((e) => e.project_id === p.id).reduce((n, e) => n + (e.minutes ?? 0), 0);
+            const team = (members ?? []).filter((m) => m.project_id === p.id).length;
+            const msIds = new Set(ms.map((m) => m.id));
+            const open = (tasks ?? []).filter((t) => t.project_id === p.id || (t.research_milestone_id && msIds.has(t.research_milestone_id))).length;
+            const bits = [
+              ms.length ? `${done} of ${ms.length} milestones` : "no milestones yet",
+              open ? `${open} open tasks` : null,
+              mins ? `${formatMinutes(mins)} this week` : null,
+              team ? `${team} on the team` : "solo",
+              late ? `${late} late` : null,
+            ].filter(Boolean);
             return (
-              <li key={m.id} className="border-b border-line/60 last:border-0 py-3 flex items-start justify-between gap-4">
-                <Link href={`/research/${m.id}`} className="min-w-0 flex-1 hover:text-brass">
-                  <span className={`block font-medium ${m.status === "done" ? "line-through text-gray-500" : ""}`}>{m.title}</span>
-                  <span className="block text-sm text-gray-500 truncate">
-                    {[m.target_date ? `${m.target_date.slice(5)} · ${relative(daysBetween(today, m.target_date))}` : "no date", p.total > 0 ? `${p.done}/${p.total} tasks` : null].filter(Boolean).join(" · ")}
-                    {late && <span className="text-red-600"> · late</span>}
-                  </span>
+              <li key={p.id} className="border-b border-line/60 last:border-0">
+                <Link href={`/research/projects/${p.id}`} className="flex flex-col gap-1 py-5 -mx-2 px-2 rounded transition-colors hover:bg-surface-raised">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="font-serif text-2xl leading-tight">{p.title}</span>
+                    <span className="text-sm text-gray-500 whitespace-nowrap">{projectStatusLabel(p.status)}</span>
+                  </div>
+                  {p.question && <p className="text-sm text-gray-500 line-clamp-2">{p.question}</p>}
+                  <p className="text-sm text-gray-400">{bits.join(" · ")}</p>
+                  {next && <p className="text-sm text-gray-500">Next: {next.title} <span className={next.target_date < today ? "text-red-600" : "text-brass"}>{relative(daysBetween(today, next.target_date))}</span></p>}
                 </Link>
-                {isOwner ? (
-                  <MilestoneStatusSelect id={m.id} value={m.status} />
-                ) : (
-                  <span className={`text-xs border rounded-full px-2 py-0.5 ${STATUS_TONE[m.status]}`}>{m.status.replace("_", " ")}</span>
-                )}
               </li>
             );
           })}
         </ul>
-        {isOwner && (
-          <details className="text-sm">
-            <summary className="cursor-pointer text-gray-500 hover:text-cream list-none">+ Add a milestone</summary>
-            <form action={addMilestoneAction} className="flex flex-col gap-2 mt-3">
-              <input name="title" placeholder="Milestone title" className="border rounded px-2 py-1.5 text-sm" required />
-              <textarea name="description" placeholder="Description (optional)" className="border rounded px-2 py-1.5 text-sm" rows={2} />
-              <input type="date" name="target_date" className="border rounded px-2 py-1.5 text-sm" />
-              <button className="bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm self-start">Add milestone</button>
-            </form>
-          </details>
-        )}
-      </Section>
+      )}
     </main>
   );
 }

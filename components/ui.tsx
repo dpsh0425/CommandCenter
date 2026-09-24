@@ -93,6 +93,6 @@ export const MATERIALS_TABS = [
   { href: "/materials/resume", label: "Resume builder" },
 ];
 export const RESEARCH_TABS = [
-  { href: "/research", label: "Milestones" },
+  { href: "/research", label: "Projects" },
   { href: "/links", label: "Library" },
 ];

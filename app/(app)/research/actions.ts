@@ -12,20 +12,11 @@ async function requireUser() {
   return { supabase, user };
 }
 
-export async function addMilestone(title: string, description?: string, targetDate?: string) {
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase.from("research_milestones").insert({
-    owner_id: user.id, title, description, target_date: targetDate,
-  });
-  if (error) throw new Error(error.message);
-  revalidatePath("/research");
-}
-
 export async function updateMilestoneStatus(id: string, status: MilestoneStatus) {
   const { supabase } = await requireUser();
   const { error } = await supabase.from("research_milestones").update({ status }).eq("id", id);
   if (error) throw new Error(error.message);
-  revalidatePath("/research");
+  revalidatePath("/research", "layout");
   revalidatePath(`/research/${id}`);
 }
 
@@ -36,14 +27,15 @@ export async function updateMilestone(id: string, fields: { title: string; descr
     .update({ title: fields.title, description: fields.description, target_date: fields.targetDate })
     .eq("id", id);
   if (error) throw new Error(error.message);
-  revalidatePath("/research");
+  revalidatePath("/research", "layout");
   revalidatePath(`/research/${id}`);
 }
 
 export async function deleteMilestone(id: string) {
   const { supabase } = await requireUser();
+  const { data: m } = await supabase.from("research_milestones").select("project_id").eq("id", id).single();
   const { error } = await supabase.from("research_milestones").delete().eq("id", id);
   if (error) throw new Error(error.message);
-  revalidatePath("/research");
-  redirect("/research");
+  revalidatePath("/research", "layout");
+  redirect(m?.project_id ? `/research/projects/${m.project_id}?tab=plan` : "/research");
 }

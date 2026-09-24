@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { detectKind, fallbackTitle, normalizeUrl, parseArxivId, parseGithubRepo, type LinkKind } from "@/lib/links";
 
-export type LinkScope = { schoolId?: string; milestoneId?: string; professorId?: string };
+export type LinkScope = { schoolId?: string; milestoneId?: string; professorId?: string; projectId?: string };
 
 type Meta = Record<string, unknown>;
 
@@ -60,6 +60,7 @@ function refresh(scope: LinkScope) {
   revalidatePath("/research", "layout");
   revalidatePath("/links");
   if (scope.schoolId) revalidatePath(`/schools/${scope.schoolId}`);
+  if (scope.projectId) revalidatePath(`/research/projects/${scope.projectId}`);
 }
 
 export async function addLink(input: { url: string; title?: string; notes?: string; kind?: LinkKind } & LinkScope) {
@@ -76,7 +77,7 @@ export async function addLink(input: { url: string; title?: string; notes?: stri
 
   const { error } = await supabase.from("links").insert({
     owner_id: user.id, url, title, kind, notes: input.notes?.trim() || null, meta,
-    school_id: input.schoolId ?? null, milestone_id: input.milestoneId ?? null, professor_id: input.professorId ?? null,
+    school_id: input.schoolId ?? null, milestone_id: input.milestoneId ?? null, professor_id: input.professorId ?? null, project_id: input.projectId ?? null,
   });
   if (error) throw new Error(error.message);
   refresh(input);

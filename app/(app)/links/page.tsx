@@ -7,11 +7,12 @@ export const metadata = { title: "Library" };
 
 export default async function LibraryPage() {
   const supabase = await createClient();
-  const [{ data: { user } }, { data: links }, { data: schools }, { data: milestones }] = await Promise.all([
+  const [{ data: { user } }, { data: links }, { data: schools }, { data: milestones }, { data: projects }] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("links").select("*").order("created_at", { ascending: false }),
     supabase.from("schools").select("id, name"),
     supabase.from("research_milestones").select("id, title"),
+    supabase.from("research_projects").select("id, title"),
   ]);
 
   if (user?.id !== OWNER_USER_ID) {
@@ -19,10 +20,11 @@ export default async function LibraryPage() {
   }
 
   const schoolName = new Map((schools ?? []).map((s) => [s.id, s.name]));
+  const projectTitle = new Map((projects ?? []).map((p) => [p.id, p.title]));
   const milestoneTitle = new Map((milestones ?? []).map((m) => [m.id, m.title]));
   const rows: LinkRow[] = ((links ?? []) as any[]).map((l) => ({
     ...l,
-    scopeLabel: l.school_id ? schoolName.get(l.school_id) ?? "School" : l.milestone_id ? `Milestone: ${milestoneTitle.get(l.milestone_id) ?? ""}` : "Research project",
+    scopeLabel: l.school_id ? schoolName.get(l.school_id) ?? "School" : l.milestone_id ? `Milestone: ${milestoneTitle.get(l.milestone_id) ?? ""}` : l.project_id ? projectTitle.get(l.project_id) ?? "Research project" : "Research project",
   }));
 
   return (

@@ -5,7 +5,7 @@ import { LINK_KINDS, hostOf, timeAgo, type LinkKind } from "@/lib/links";
 
 export type LinkRow = {
   id: string; url: string; title: string; kind: LinkKind; notes: string | null; pinned: boolean; created_at: string;
-  meta: Record<string, any>; school_id?: string | null; milestone_id?: string | null; professor_id?: string | null;
+  meta: Record<string, any>; school_id?: string | null; milestone_id?: string | null; professor_id?: string | null; project_id?: string | null;
   scopeLabel?: string;
 };
 
@@ -34,7 +34,7 @@ function useRun() {
 
 function LinkCard({ link }: { link: LinkRow }) {
   const { pending, error, run } = useRun();
-  const scope: LinkScope = { schoolId: link.school_id ?? undefined, milestoneId: link.milestone_id ?? undefined, professorId: link.professor_id ?? undefined };
+  const scope: LinkScope = { schoolId: link.school_id ?? undefined, milestoneId: link.milestone_id ?? undefined, professorId: link.professor_id ?? undefined, projectId: link.project_id ?? undefined };
   const [editing, setEditing] = useState(false);
   const m = link.meta ?? {};
   const isRepo = link.kind === "github" && (m.description !== undefined || m.stars !== undefined || m.unavailable);

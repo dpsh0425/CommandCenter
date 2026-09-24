@@ -22,7 +22,7 @@ export default async function MilestoneDetailPage({ params }: { params: Promise<
     supabase.from("research_milestones").select("*").eq("id", id).single(),
     supabase.from("tasks").select("id, title, status, priority, due_date, people(name)").eq("research_milestone_id", id).order("due_date", { ascending: true, nullsFirst: false }),
     supabase.from("people").select("id, name").order("name"),
-    supabase.from("research_milestones").select("id, title").order("target_date", { ascending: true, nullsFirst: false }),
+    supabase.from("research_milestones").select("id, title, project_id").order("target_date", { ascending: true, nullsFirst: false }),
     supabase.from("links").select("*").eq("milestone_id", id),
   ]);
   if (!milestone) return <p className="p-4 md:p-8">Not found.</p>;
@@ -35,7 +35,7 @@ export default async function MilestoneDetailPage({ params }: { params: Promise<
   const pct = active.length ? Math.round((done / active.length) * 100) : 0;
   const late = milestone.status !== "done" && milestone.target_date && milestone.target_date < today;
 
-  const order = siblings ?? [];
+  const order = (siblings ?? []).filter((s: any) => s.project_id === milestone.project_id);
   const idx = order.findIndex((s) => s.id === id);
   const prev = idx > 0 ? order[idx - 1] : null;
   const nextM = idx >= 0 && idx < order.length - 1 ? order[idx + 1] : null;
@@ -43,7 +43,7 @@ export default async function MilestoneDetailPage({ params }: { params: Promise<
   return (
     <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <Link href="/research" className="text-xs text-gray-500 hover:text-cream self-start">← All milestones</Link>
+        <Link href={milestone.project_id ? `/research/projects/${milestone.project_id}?tab=plan` : "/research"} className="text-xs text-gray-500 hover:text-cream self-start">← Project plan</Link>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
             <div className="text-[10px] font-mono text-gray-400">MILESTONE {idx >= 0 ? String(idx + 1).padStart(2, "0") : ""}</div>
