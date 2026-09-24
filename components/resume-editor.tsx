@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { saveResume } from "@/app/(app)/materials/actions";
 import { emptyEntry, uid, type ResumeData, type ResumeEntry } from "@/lib/resume";
+import { useUnsavedGuard } from "@/lib/use-unsaved-guard";
 
 type ListKey = "education" | "experience" | "projects";
 
@@ -94,19 +95,26 @@ export function ResumeEditor({ id, initialName, initial }: { id: string; initial
   const first = useRef(true);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
 
-  // Autosave two seconds after the last change.
+  // Autosave two seconds after the last change. The latest values and a "changes not yet saved" flag are kept in
+  // refs so leaving the page (or closing the tab) inside that window still saves or warns.
+  const latest = useRef({ name, data });
+  latest.current = { name, data };
+  const unsaved = useRef(false);
   useEffect(() => {
     if (first.current) { first.current = false; return; }
     setStatus("dirty");
+    unsaved.current = true;
     const t = setTimeout(() => {
       setStatus("saving");
       start(async () => {
-        try { await saveResume(id, name, data); setStatus("saved"); setError(null); }
+        try { await saveResume(id, name, data); unsaved.current = false; setStatus("saved"); setError(null); }
         catch (e) { setStatus("error"); setError(e instanceof Error ? e.message : "Could not save"); }
       });
     }, 2000);
     return () => clearTimeout(t);
   }, [name, data, id]);
+  useEffect(() => () => { if (unsaved.current) saveResume(id, latest.current.name, latest.current.data).catch(() => {}); }, [id]);
+  useUnsavedGuard(status !== "saved");
 
   const patch = (p: Partial<ResumeData>) => setData((d) => ({ ...d, ...p }));
   const setContact = (k: keyof ResumeData["contact"], v: string) => setData((d) => ({ ...d, contact: { ...d.contact, [k]: v } }));

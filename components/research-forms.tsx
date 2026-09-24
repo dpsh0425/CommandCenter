@@ -5,6 +5,7 @@ import {
   addEntry, addMeeting, addMember, addPaper, addProjectMilestone, addProjectTask, createProject, deleteEntry, deleteMeeting, deletePaper,
   deleteProject, removeMember, updateMeeting, updatePaper, updateProject,
 } from "@/app/(app)/research/project-actions";
+import { lookupPaper } from "@/app/(app)/research/library-actions";
 import { ENTRY_KINDS, PAPER_STATUS, PROJECT_STATUS, formatMinutes, kindLabel, localDate } from "@/lib/research";
 
 type Opt = { id: string; name: string };
@@ -253,6 +254,23 @@ export function EntryRow({ e, projectId }: { e: EntryRowData; projectId: string 
 
 export function PaperForm({ projectId }: { projectId: string }) {
   const { pending, error, run } = useRun();
+  const [looking, setLooking] = useState(false);
+
+  // Paste a link and the title, authors and year fill in on their own (arXiv gives all three; other pages give a title).
+  // Anything already typed is left alone, and a failed lookup just leaves the fields as they are.
+  const lookup = async (form: HTMLFormElement) => {
+    const field = (n: string) => form.elements.namedItem(n) as HTMLInputElement;
+    const url = field("url").value.trim();
+    if (!url || (field("title").value.trim() && field("authors").value.trim() && field("year").value)) return;
+    setLooking(true);
+    try {
+      const m = await lookupPaper(url);
+      if (m.title && !field("title").value.trim()) field("title").value = m.title;
+      if (m.authors && !field("authors").value.trim()) field("authors").value = m.authors;
+      if (m.year && !field("year").value) field("year").value = String(m.year);
+    } catch { /* optional convenience */ } finally { setLooking(false); }
+  };
+
   return (
     <form
       className="flex flex-col gap-2 text-sm border-b border-line pb-6"
@@ -262,14 +280,12 @@ export function PaperForm({ projectId }: { projectId: string }) {
         run(() => addPaper(projectId, { title: val(f, "title"), url: val(f, "url"), authors: val(f, "authors"), year: Number(val(f, "year")) || null }), () => form.reset());
       }}
     >
-      <div className="flex flex-wrap gap-2">
-        <input name="title" required placeholder="Paper title" className={field + " flex-1 min-w-[14rem]"} />
-        <input name="url" placeholder="Link (arXiv, PDF, DOI)" className={field + " flex-1 min-w-[12rem]"} />
-      </div>
+      <input name="url" placeholder="Paste a link (arXiv, PDF, DOI) and the details fill in" onBlur={(e) => e.currentTarget.form && lookup(e.currentTarget.form)} className={field} aria-label="Paper link" />
+      <input name="title" required placeholder="Paper title" className={field} />
       <div className="flex flex-wrap gap-2 items-center">
         <input name="authors" placeholder="Authors (optional)" className={field + " flex-1 min-w-[12rem]"} />
         <input name="year" type="number" min={1900} max={2100} placeholder="Year" className={field + " max-w-[6rem]"} />
-        <button disabled={pending} className={primary}>Add to reading list</button>
+        <button disabled={pending || looking} className={primary}>{looking ? "Looking up…" : "Add to reading list"}</button>
         {error && <span className="text-red-600 text-xs">{error}</span>}
       </div>
     </form>

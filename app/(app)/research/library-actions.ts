@@ -4,6 +4,7 @@ import { OWNER_USER_ID } from "@/lib/owner";
 import { revalidatePath } from "next/cache";
 import { hostOf, parseArxivId, parseGithubRepo } from "@/lib/links";
 import { LIB_KINDS } from "@/lib/library";
+import { extractPageTitle, fetchArxivMeta, fetchPageTitle, metaTag, safeFetch } from "@/lib/web-meta";
 
 async function owner() {
   const supabase = await createClient();
@@ -91,54 +92,6 @@ export type LinkPreview =
   | { type: "page"; title: string | null; description: string | null; image: string | null; siteName: string | null }
   | { type: "none"; reason: string };
 
-// Refuse anything that points at this machine or a private network, since the server does the fetching.
-function isPublicHost(host: string) {
-  const h = host.toLowerCase();
-  if (h === "localhost" || h.endsWith(".local") || h.endsWith(".internal") || h.endsWith(".localhost")) return false;
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) {
-    const [a, b] = h.split(".").map(Number);
-    if (a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)) return false;
-  }
-  if (h.includes(":") || h.startsWith("[")) return false;
-  return true;
-}
-
-async function safeFetch(url: string, accept: string, maxBytes: number): Promise<{ text: string; finalUrl: string } | null> {
-  let current = url;
-  for (let i = 0; i < 4; i++) {
-    let u: URL;
-    try { u = new URL(current); } catch { return null; }
-    if ((u.protocol !== "http:" && u.protocol !== "https:") || !isPublicHost(u.hostname)) return null;
-    const res = await fetch(current, { redirect: "manual", headers: { Accept: accept, "User-Agent": "Mozilla/5.0 (compatible; grad-command-center link preview)" }, signal: AbortSignal.timeout(8000), cache: "no-store" });
-    if (res.status >= 300 && res.status < 400) {
-      const loc = res.headers.get("location");
-      if (!loc) return null;
-      current = new URL(loc, current).toString();
-      continue;
-    }
-    if (!res.ok || !res.body) return null;
-    const reader = res.body.getReader();
-    const chunks: Uint8Array[] = []; let total = 0;
-    while (total < maxBytes) {
-      const { done, value } = await reader.read();
-      if (done || !value) break;
-      chunks.push(value); total += value.length;
-    }
-    reader.cancel().catch(() => {});
-    const buf = new Uint8Array(total); let o = 0; chunks.forEach((c) => { buf.set(c, o); o += c.length; });
-    return { text: new TextDecoder("utf-8", { fatal: false }).decode(buf), finalUrl: current };
-  }
-  return null;
-}
-
-const decode = (s: string) => s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&#x27;/g, "'").replace(/\s+/g, " ").trim();
-const metaTag = (html: string, key: string) => {
-  const re = new RegExp(`<meta[^>]+(?:property|name)=["']${key}["'][^>]*>`, "i");
-  const tag = html.match(re)?.[0];
-  const c = tag?.match(/content=["']([^"']*)["']/i)?.[1];
-  return c ? decode(c) : null;
-};
-
 function youtubeId(url: string) {
   try {
     const u = new URL(url);
@@ -169,18 +122,8 @@ export async function getLinkPreview(id: string): Promise<LinkPreview> {
 
   const ax = parseArxivId(url);
   if (ax) {
-    const r = await safeFetch(`https://export.arxiv.org/api/query?id_list=${encodeURIComponent(ax)}`, "application/atom+xml", 200000);
-    const entry = r?.text.split("<entry>")[1];
-    if (entry) {
-      return {
-        type: "arxiv",
-        title: decode(entry.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? ax),
-        authors: Array.from(entry.matchAll(/<name>([\s\S]*?)<\/name>/g)).map((m) => decode(m[1])).slice(0, 12),
-        summary: decode(entry.match(/<summary>([\s\S]*?)<\/summary>/)?.[1] ?? ""),
-        published: entry.match(/<published>(.*?)<\/published>/)?.[1]?.slice(0, 10) ?? null,
-        pdfUrl: `https://arxiv.org/pdf/${ax}`,
-      };
-    }
+    const m = await fetchArxivMeta(ax);
+    if (m) return { type: "arxiv", ...m, pdfUrl: `https://arxiv.org/pdf/${ax}` };
   }
 
   const yt = youtubeId(url);
@@ -191,9 +134,25 @@ export async function getLinkPreview(id: string): Promise<LinkPreview> {
   const page = await safeFetch(url, "text/html", 300000);
   if (!page) return { type: "none", reason: `Could not read ${hostOf(url)} from the server. Open it in a new tab.` };
   const html = page.text;
-  const title = metaTag(html, "og:title") ?? metaTag(html, "twitter:title") ?? (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ? decode(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)![1]) : null);
+  const title = extractPageTitle(html);
   const description = metaTag(html, "og:description") ?? metaTag(html, "twitter:description") ?? metaTag(html, "description");
   let image = metaTag(html, "og:image") ?? metaTag(html, "twitter:image");
   if (image) { try { image = new URL(image, page.finalUrl).toString(); } catch { image = null; } }
   return { type: "page", title, description, image, siteName: metaTag(html, "og:site_name") ?? hostOf(url) };
+}
+
+// Fills in a paper's details from its link, for the reading list form. arXiv links give title, authors and year;
+// any other public page gives at least a title. Returns an empty object when nothing could be read.
+export async function lookupPaper(url: string): Promise<{ title?: string; authors?: string; year?: number }> {
+  await owner();
+  const clean = url.trim();
+  if (!clean) return {};
+  const full = /^https?:\/\//i.test(clean) ? clean : `https://${clean}`;
+  const ax = parseArxivId(full);
+  if (ax) {
+    const m = await fetchArxivMeta(ax);
+    if (m) return { title: m.title, authors: m.authors.join(", "), year: m.published ? Number(m.published.slice(0, 4)) : undefined };
+  }
+  const title = await fetchPageTitle(full);
+  return title ? { title } : {};
 }

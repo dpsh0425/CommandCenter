@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { addPaperTemplate, addSection, deleteSection, moveSection, saveSectionDraft, updateSection } from "@/app/(app)/research/experiment-actions";
 import { SECTION_STATUS, countWords } from "@/lib/research";
+import { useUnsavedGuard } from "@/lib/use-unsaved-guard";
 
 export type SectionRow = {
   id: string; name: string; status: string; position: number; target_words: number | null; words: number; body: string; notes: string | null; due_date: string | null; person_id: string | null;
@@ -26,17 +27,24 @@ function Draft({ id, initial, onWords }: { id: string; initial: string; onWords:
   const [text, setText] = useState(initial);
   const [state, setState] = useState<"saved" | "dirty" | "saving" | "error">("saved");
   const first = useRef(true);
+  // Latest text and an "unsaved" flag live in refs so leaving the page inside the autosave delay still saves.
+  const latest = useRef(text);
+  latest.current = text;
+  const unsaved = useRef(false);
   useEffect(() => {
     if (first.current) { first.current = false; return; }
     setState("dirty");
+    unsaved.current = true;
     const t = setTimeout(async () => {
       setState("saving");
-      try { onWords(await saveSectionDraft(id, text)); setState("saved"); } catch { setState("error"); }
+      try { onWords(await saveSectionDraft(id, text)); unsaved.current = false; setState("saved"); } catch { setState("error"); }
     }, 1500);
     return () => clearTimeout(t);
     // onWords is stable enough for this purpose; re-running on it would restart the timer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, id]);
+  useEffect(() => () => { if (unsaved.current) saveSectionDraft(id, latest.current).catch(() => {}); }, [id]);
+  useUnsavedGuard(state !== "saved");
   return (
     <div className="flex flex-col gap-1">
       <textarea value={text} onChange={(e) => { setText(e.target.value); onWords(countWords(e.target.value)); }} rows={14} placeholder="Write here. It saves on its own." className={field + " font-serif text-base leading-relaxed"} aria-label="Draft" />
