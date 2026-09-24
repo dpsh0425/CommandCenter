@@ -4,6 +4,7 @@ import Link from "next/link";
 import { StatementStep } from "@/components/statement-step";
 import { hasFinalStatement } from "@/lib/statements";
 import { createClient } from "@/lib/supabase/server";
+import { renderRich } from "@/lib/rich-text-server";
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { StatusSelect } from "@/components/status-select";
 import { OWNER_USER_ID } from "@/lib/owner";
@@ -69,7 +70,7 @@ export default async function SchoolDetailPage({
     return (
       <main className="p-4 md:p-8 max-w-xl mx-auto flex flex-col gap-3">
         <Link href="/schools" className="text-xs text-gray-500 hover:text-cream">← All schools</Link>
-        <p className="text-gray-500">This school doesn't exist or you don't have access to it.</p>
+        <p className="text-gray-500">This school doesn&apos;t exist or you don&apos;t have access to it.</p>
       </main>
     );
   }
@@ -257,7 +258,7 @@ export default async function SchoolDetailPage({
           {isOwner && (
             <Fold title="Notes and activity" summary={`${(activity ?? []).length} entries`}>
               <NoteForm schoolId={id} />
-              {(activity ?? []).length === 0 ? <p className="text-sm text-gray-500">No activity yet. Notes and status changes appear here.</p> : <ActivityTimeline items={(activity ?? []) as any} schoolId={id} />}
+              {(activity ?? []).length === 0 ? <p className="text-sm text-gray-500">No activity yet. Notes and status changes appear here.</p> : <ActivityTimeline items={((activity ?? []) as any[]).map((a) => (a.type === "note" ? { ...a, html: renderRich(a.content) } : a))} schoolId={id} />}
             </Fold>
           )}
 
@@ -309,7 +310,7 @@ export default async function SchoolDetailPage({
           {meta.funding_guarantee ? (
             <p className="font-serif text-2xl leading-snug max-w-2xl"><span className="text-teal-600">Guaranteed. </span>{meta.funding_guarantee}</p>
           ) : (
-            <p className="text-sm text-gray-500 max-w-2xl">Every way this school could pay for you: school-wide, by department, or a professor's grant.</p>
+            <p className="text-sm text-gray-500 max-w-2xl">Every way this school could pay for you: school-wide, by department, or a professor&apos;s grant.</p>
           )}
           {sortedFunds.length === 0 ? <Empty>No funding tracked yet.</Empty> : (
             <div className="grid gap-3 md:grid-cols-2">

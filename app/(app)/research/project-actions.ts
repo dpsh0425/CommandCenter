@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cleanRichBody } from "@/lib/rich-text-server";
 import { ENTRY_KINDS, PAPER_STATUS, PROJECT_STATUS } from "@/lib/research";
 
 async function owner() {
@@ -87,7 +88,7 @@ export async function addEntry(projectId: string, f: { kind: string; title: stri
   const { supabase, userId } = await owner();
   if (!f.title.trim()) throw new Error("Write a short title for what you did.");
   const { error } = await supabase.from("research_entries").insert({
-    owner_id: userId, project_id: projectId, kind: inList(ENTRY_KINDS, f.kind, "other"), title: f.title.trim(), body: clean(f.body),
+    owner_id: userId, project_id: projectId, kind: inList(ENTRY_KINDS, f.kind, "other"), title: f.title.trim(), body: cleanRichBody(f.body),
     occurred_on: f.occurredOn || undefined, minutes: f.minutes && f.minutes > 0 ? Math.round(f.minutes) : null,
     person_id: f.personId || null, milestone_id: f.milestoneId || null,
   });

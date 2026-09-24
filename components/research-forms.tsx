@@ -5,6 +5,8 @@ import {
   addEntry, addMeeting, addMember, addPaper, addProjectMilestone, addProjectTask, createProject, deleteEntry, deleteMeeting, deletePaper,
   deleteProject, removeMember, updateMeeting, updatePaper, updateProject,
 } from "@/app/(app)/research/project-actions";
+import { RichEditorLazy } from "@/components/rich-editor-lazy";
+import { RichHtml } from "@/components/rich-view";
 import { lookupPaper } from "@/app/(app)/research/library-actions";
 import { ENTRY_KINDS, PAPER_STATUS, PROJECT_STATUS, formatMinutes, kindLabel, localDate } from "@/lib/research";
 
@@ -182,6 +184,8 @@ export function AddTaskForm({ projectId, milestones, people, teamSize }: { proje
 export function EntryForm({ projectId, people, milestones, teamSize }: { projectId: string; people: Opt[]; milestones: Opt[]; teamSize: number }) {
   const { pending, error, run } = useRun();
   const [more, setMore] = useState(false);
+  const [bodyHtml, setBodyHtml] = useState("");
+  const [resetKey, setResetKey] = useState(0);
   const [person, choose] = useRememberedPerson(`research-journal-person:${projectId}`, people, teamSize);
   const showPerson = people.length > 0;
 
@@ -192,9 +196,9 @@ export function EntryForm({ projectId, people, milestones, teamSize }: { project
         e.preventDefault();
         const form = e.currentTarget; const f = new FormData(form);
         run(() => addEntry(projectId, {
-          kind: val(f, "kind"), title: val(f, "title"), body: val(f, "body"), occurredOn: val(f, "date") || undefined,
+          kind: val(f, "kind"), title: val(f, "title"), body: bodyHtml, occurredOn: val(f, "date") || undefined,
           minutes: Number(val(f, "minutes")) || null, personId: person || null, milestoneId: val(f, "milestone") || null,
-        }), () => { form.reset(); setMore(false); });
+        }), () => { form.reset(); setMore(false); setBodyHtml(""); setResetKey((k) => k + 1); });
       }}
     >
       <div className="flex flex-wrap gap-2">
@@ -216,7 +220,7 @@ export function EntryForm({ projectId, people, milestones, teamSize }: { project
       )}
       {more && (
         <div className="flex flex-col gap-2">
-          <textarea name="body" rows={3} placeholder="Details, results, what you'd do next. Numbers, file names and decisions belong here." className={field} />
+          <RichEditorLazy variant="compact" label="Details" placeholder="Details, results, what you'd do next…" value={bodyHtml} onChange={setBodyHtml} resetKey={resetKey} minHeight="8rem" />
           <div className="flex flex-wrap gap-2">
             <input type="date" name="date" defaultValue={localDate(new Date())} className={field + " max-w-[10rem]"} aria-label="Date" />
             <select name="milestone" className={field + " max-w-[12rem] bg-transparent"} aria-label="Milestone"><option value="">No milestone</option>{milestones.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
@@ -231,7 +235,7 @@ export function EntryForm({ projectId, people, milestones, teamSize }: { project
   );
 }
 
-export type EntryRowData = { id: string; kind: string; title: string; body: string | null; minutes: number | null; personName?: string; milestoneTitle?: string };
+export type EntryRowData = { id: string; kind: string; title: string; bodyHtml: string | null; minutes: number | null; personName?: string; milestoneTitle?: string };
 
 export function EntryRow({ e, projectId }: { e: EntryRowData; projectId: string }) {
   const { pending, error, run } = useRun();
@@ -240,13 +244,13 @@ export function EntryRow({ e, projectId }: { e: EntryRowData; projectId: string 
     <li className={`group py-2.5 border-b border-line/60 last:border-0 ${pending ? "opacity-60" : ""}`}>
       <div className="flex items-baseline gap-3">
         <span className="text-xs text-gray-500 w-20 flex-shrink-0">{kindLabel(e.kind)}</span>
-        <button onClick={() => e.body && setOpen((v) => !v)} className={`text-left flex-1 min-w-0 ${e.body ? "hover:text-brass cursor-pointer" : "cursor-default"}`}>
+        <button onClick={() => e.bodyHtml && setOpen((v) => !v)} className={`text-left flex-1 min-w-0 ${e.bodyHtml ? "hover:text-brass cursor-pointer" : "cursor-default"}`}>
           <span className="break-words">{e.title}</span>
           <span className="block text-xs text-gray-400">{[e.personName, e.milestoneTitle, e.minutes ? formatMinutes(e.minutes) : null].filter(Boolean).join(" · ")}</span>
         </button>
         <button onClick={() => { if (confirm("Delete this entry?")) run(() => deleteEntry(e.id, projectId)); }} className="text-xs text-gray-500 hover:text-red-600 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100" aria-label="Delete entry">✕</button>
       </div>
-      {open && e.body && <p className="text-sm text-gray-500 whitespace-pre-line pl-[5.75rem] pt-1">{e.body}</p>}
+      {open && e.bodyHtml && <RichHtml html={e.bodyHtml} className="text-sm pl-[5.75rem] pt-1" />}
       {error && <p className="text-red-600 text-xs pl-[5.75rem]">{error}</p>}
     </li>
   );

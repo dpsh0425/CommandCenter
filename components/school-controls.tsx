@@ -5,6 +5,9 @@ import { FLAG_LABEL, letterFlags, type LetterStatus } from "@/lib/letters";
 import { addNote, deleteNote, updateSchoolDetails } from "@/app/(app)/schools/[id]/actions";
 import { addLetterRequest, clearSchoolSop, recordSopSent, removeLetterRequest, updateLetterStatus } from "@/app/(app)/schools/[id]/logistics-actions";
 import { deleteInterview, scheduleInterview, updateInterview, updateVisaStep, type InterviewStatus } from "@/app/(app)/schools/[id]/interview-actions";
+import { RichEditorLazy } from "@/components/rich-editor-lazy";
+import { useAction } from "@/lib/use-action";
+import { htmlToText, toEditorHtml } from "@/lib/rich-text";
 import { createTask } from "@/app/(app)/tasks/actions";
 
 function useRun() {
@@ -81,20 +84,22 @@ export function SchoolDetailsForm(props: {
 }
 
 export function NoteForm({ schoolId }: { schoolId: string }) {
-  const { pending, error, run } = useRun();
+  const { pending, error, run } = useAction();
+  const [html, setHtml] = useState("");
+  const [resetKey, setResetKey] = useState(0);
+  const empty = !htmlToText(toEditorHtml(html)).trim();
   return (
     <form
       className="flex flex-col gap-2 mb-4"
       onSubmit={(e) => {
         e.preventDefault();
-        const form = e.currentTarget;
-        const content = String(new FormData(form).get("content") ?? "").trim();
-        if (content) run(() => addNote(schoolId, content), () => form.reset());
+        if (empty) return;
+        run(() => addNote(schoolId, html), () => { setHtml(""); setResetKey((k) => k + 1); });
       }}
     >
-      <textarea name="content" required rows={3} placeholder="Log a note, call, or outreach…" className="border rounded p-2 text-sm" />
+      <RichEditorLazy variant="compact" label="Note" placeholder="Log a note, call, or outreach…" value={html} onChange={setHtml} resetKey={resetKey} minHeight="6rem" />
       <Err message={error} />
-      <button disabled={pending} className={`${btn} self-start`}>{pending ? "Saving…" : "Add note"}</button>
+      <button disabled={pending || empty} className={`${btn} self-start`}>{pending ? "Saving…" : "Add note"}</button>
     </form>
   );
 }

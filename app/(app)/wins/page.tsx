@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { htmlToText, toEditorHtml } from "@/lib/rich-text";
 import { PageHeader, SubNav, TODAY_TABS } from "@/components/ui";
 
 export const metadata = { title: "Wins" };
@@ -15,7 +16,7 @@ export default async function WinsPage() {
 
   const items: Win[] = [
     ...(activity ?? []).map((a: any) => ({
-      label: a.schools?.name ?? "School", content: a.content, when: a.created_at,
+      label: a.schools?.name ?? "School", content: a.type === "note" ? htmlToText(toEditorHtml(a.content ?? "")).trim() : a.content, when: a.created_at,
       href: a.school_id ? `/schools/${a.school_id}` : "/schools", kind: "school" as const,
     })),
     ...(taskUpdates ?? []).map((u: any) => ({
@@ -39,7 +40,7 @@ export default async function WinsPage() {
 
       {items.length === 0 && (
         <div className="border border-dashed border-line rounded p-6 text-center text-sm text-gray-500">
-          Nothing yet — it's early. A win is logged when a school moves to replied, submitted, interview or accepted, or when you mark a task result.
+          Nothing yet — it&apos;s early. A win is logged when a school moves to replied, submitted, interview or accepted, or when you mark a task result.
         </div>
       )}
 

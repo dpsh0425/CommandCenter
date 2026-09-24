@@ -1,17 +1,22 @@
 "use server";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { fail, ok, type ActionResult } from "@/lib/action-result";
+import { cleanRichBody } from "@/lib/rich-text-server";
 
-export async function addNote(schoolId: string, content: string) {
+export async function addNote(schoolId: string, content: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("not authenticated");
 
+  const body = cleanRichBody(content);
+  if (!body) return fail("Write something first.");
   const { error } = await supabase.from("activity_log").insert({
-    owner_id: user.id, school_id: schoolId, type: "note", content,
+    owner_id: user.id, school_id: schoolId, type: "note", content: body,
   });
   if (error) throw new Error(error.message);
   revalidatePath(`/schools/${schoolId}`);
+  return ok(undefined);
 }
 
 export async function updateSchoolDetails(schoolId: string, fields: {

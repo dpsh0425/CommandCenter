@@ -12,6 +12,7 @@ import {
   AddMemberForm, AddMilestoneForm, AddTaskForm, DeleteProjectButton, EntryForm, EntryRow, MeetingCard, MeetingForm, PaperForm, PaperRow,
   ProjectEditForm, RemoveMemberButton,
 } from "@/components/research-forms";
+import { renderRich } from "@/lib/rich-text-server";
 import { Fold, Meta, Section } from "@/components/ui";
 import { ENTRY_KINDS, PAPER_STATUS, daysBetween, formatMinutes, kindLabel, localDate, projectStatusLabel, relative } from "@/lib/research";
 
@@ -251,7 +252,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
             {groups.length === 0 ? <p className="text-sm text-gray-500">Nothing logged yet. Log the small things too: a failed run, a paper skimmed, a decision made. They add up to your methods section.</p> : groups.map((g) => (
               <section key={g.date} className="flex flex-col">
                 <h3 className="font-sans text-sm font-semibold text-gray-500 border-b border-line pb-1">{longDate(g.date)} <span className="font-normal text-gray-400">{formatMinutes(g.rows.reduce((n, r) => n + (r.minutes ?? 0), 0))}</span></h3>
-                <ul>{g.rows.map((e) => <EntryRow key={e.id} projectId={id} e={{ id: e.id, kind: e.kind, title: e.title, body: e.body, minutes: e.minutes, personName: e.person_id ? personById.get(e.person_id)?.name : undefined, milestoneTitle: e.milestone_id ? msById.get(e.milestone_id)?.title : undefined }} />)}</ul>
+                <ul>{g.rows.map((e) => <EntryRow key={e.id} projectId={id} e={{ id: e.id, kind: e.kind, title: e.title, bodyHtml: e.body ? renderRich(e.body) : null, minutes: e.minutes, personName: e.person_id ? personById.get(e.person_id)?.name : undefined, milestoneTitle: e.milestone_id ? msById.get(e.milestone_id)?.title : undefined }} />)}</ul>
               </section>
             ))}
           </div>
