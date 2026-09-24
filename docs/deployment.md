@@ -19,7 +19,7 @@ Generate a `CRON_SECRET` with: `node -e "console.log(require('crypto').randomByt
 
 ## First deployment
 
-1. Create a private GitHub repository, then: `git remote add origin <url>` and `git push -u origin master`. Check the Actions tab shows a green `CI` run.
+1. Create a private GitHub repository, then: `git remote add origin <url>` and `git push -u origin master`. This repository's default branch is `master`, so in the Vercel project settings (Git) make sure the Production Branch is `master`, not `main`. Check the Actions tab shows a green `CI` run.
 2. In Vercel: Add New Project, import the repository, framework Next.js, add the variables above, deploy.
 3. Open `<your-url>/api/health`. Expected: `{"ok":true,"db":true}`.
 4. In Supabase (Authentication, URL Configuration): set **Site URL** to the production address and add it plus `http://localhost:3000` to **Redirect URLs**. Until this is done, email links point at localhost.
@@ -37,7 +37,7 @@ Migrations are tested on staging before production.
 2. Apply every migration: `SUPABASE_PROJECT_REF=<staging-ref> npm run db:migrate`.
    The runner wraps each migration in a transaction and refuses to run on a project that already has tables but no migration records; use --baseline for those.
 3. Check it: `SUPABASE_PROJECT_REF=<staging-ref> npm run db:test`. Expected: `0 failed`.
-4. Optional: load a copy of production data for realistic checks by restoring from a backup file set (`npm run db:backup` on production first).
+4. Staging starts empty. Restoring production data into staging is not automated yet; if you need realistic data, use the loaders in `scripts/` (`load_schools.py`, `seed_research_milestones.py`) or add rows by hand. Test data uses the `ZZTEMP` prefix and is deleted afterwards.
 
 Production is baselined once (`--baseline`) so the runner knows what already ran there. From then on, apply new migrations to staging first, run the tests, take a backup of production, then apply to production.
 
