@@ -69,3 +69,15 @@ describe("assess", () => {
     expect(r.pending.map((p) => p.key)).toEqual(["transcripts", "sop", "fee"]);
   });
 });
+
+describe("buildItems statement rule", () => {
+  const done = (over: Partial<ReadinessSchool>) => buildItems(school(over), [], {}).find((i) => i.key === "sop")!.done;
+
+  it("is done when the school has a final or sent statement", () => expect(done({ has_statement: true })).toBe(true));
+  it("is not done without a statement or a legacy record", () => expect(done({ has_statement: false })).toBe(false));
+  it("still counts the legacy recorded statement", () => expect(done({ sop_version_id: "v1" })).toBe(true));
+  it("points at the Statements tab when not done", () => {
+    const item = buildItems(school(), [], {}).find((i) => i.key === "sop")!;
+    expect(item.hint).toBe("Mark your statement Final in Materials, Statements");
+  });
+});

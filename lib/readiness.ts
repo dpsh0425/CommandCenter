@@ -1,7 +1,7 @@
 // What still stands between you and a submitted application, and how worried to be about it.
 export type ReadinessSchool = {
   id: string; name: string; deadline_date: string | null; status: string; gre_policy: string | null; english_test: string | null;
-  letters_required: number | null; sop_version_id: string | null;
+  letters_required: number | null; sop_version_id: string | null; has_statement?: boolean;
 };
 export type ReadinessItem = { key: string; label: string; done: boolean; derived: boolean; hint?: string };
 export type Risk = "submitted" | "overdue" | "urgent" | "watch" | "ok" | "nodate";
@@ -18,7 +18,7 @@ export function buildItems(s: ReadinessSchool, letters: Array<{ status: string }
     { key: "portal", label: "Application portal account created", done: !!checks.portal, derived: false },
     { key: "resume", label: "Resume or CV ready", done: !!checks.resume, derived: false },
     { key: "transcripts", label: "Transcripts ready", done: !!checks.transcripts, derived: false },
-    { key: "sop", label: "Statement of purpose written", done: !!s.sop_version_id, derived: true, hint: "Record it on the Application tab" },
+    { key: "sop", label: "Statement of purpose written", done: !!s.has_statement || !!s.sop_version_id, derived: true, hint: "Mark your statement Final in Materials, Statements" },
   ];
   if (need > 0 || letters.length > 0) {
     items.push({ key: "letters", label: `Recommendation letters (${confirmed} of ${need || letters.length} confirmed)`, done: confirmed >= (need || letters.length) && confirmed > 0, derived: true, hint: "Request letters on the Application tab" });

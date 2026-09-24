@@ -1,6 +1,8 @@
 import { ApplyingToggle, ChecklistRows } from "@/components/readiness-controls";
 import { assess, buildItems, RISK_LABEL, RISK_TONE } from "@/lib/readiness";
 import Link from "next/link";
+import { StatementStep } from "@/components/statement-step";
+import { hasFinalStatement } from "@/lib/statements";
 import { createClient } from "@/lib/supabase/server";
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { StatusSelect } from "@/components/status-select";
@@ -83,6 +85,9 @@ export default async function SchoolDetailPage({
   const funds = (fundings ?? []) as FundingRow[];
   const sopLabel = (sop as any)?.sop_versions?.label as string | undefined;
   const hasSop = !!(sop as any)?.sop_version_id;
+  const { data: schoolStatements } = await supabase.from("statements").select("id, kind, title, status, words, word_limit").eq("school_id", id).order("created_at");
+  const { data: generalDrafts } = await supabase.from("statements").select("id, title").is("school_id", null).eq("kind", "statement_of_purpose").order("updated_at", { ascending: false });
+  const statementReady = hasFinalStatement((schoolStatements ?? []) as any[]);
   const openTasks = (linkedTasks ?? []).filter((t) => t.status !== "done" && t.status !== "cancelled").length;
   const deptOptions = depts.map((d) => ({ id: d.id, name: d.name }));
   const profOptions = profs.map((p) => ({ id: p.id, name: p.name }));
@@ -91,11 +96,11 @@ export default async function SchoolDetailPage({
   const checkMap: Record<string, boolean> = {};
   (checkRows ?? []).forEach((c: any) => { checkMap[c.item] = c.done; });
   const readinessItems = buildItems(
-    { id, name: meta.name, deadline_date: meta.deadline_date, status: meta.status, gre_policy: meta.gre_policy, english_test: meta.english_test, letters_required: meta.letters_required, sop_version_id: (sop as any)?.sop_version_id ?? null },
+    { id, name: meta.name, deadline_date: meta.deadline_date, status: meta.status, gre_policy: meta.gre_policy, english_test: meta.english_test, letters_required: meta.letters_required, sop_version_id: (sop as any)?.sop_version_id ?? null, has_statement: statementReady },
     letterList, checkMap
   );
   const verdict = assess(
-    { id, name: meta.name, deadline_date: meta.deadline_date, status: meta.status, gre_policy: meta.gre_policy, english_test: meta.english_test, letters_required: meta.letters_required, sop_version_id: (sop as any)?.sop_version_id ?? null },
+    { id, name: meta.name, deadline_date: meta.deadline_date, status: meta.status, gre_policy: meta.gre_policy, english_test: meta.english_test, letters_required: meta.letters_required, sop_version_id: (sop as any)?.sop_version_id ?? null, has_statement: statementReady },
     readinessItems, today
   );
   const lettersConfirmed = letterList.filter((l) => l.status === "confirmed" || l.status === "submitted").length;
@@ -366,15 +371,18 @@ export default async function SchoolDetailPage({
             </details>
           </Step>
 
-          <Step done={hasSop} title="Statement of purpose" summary={hasSop ? "Recorded" : "Not recorded yet"}>
-            {hasSop ? (
-              <SopForm schoolId={id} current={{ label: sopLabel ?? "Recorded version", sentAt: (sop as any).sop_sent_at }} />
-            ) : (
-              <details className="text-sm">
-                <summary className="cursor-pointer text-gray-500 hover:text-cream">+ Record what you sent</summary>
-                <div className="pt-3"><SopForm schoolId={id} current={null} /></div>
-              </details>
-            )}
+          <Step
+            done={hasSop || statementReady}
+            title="Statement of purpose"
+            summary={statementReady ? "Final" : (schoolStatements ?? []).length > 0 ? "In progress" : hasSop ? "Recorded" : "Not started"}
+          >
+            <StatementStep schoolId={id} statements={(schoolStatements ?? []) as any[]} generalDrafts={(generalDrafts ?? []) as any[]} />
+            <details className="text-sm">
+              <summary className="cursor-pointer text-gray-500 hover:text-cream">{hasSop ? "Recorded without a draft" : "+ Just record what you sent, without a draft"}</summary>
+              <div className="pt-3">
+                <SopForm schoolId={id} current={hasSop ? { label: sopLabel ?? "Recorded version", sentAt: (sop as any).sop_sent_at } : null} />
+              </div>
+            </details>
           </Step>
 
           <Step
