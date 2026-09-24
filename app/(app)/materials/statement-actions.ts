@@ -2,7 +2,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { revalidatePath } from "next/cache";
-import { countWords } from "@/lib/research";
+import { countWordsHtml, toEditorHtml } from "@/lib/rich-text";
+import { sanitizeHtml } from "@/lib/rich-text-server";
 import { defaultTitle, isStatementKind, isStatementStatus, statusChange } from "@/lib/statements";
 
 async function owner() {
@@ -47,7 +48,7 @@ export async function createStatement(input: { kind: string; schoolId?: string |
   }
 
   const { data, error } = await supabase.from("statements").insert({
-    owner_id: userId, kind: input.kind, title: input.title?.trim() || defaultTitle(input.kind, schoolName), prompt, body, words: countWords(body),
+    owner_id: userId, kind: input.kind, title: input.title?.trim() || defaultTitle(input.kind, schoolName), prompt, body, words: countWordsHtml(body),
     school_id: input.schoolId ?? null, source_id: sourceId,
   }).select("id").single();
   if (error || !data) {
@@ -79,13 +80,23 @@ export async function updateStatementMeta(id: string, f: { title?: string; kind?
   refresh(id, data?.school_id);
 }
 
-// Called on every autosave, so it deliberately does not revalidate the page.
-export async function saveStatementBody(id: string, body: string): Promise<number> {
+export type SaveResult = { ok: true; words: number; version: number } | { ok: false; reason: "stale" | "error"; message: string };
+
+// Called on every autosave, so it deliberately does not revalidate the page. It never throws: production builds hide
+// thrown messages, and the editor must be able to tell "changed elsewhere" from "could not save".
+export async function saveStatementBody(id: string, body: string, baseVersion: number): Promise<SaveResult> {
   const { supabase } = await owner();
-  const words = countWords(body);
-  const { error } = await supabase.from("statements").update({ body, words }).eq("id", id);
-  if (error) throw new Error(error.message);
-  return words;
+  const clean = sanitizeHtml(toEditorHtml(body));
+  const words = countWordsHtml(clean);
+  const { data, error } = await supabase
+    .from("statements")
+    .update({ body: clean, words, body_version: baseVersion + 1 })
+    .eq("id", id)
+    .eq("body_version", baseVersion)
+    .select("body_version");
+  if (error) return { ok: false, reason: "error", message: error.message };
+  if (!data || data.length === 0) return { ok: false, reason: "stale", message: "This was changed somewhere else." };
+  return { ok: true, words, version: data[0].body_version as number };
 }
 
 export async function setStatementStatus(id: string, next: string) {
@@ -111,11 +122,11 @@ export async function saveSnapshot(id: string, note?: string) {
 }
 
 // Restoring first saves the current text as a snapshot, so nothing is ever lost.
-export async function restoreSnapshot(snapshotId: string): Promise<{ body: string; words: number }> {
+export async function restoreSnapshot(snapshotId: string): Promise<{ body: string; words: number; version: number }> {
   const { supabase, userId } = await owner();
   const { data: snap } = await supabase.from("statement_snapshots").select("statement_id, body").eq("id", snapshotId).single();
   if (!snap) throw new Error("Version not found.");
-  const { data: cur } = await supabase.from("statements").select("body, words, school_id").eq("id", snap.statement_id).single();
+  const { data: cur } = await supabase.from("statements").select("body, words, school_id, body_version").eq("id", snap.statement_id).single();
   if (!cur) throw new Error("Statement not found.");
   if (cur.body !== snap.body) {
     const { error: e1 } = await supabase.from("statement_snapshots").insert({
@@ -123,11 +134,18 @@ export async function restoreSnapshot(snapshotId: string): Promise<{ body: strin
     });
     if (e1) throw new Error(e1.message);
   }
-  const words = countWords(snap.body);
-  const { error } = await supabase.from("statements").update({ body: snap.body, words }).eq("id", snap.statement_id);
+  const clean = sanitizeHtml(toEditorHtml(snap.body));
+  const words = countWordsHtml(clean);
+  const { data: updated, error } = await supabase
+    .from("statements")
+    .update({ body: clean, words, body_version: cur.body_version + 1 })
+    .eq("id", snap.statement_id)
+    .eq("body_version", cur.body_version)
+    .select("body_version");
   if (error) throw new Error(error.message);
+  if (!updated || updated.length === 0) throw new Error("The statement changed while restoring. Try again.");
   refresh(snap.statement_id, cur.school_id);
-  return { body: snap.body, words };
+  return { body: clean, words, version: updated[0].body_version as number };
 }
 
 export async function deleteSnapshot(snapshotId: string, statementId: string) {
