@@ -5,6 +5,8 @@ import { Avatar } from "@/components/avatar";
 import { ProjectLibrary, type LibItem } from "@/components/project-library";
 import { ExperimentsBoard, type ExperimentRow } from "@/components/experiments-board";
 import { WritingBoard, type SectionRow } from "@/components/writing-board";
+import { TeamWeek } from "@/components/team-week";
+import { addDays, loadTeamWeek } from "@/lib/team-week";
 import { MilestoneStatusSelect } from "@/components/milestone-controls";
 import {
   AddMemberForm, AddMilestoneForm, AddTaskForm, DeleteProjectButton, EntryForm, EntryRow, MeetingCard, MeetingForm, PaperForm, PaperRow,
@@ -29,7 +31,7 @@ type Tab = (typeof TABS)[number]["key"];
 const TASK_TONE: Record<string, string> = { todo: "text-gray-500", in_progress: "text-brass", blocked: "text-red-600", done: "text-teal-600", cancelled: "text-gray-400" };
 const longDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 
-export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; kind?: string }> }) {
+export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; kind?: string; w?: string }> }) {
   const { id } = await params;
   const sp = await searchParams;
   const tab: Tab = TABS.some((t) => t.key === sp.tab) ? (sp.tab as Tab) : "overview";
@@ -86,6 +88,11 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const secRows = (sections ?? []) as SectionRow[];
   const wordsTotal = secRows.reduce((n, x) => n + x.words, 0);
   const wordsTarget = secRows.reduce((n, x) => n + (x.target_words ?? 0), 0);
+  const weekOffset = Math.max(-12, Math.min(4, Number(sp.w) || 0));
+  const monday = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + weekOffset * 7); return localDate(d); })();
+  const weekEnd = addDays(monday, 6);
+  const shortDay = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const teamWeek = tab === "team" ? await loadTeamWeek(supabase, id, monday, today) : null;
   const pinnedItems = libItems.filter((i) => i.pinned).slice(0, 4);
 
   return (
@@ -285,7 +292,12 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       )}
 
       {tab === "team" && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-8">
+          {teamWeek && (
+            <TeamWeek projectId={id} people={teamWeek.people} unattributedMinutes={teamWeek.unattributedMinutes} unattributedEntries={teamWeek.unattributedEntries}
+              offset={weekOffset} label={`${shortDay(monday)} to ${shortDay(weekEnd)}`} isPast={weekEnd < today} />
+          )}
+          <h2 className="font-sans text-[15px] font-semibold text-cream border-b border-line pb-2 -mb-4">Members</h2>
           {(members ?? []).length === 0 ? <p className="text-sm text-gray-500">This is a solo project. Add collaborators, advisors or annotators to assign them tasks and track their work.</p> : (
             <ul className="flex flex-col">
               {(members ?? []).map((m) => {
@@ -298,7 +310,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                     <Avatar name={p.name} color={p.color} size={36} />
                     <Link href={`/people/${p.id}`} className="min-w-0 flex-1 hover:text-brass">
                       <span className="block font-medium truncate">{p.name}</span>
-                      <span className="block text-xs text-gray-500 truncate">{[m.role, `${mine} open tasks`, mins ? `${formatMinutes(mins)} logged` : null].filter(Boolean).join(" · ")}</span>
+                      <span className="block text-xs text-gray-500 truncate">{[m.role, `${mine} open task${mine === 1 ? "" : "s"}`, mins ? `${formatMinutes(mins)} logged` : null].filter(Boolean).join(" · ")}</span>
                     </Link>
                     <RemoveMemberButton projectId={id} personId={p.id} name={p.name} />
                   </li>
