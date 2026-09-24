@@ -1,8 +1,8 @@
 "use client";
-import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createStatement } from "@/app/(app)/materials/statement-actions";
+import { useAction } from "@/lib/use-action";
 import { limitState, statementKindLabel, type LimitState } from "@/lib/statements";
 
 type StepStatement = { id: string; kind: string; title: string; status: string; words: number; word_limit: number | null };
@@ -10,15 +10,14 @@ const TONE: Record<LimitState, string> = { none: "text-gray-400", ok: "text-gray
 
 export function StatementStep({ schoolId, statements, generalDrafts }: { schoolId: string; statements: StepStatement[]; generalDrafts: Array<{ id: string; title: string }> }) {
   const router = useRouter();
-  const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const { pending, error, run } = useAction();
   const hasSop = statements.some((s) => s.kind === "statement_of_purpose");
 
   const create = (fromId: string | null) => {
-    setError(null);
-    start(async () => {
-      try { router.push(`/materials/statements/${await createStatement({ kind: "statement_of_purpose", schoolId, fromId })}`); }
-      catch (e) { setError(e instanceof Error ? e.message : "Could not create the statement."); }
+    run(async () => {
+      const r = await createStatement({ kind: "statement_of_purpose", schoolId, fromId });
+      if (r.ok) router.push(`/materials/statements/${r.data}`);
+      return r;
     });
   };
 

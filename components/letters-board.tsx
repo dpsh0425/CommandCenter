@@ -1,8 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { markLettersAsked, markLettersReminded, setLetterStatus } from "@/app/(app)/materials/letter-actions";
+import { PaperTextarea } from "@/components/paper-textarea";
+import { useAction } from "@/lib/use-action";
 import {
   FLAG_LABEL, HEAVY_LOAD, LETTER_STATUSES, buildReminderEmail, buildRequestEmail, buildThankYouEmail, daysBetween, groupByRecommender,
   letterFlags, mailtoUrl, type EmailDraft, type LetterRecord, type RecommenderGroup,
@@ -28,8 +30,8 @@ const KIND_LABEL: Record<Kind, string> = { request: "Draft request", reminder: "
 
 export function LettersBoard({ letters, today, focus }: { letters: LetterRecord[]; today: string; focus?: string }) {
   const router = useRouter();
-  const [pending, start] = useTransition();
-  const [error, setError] = useState<{ key: string; message: string } | null>(null);
+  const { pending, error, run: act } = useAction();
+  const [errorKey, setErrorKey] = useState<string | null>(null);
   const [signAs, setSignAs] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
@@ -44,10 +46,8 @@ export function LettersBoard({ letters, today, focus }: { letters: LetterRecord[
   };
 
   const run = (key: string, fn: () => Promise<unknown>, after?: () => void) => {
-    setError(null);
-    start(async () => {
-      try { await fn(); after?.(); router.refresh(); } catch (e) { setError({ key, message: e instanceof Error ? e.message : "Something went wrong" }); }
-    });
+    setErrorKey(key);
+    act(fn, () => { after?.(); router.refresh(); });
   };
 
   const openDraft = (g: RecommenderGroup, kind: Kind) => {
@@ -143,7 +143,7 @@ export function LettersBoard({ letters, today, focus }: { letters: LetterRecord[
             {d && (
               <div className="flex flex-col gap-2 border-t border-line pt-3">
                 <input value={d.subject} onChange={(e) => setDraft({ ...d, subject: e.target.value })} className={field + " text-cream"} aria-label="Email subject" />
-                <textarea value={d.body} onChange={(e) => setDraft({ ...d, body: e.target.value })} rows={12} className={field + " text-cream"} aria-label="Email body" />
+                <PaperTextarea value={d.body} onChange={(e) => setDraft({ ...d, body: e.target.value })} rows={12} aria-label="Email body" />
                 <div className="flex flex-wrap items-center gap-2">
                   {mail ? (
                     <a href={mail} className={primary}>Open in mail</a>
@@ -164,7 +164,7 @@ export function LettersBoard({ letters, today, focus }: { letters: LetterRecord[
               </div>
             )}
 
-            {error && error.key === g.key && <span className="text-red-600 text-xs">{error.message}</span>}
+            {error && errorKey === g.key && <span className="text-red-600 text-xs">{error}</span>}
           </section>
         );
       })}

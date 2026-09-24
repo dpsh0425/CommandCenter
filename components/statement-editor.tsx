@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -15,6 +15,8 @@ import { StatementExport } from "@/components/statement-export";
 import { useDraftBackup } from "@/lib/use-draft-backup";
 import { STATEMENT_KINDS, STATEMENT_STATUS, statementKindLabel } from "@/lib/statements";
 import { useUnsavedGuard } from "@/lib/use-unsaved-guard";
+import { useAction } from "@/lib/use-action";
+import { fail } from "@/lib/action-result";
 
 export type EditorStatement = {
   id: string; kind: string; title: string; prompt: string | null; word_limit: number | null; char_limit: number | null; body: string; status: string; sent_on: string | null;
@@ -25,19 +27,9 @@ export type EditorSnapshot = { id: string; body: string; words: number; note: st
 const field = "border rounded px-2 py-1.5 text-sm w-full";
 const primary = "bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm disabled:opacity-50";
 
-function useRun() {
-  const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const run = (fn: () => Promise<unknown>, after?: () => void) => {
-    setError(null);
-    start(async () => { try { await fn(); after?.(); } catch (e) { setError(e instanceof Error ? e.message : "Something went wrong"); } });
-  };
-  return { pending, error, run };
-}
-
 export function StatementEditor({ statement, snapshots }: { statement: EditorStatement; snapshots: EditorSnapshot[] }) {
   const router = useRouter();
-  const { pending, error, run } = useRun();
+  const { pending, error, run } = useAction();
   const [text, setText] = useState(statement.body);
   const [limit, setLimit] = useState<number | null>(statement.word_limit);
   const [charLimit, setCharLimit] = useState<number | null>(statement.char_limit);
@@ -200,11 +192,11 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
               // Make sure the latest text is stored before it is copied into a version.
               const r = await saveStatementBody(statement.id, latest.current, version.current);
               if (!r.ok) {
-                if (r.reason === "stale") { conflict.current = true; setSaveState("conflict"); throw new Error("Not saved: this was changed somewhere else."); }
-                throw new Error(r.message);
+                if (r.reason === "stale") { conflict.current = true; setSaveState("conflict"); return fail("Not saved: this was changed somewhere else."); }
+                return fail(r.message);
               }
               version.current = r.version; lastSaved.current = latest.current; unsaved.current = false; setSaveState("saved"); clearBackup();
-              await saveSnapshot(statement.id, note);
+              return await saveSnapshot(statement.id, note);
             }, () => { form.reset(); router.refresh(); });
           }}
         >
@@ -227,7 +219,7 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
                     <button onClick={() => setComparing(comparing === s.id ? null : s.id)} className="hover:text-cream">{comparing === s.id ? "Hide compare" : "Compare"}</button>
                     <button
                       disabled={pending}
-                      onClick={() => { if (confirm("Replace the current text with this version? Your current text is saved as a version first.")) run(async () => { const r = await restoreSnapshot(s.id); lastSaved.current = r.body; setText(r.body); version.current = r.version; setResetKey((k) => k + 1); unsaved.current = false; conflict.current = false; setSaveState("saved"); clearBackup(); }, () => router.refresh()); }}
+                      onClick={() => { if (confirm("Replace the current text with this version? Your current text is saved as a version first.")) run(async () => { const r = await restoreSnapshot(s.id); if (!r.ok) return r; lastSaved.current = r.data.body; setText(r.data.body); version.current = r.data.version; setResetKey((k) => k + 1); unsaved.current = false; conflict.current = false; setSaveState("saved"); clearBackup(); }, () => router.refresh()); }}
                       className="hover:text-brass"
                     >
                       Restore

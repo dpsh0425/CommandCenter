@@ -1,8 +1,9 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createStatement } from "@/app/(app)/materials/statement-actions";
+import { useAction } from "@/lib/use-action";
 import { STATEMENT_KINDS, limitState, statementKindLabel, type LimitState } from "@/lib/statements";
 
 export type StatementRow = {
@@ -35,8 +36,7 @@ function Row({ s, schoolName }: { s: StatementRow; schoolName?: string }) {
 
 export function StatementsList({ statements, schools }: { statements: StatementRow[]; schools: SchoolOpt[] }) {
   const router = useRouter();
-  const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const { pending, error, run } = useAction();
   const [kind, setKind] = useState<string>("statement_of_purpose");
   const [schoolId, setSchoolId] = useState("");
   const [fromGeneral, setFromGeneral] = useState(true);
@@ -54,12 +54,10 @@ export function StatementsList({ statements, schools }: { statements: StatementR
         className="flex flex-col gap-3 text-sm border-b border-line pb-6"
         onSubmit={(e) => {
           e.preventDefault();
-          setError(null);
-          start(async () => {
-            try {
-              const id = await createStatement({ kind, schoolId: schoolId || null, fromId: schoolId && fromGeneral && generalOfKind ? generalOfKind.id : null });
-              router.push(`/materials/statements/${id}`);
-            } catch (err) { setError(err instanceof Error ? err.message : "Could not create the statement."); }
+          run(async () => {
+            const r = await createStatement({ kind, schoolId: schoolId || null, fromId: schoolId && fromGeneral && generalOfKind ? generalOfKind.id : null });
+            if (r.ok) router.push(`/materials/statements/${r.data}`);
+            return r;
           });
         }}
       >

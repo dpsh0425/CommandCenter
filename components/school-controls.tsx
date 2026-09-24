@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { FLAG_LABEL, letterFlags, type LetterStatus } from "@/lib/letters";
 import { addNote, deleteNote, updateSchoolDetails } from "@/app/(app)/schools/[id]/actions";
@@ -10,22 +10,9 @@ import { useAction } from "@/lib/use-action";
 import { htmlToText, toEditorHtml } from "@/lib/rich-text";
 import { createTask } from "@/app/(app)/tasks/actions";
 
-function useRun() {
-  const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const run = (fn: () => Promise<unknown>, after?: () => void) => {
-    setError(null);
-    start(async () => {
-      try {
-        await fn();
-        after?.();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Something went wrong");
-      }
-    });
-  };
-  return { pending, error, run };
-}
+// Every control in this file runs its server action through the shared hook, which shows a failure result's message
+// and turns anything thrown into a generic one.
+const useRun = useAction;
 
 const btn = "bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm disabled:opacity-50";
 const Err = ({ message }: { message: string | null }) => (message ? <p className="text-red-600 text-xs">{message}</p> : null);
@@ -188,7 +175,7 @@ export function LetterRow({
           <select
             value={status}
             disabled={pending}
-            onChange={(e) => run(() => updateLetterStatus(id, schoolId, e.target.value as any))}
+            onChange={(e) => run(() => updateLetterStatus(id, schoolId, e.target.value))}
             className="border rounded text-xs px-1 py-0.5"
             aria-label={`Letter status for ${name}`}
           >
