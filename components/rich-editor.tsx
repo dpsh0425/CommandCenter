@@ -95,7 +95,7 @@ function Toolbar({ editor, variant }: { editor: Editor; variant: "full" | "compa
       aria-label="Formatting"
       onKeyDown={onKeyDown}
       onFocus={onFocus}
-      className="sticky top-0 z-10 flex flex-nowrap items-center gap-1 overflow-x-auto bg-surface-raised border-b border-line px-2 py-1 rounded-t"
+      className="sticky top-0 z-10 flex flex-nowrap items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden bg-surface-raised border-b border-line px-2 py-1 rounded-t"
     >
       {full && (
         <select
@@ -160,7 +160,8 @@ export function RichEditor({ value, onChange, label, variant = "full", placehold
     // Only an outside reset replaces the document, not every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
-  useEffect(() => { editor?.setEditable(!readOnly); }, [editor, readOnly]);
+  // setEditable announces an update unless told not to, which would look like an edit on every open.
+  useEffect(() => { if (editor && editor.isEditable === readOnly) editor.setEditable(!readOnly, false); }, [editor, readOnly]);
 
   if (!editor) return <div className="paper paper-page" style={{ minHeight: height }} aria-busy="true" />;
 

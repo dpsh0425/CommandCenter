@@ -45,14 +45,16 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
   const { write: writeBackup, clear: clearBackup } = backup;
   const [metaSaved, setMetaSaved] = useState(false);
   const [viewing, setViewing] = useState<string | null>(null);
-  const first = useRef(true);
+  // The text as last stored on the server (or as loaded). Nothing saves while the editor matches it, which also keeps
+  // React's development double-run of effects from saving an unchanged statement.
+  const lastSaved = useRef(statement.body);
   const latest = useRef(text);
   latest.current = text;
   const unsaved = useRef(false);
 
   // Autosave 1.5 seconds after the last keystroke; saves again on leaving the page. After a conflict nothing saves again.
   useEffect(() => {
-    if (first.current) { first.current = false; return; }
+    if (text === lastSaved.current) { if (!conflict.current) { unsaved.current = false; setSaveState("saved"); } return; }
     if (conflict.current) return;
     setSaveState("dirty");
     unsaved.current = true;
@@ -63,7 +65,7 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
       const r = await saveStatementBody(statement.id, text, version.current).catch(
         (): SaveResult => ({ ok: false, reason: "error", message: "Could not save." }),
       );
-      if (r.ok) { version.current = r.version; unsaved.current = false; setSaveState("saved"); clearBackup(); }
+      if (r.ok) { version.current = r.version; lastSaved.current = text; unsaved.current = false; setSaveState("saved"); clearBackup(); }
       else if (r.reason === "stale") { conflict.current = true; setSaveState("conflict"); }
       else setSaveState("error");
     }, 1500);
@@ -154,7 +156,7 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
                 if (r.reason === "stale") { conflict.current = true; setSaveState("conflict"); throw new Error("Not saved: this was changed somewhere else."); }
                 throw new Error(r.message);
               }
-              version.current = r.version; unsaved.current = false; setSaveState("saved"); clearBackup();
+              version.current = r.version; lastSaved.current = latest.current; unsaved.current = false; setSaveState("saved"); clearBackup();
               await saveSnapshot(statement.id, note);
             }, () => { form.reset(); router.refresh(); });
           }}
@@ -177,7 +179,7 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
                     <button onClick={() => setViewing(viewing === s.id ? null : s.id)} className="hover:text-cream">{viewing === s.id ? "Hide" : "View"}</button>
                     <button
                       disabled={pending}
-                      onClick={() => { if (confirm("Replace the current text with this version? Your current text is saved as a version first.")) run(async () => { const r = await restoreSnapshot(s.id); setText(r.body); version.current = r.version; setResetKey((k) => k + 1); unsaved.current = false; conflict.current = false; setSaveState("saved"); clearBackup(); }, () => router.refresh()); }}
+                      onClick={() => { if (confirm("Replace the current text with this version? Your current text is saved as a version first.")) run(async () => { const r = await restoreSnapshot(s.id); lastSaved.current = r.body; setText(r.body); version.current = r.version; setResetKey((k) => k + 1); unsaved.current = false; conflict.current = false; setSaveState("saved"); clearBackup(); }, () => router.refresh()); }}
                       className="hover:text-brass"
                     >
                       Restore
