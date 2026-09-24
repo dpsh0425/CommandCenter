@@ -167,3 +167,24 @@ export function askedUpdate(cur: { status: LetterStatus; asked_on: string | null
 export function remindedUpdate(cur: { reminder_count: number }, today: string): { last_reminded_on: string; reminder_count: number } {
   return { last_reminded_on: today, reminder_count: cur.reminder_count + 1 };
 }
+
+// Which letter requests to create for one recommender: one per chosen school, none that already exist, each due on the
+// override date or the school's own deadline.
+export function planLetterRequests(
+  existingSchoolIds: string[],
+  schools: Array<{ id: string; deadline_date: string | null }>,
+  chosen: string[],
+  override: string | null,
+): { rows: Array<{ school_id: string; letter_deadline: string | null }>; skipped: number } {
+  const have = new Set(existingSchoolIds);
+  const byId = new Map(schools.map((s) => [s.id, s]));
+  const rows: Array<{ school_id: string; letter_deadline: string | null }> = [];
+  let skipped = 0;
+  for (const id of chosen) {
+    const school = byId.get(id);
+    if (!school || have.has(id)) { skipped++; continue; }
+    have.add(id);
+    rows.push({ school_id: id, letter_deadline: override ?? school.deadline_date });
+  }
+  return { rows, skipped };
+}

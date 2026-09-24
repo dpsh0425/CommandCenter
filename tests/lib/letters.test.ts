@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   askedUpdate, buildReminderEmail, buildRequestEmail, buildThankYouEmail, chaseReason, daysBetween, groupByRecommender,
-  isLetterStatus, letterFlags, letterStatusChange, lettersToChase, mailtoUrl, openLetterCount, remindedUpdate,
+  isLetterStatus, letterFlags, letterStatusChange, lettersToChase, mailtoUrl, openLetterCount, planLetterRequests, remindedUpdate,
   type LetterRecord,
 } from "@/lib/letters";
 
@@ -152,5 +152,25 @@ describe("date updates", () => {
   });
   it("marks as reminded with a date and a running count", () => {
     expect(remindedUpdate({ reminder_count: 1 }, "2026-10-20")).toEqual({ last_reminded_on: "2026-10-20", reminder_count: 2 });
+  });
+});
+
+describe("planLetterRequests", () => {
+  const schools = [
+    { id: "a", deadline_date: "2026-12-01" },
+    { id: "b", deadline_date: null },
+    { id: "c", deadline_date: "2026-12-15" },
+  ];
+  it("uses each school's own deadline unless one is given", () => {
+    expect(planLetterRequests([], schools, ["a", "b"], null)).toEqual({
+      rows: [{ school_id: "a", letter_deadline: "2026-12-01" }, { school_id: "b", letter_deadline: null }], skipped: 0,
+    });
+    expect(planLetterRequests([], schools, ["a", "b"], "2026-11-20").rows.map((r) => r.letter_deadline)).toEqual(["2026-11-20", "2026-11-20"]);
+  });
+  it("skips schools that already have a request from this recommender, and repeats", () => {
+    expect(planLetterRequests(["a"], schools, ["a", "c", "c"], null)).toEqual({ rows: [{ school_id: "c", letter_deadline: "2026-12-15" }], skipped: 2 });
+  });
+  it("ignores unknown school ids", () => {
+    expect(planLetterRequests([], schools, ["zzz"], null)).toEqual({ rows: [], skipped: 1 });
   });
 });

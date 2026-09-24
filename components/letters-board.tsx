@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { markLettersAsked, markLettersReminded, setLetterStatus } from "@/app/(app)/materials/letter-actions";
+import { LetterRequestForm, type PersonOpt, type SchoolOpt } from "@/components/letter-request-form";
 import { PaperTextarea } from "@/components/paper-textarea";
 import { useAction } from "@/lib/use-action";
 import {
@@ -28,7 +29,7 @@ function build(kind: Kind, g: RecommenderGroup, ls: LetterRecord[], signAs: stri
 
 const KIND_LABEL: Record<Kind, string> = { request: "Draft request", reminder: "Draft reminder", thanks: "Draft thank-you" };
 
-export function LettersBoard({ letters, today, focus }: { letters: LetterRecord[]; today: string; focus?: string }) {
+export function LettersBoard({ letters, people, schools, today, focus }: { letters: LetterRecord[]; people: PersonOpt[]; schools: SchoolOpt[]; today: string; focus?: string }) {
   const router = useRouter();
   const { pending, error, run: act } = useAction();
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -75,8 +76,10 @@ export function LettersBoard({ letters, today, focus }: { letters: LetterRecord[
         <input value={signAs} onChange={(e) => onSignAs(e.target.value)} placeholder="Your name" className={field + " text-cream"} />
       </label>
 
+      <LetterRequestForm people={people} schools={schools} letters={letters} />
+
       {letters.length === 0 && (
-        <p className="text-sm text-gray-500">No letter requests yet. Add one from a school&rsquo;s Application tab, under Recommendation letters.</p>
+        <p className="text-sm text-gray-500">No letter requests yet. Use Request letters above, or add one from a school&rsquo;s Application tab.</p>
       )}
 
       {groups.map((g) => {
