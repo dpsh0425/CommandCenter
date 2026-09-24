@@ -21,6 +21,23 @@ function useRun() {
   return { pending, error, run };
 }
 
+// Remembers the last person picked for a given purpose on a project (in this browser).
+// A team of exactly one defaults to that person.
+function useRememberedPerson(storageKey: string, people: Opt[], teamSize: number) {
+  const [person, setPerson] = useState<string>(people.length === 1 && teamSize === 1 ? people[0].id : "");
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved && people.some((p) => p.id === saved)) setPerson(saved);
+    } catch { /* storage unavailable: keep the computed default */ }
+  }, [storageKey, people]);
+  const choose = (id: string) => {
+    setPerson(id);
+    try { if (id) localStorage.setItem(storageKey, id); else localStorage.removeItem(storageKey); } catch { /* ignore */ }
+  };
+  return [person, choose] as const;
+}
+
 const field = "border rounded px-2 py-1.5 text-sm w-full";
 const primary = "bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm disabled:opacity-50";
 const val = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -129,15 +146,16 @@ export function AddMilestoneForm({ projectId }: { projectId: string }) {
   );
 }
 
-export function AddTaskForm({ projectId, milestones, people }: { projectId: string; milestones: Opt[]; people: Opt[] }) {
+export function AddTaskForm({ projectId, milestones, people, teamSize }: { projectId: string; milestones: Opt[]; people: Opt[]; teamSize: number }) {
   const { pending, error, run } = useRun();
+  const [assignee, choose] = useRememberedPerson(`research-task-assignee:${projectId}`, people, teamSize);
   return (
     <form
       className="flex flex-wrap gap-2 items-center text-sm"
       onSubmit={(e) => {
         e.preventDefault();
         const form = e.currentTarget; const f = new FormData(form);
-        run(() => addProjectTask(projectId, { title: val(f, "title"), milestoneId: val(f, "milestone") || null, assigneeId: val(f, "assignee") || null, dueDate: val(f, "due") || null, priority: val(f, "priority") }), () => form.reset());
+        run(() => addProjectTask(projectId, { title: val(f, "title"), milestoneId: val(f, "milestone") || null, assigneeId: assignee || null, dueDate: val(f, "due") || null, priority: val(f, "priority") }), () => form.reset());
       }}
     >
       <input name="title" required placeholder="Add a task" className={field + " flex-1 min-w-[12rem]"} />
@@ -145,7 +163,7 @@ export function AddTaskForm({ projectId, milestones, people }: { projectId: stri
         <option value="">No milestone</option>
         {milestones.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
       </select>
-      <select name="assignee" className={field + " max-w-[9rem] bg-transparent"} aria-label="Assign to">
+      <select value={assignee} onChange={(e) => choose(e.target.value)} className={field + " max-w-[9rem] bg-transparent"} aria-label="Assign to">
         <option value="">Unassigned</option>
         {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
       </select>
@@ -154,6 +172,7 @@ export function AddTaskForm({ projectId, milestones, people }: { projectId: stri
         <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
       </select>
       <button disabled={pending} className={primary}>Add</button>
+      {teamSize > 0 && !assignee && <span className="text-xs text-gray-400 basis-full">Assign the task to someone so it shows on their page and in the team view. Your choice is remembered.</span>}
       {error && <span className="text-red-600 text-xs basis-full">{error}</span>}
     </form>
   );
@@ -162,19 +181,7 @@ export function AddTaskForm({ projectId, milestones, people }: { projectId: stri
 export function EntryForm({ projectId, people, milestones, teamSize }: { projectId: string; people: Opt[]; milestones: Opt[]; teamSize: number }) {
   const { pending, error, run } = useRun();
   const [more, setMore] = useState(false);
-  const storageKey = `research-journal-person:${projectId}`;
-  // Default to whoever logged last on this project; a one-person team defaults to that person.
-  const [person, setPerson] = useState<string>(people.length === 1 && teamSize === 1 ? people[0].id : "");
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved && people.some((p) => p.id === saved)) setPerson(saved);
-    } catch { /* storage unavailable: keep the computed default */ }
-  }, [storageKey, people]);
-  const choose = (id: string) => {
-    setPerson(id);
-    try { if (id) localStorage.setItem(storageKey, id); else localStorage.removeItem(storageKey); } catch { /* ignore */ }
-  };
+  const [person, choose] = useRememberedPerson(`research-journal-person:${projectId}`, people, teamSize);
   const showPerson = people.length > 0;
 
   return (
@@ -330,8 +337,9 @@ export function MeetingForm({ projectId, people }: { projectId: string; people: 
 
 export type MeetingData = { id: string; title: string; held_on: string; attendees: string[]; agenda: string | null; notes: string | null; decisions: string | null };
 
-export function MeetingCard({ m, projectId, people, defaultOpen }: { m: MeetingData; projectId: string; people: Opt[]; defaultOpen?: boolean }) {
+export function MeetingCard({ m, projectId, people, defaultOpen, teamSize }: { m: MeetingData; projectId: string; people: Opt[]; defaultOpen?: boolean; teamSize: number }) {
   const { pending, error, run } = useRun();
+  const [assignee, choose] = useRememberedPerson(`research-task-assignee:${projectId}`, people, teamSize);
   const [open, setOpen] = useState(!!defaultOpen);
   const [added, setAdded] = useState<string | null>(null);
   return (
@@ -360,12 +368,12 @@ export function MeetingCard({ m, projectId, people, defaultOpen }: { m: MeetingD
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.currentTarget; const f = new FormData(form); const title = val(f, "title");
-              run(() => addProjectTask(projectId, { title, assigneeId: val(f, "assignee") || null, dueDate: val(f, "due") || null }), () => { form.reset(); setAdded(title); });
+              run(() => addProjectTask(projectId, { title, assigneeId: assignee || null, dueDate: val(f, "due") || null }), () => { form.reset(); setAdded(title); });
             }}
           >
             <span className="text-gray-500 basis-full">Action items become tasks on your board</span>
             <input name="title" required placeholder="Who does what" className={field + " flex-1 min-w-[12rem]"} />
-            <select name="assignee" className={field + " max-w-[9rem] bg-transparent"} aria-label="Assign to"><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+            <select value={assignee} onChange={(e) => choose(e.target.value)} className={field + " max-w-[9rem] bg-transparent"} aria-label="Assign to"><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
             <input type="date" name="due" className={field + " max-w-[10rem]"} aria-label="Due date" />
             <button disabled={pending} className={primary}>Add task</button>
             {added && <span className="text-teal-600 text-xs basis-full">Added task: {added}</span>}

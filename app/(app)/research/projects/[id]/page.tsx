@@ -73,6 +73,8 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const toRead = (papers ?? []).filter((p) => p.status === "to_read" || p.status === "reading").length;
   const memberIds = new Set((members ?? []).map((m) => m.person_id));
   const peopleOpts = (people ?? []).map((p) => ({ id: p.id, name: p.name }));
+  // Team members first-class: with a team, only members are offered; otherwise everyone in People.
+  const assignable = peopleOpts.some((p) => memberIds.has(p.id)) ? peopleOpts.filter((p) => memberIds.has(p.id)) : peopleOpts;
   const msOpts = (milestones ?? []).map((m) => ({ id: m.id, name: m.title }));
   const base = `/research/projects/${id}`;
   const libItems: LibItem[] = [
@@ -200,7 +202,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           </Section>
 
           <Section title="Tasks" hint={tasks.length ? `${openTasks.length} open` : undefined}>
-            <AddTaskForm projectId={id} milestones={msOpts} people={peopleOpts} />
+            <AddTaskForm projectId={id} milestones={msOpts} people={assignable} teamSize={memberIds.size} />
             {tasks.length === 0 ? <p className="text-sm text-gray-500">No tasks yet. Add the smallest concrete steps here and give each an owner and a date.</p> : (
               <ul className="flex flex-col">
                 {[...openTasks.sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999")), ...tasks.filter((t) => t.status === "done")].map((t) => {
@@ -236,7 +238,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         const usedKinds = Array.from(new Set((entries ?? []).map((e) => e.kind)));
         return (
           <div className="flex flex-col gap-6">
-            <EntryForm projectId={id} people={peopleOpts.filter((p) => memberIds.has(p.id)).length ? peopleOpts.filter((p) => memberIds.has(p.id)) : peopleOpts} milestones={msOpts} teamSize={memberIds.size} />
+            <EntryForm projectId={id} people={assignable} milestones={msOpts} teamSize={memberIds.size} />
             {weekMinutes > 0 && (
               <p className="text-sm text-gray-500">Last 7 days: <span className="font-mono text-cream">{formatMinutes(weekMinutes)}</span> · {Array.from(byKind.entries()).filter(([, m]) => m > 0).sort((a, b) => b[1] - a[1]).map(([k, m]) => `${kindLabel(k)} ${formatMinutes(m)}`).join(" · ")}</p>
             )}
@@ -286,7 +288,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         <div className="flex flex-col gap-6">
           <MeetingForm projectId={id} people={peopleOpts} />
           {(meetings ?? []).length === 0 ? <p className="text-sm text-gray-500">No meetings yet. Add each meeting with its agenda before, and notes and decisions after.</p> : (
-            <ul>{(meetings ?? []).map((m, i) => <MeetingCard key={m.id} projectId={id} people={peopleOpts} defaultOpen={i === 0} m={{ id: m.id, title: m.title, held_on: m.held_on, agenda: m.agenda, notes: m.notes, decisions: m.decisions, attendees: (m.attendee_ids as string[]).map((pid) => personById.get(pid)?.name).filter(Boolean) as string[] }} />)}</ul>
+            <ul>{(meetings ?? []).map((m, i) => <MeetingCard key={m.id} projectId={id} people={assignable} teamSize={memberIds.size} defaultOpen={i === 0} m={{ id: m.id, title: m.title, held_on: m.held_on, agenda: m.agenda, notes: m.notes, decisions: m.decisions, attendees: (m.attendee_ids as string[]).map((pid) => personById.get(pid)?.name).filter(Boolean) as string[] }} />)}</ul>
           )}
         </div>
       )}
