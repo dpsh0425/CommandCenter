@@ -28,6 +28,10 @@ async function query(sql) {
 
 const dir = "supabase/tests";
 const files = fs.readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
+if (files.length === 0) {
+  console.error(`No test files found in ${dir}. A run with nothing to check counts as a failure.`);
+  process.exit(1);
+}
 let total = 0;
 let failed = 0;
 
