@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { OWNER_USER_ID } from "@/lib/owner";
+import { renderRich } from "@/lib/rich-text-server";
 import { StatementEditor, type EditorSnapshot, type EditorStatement } from "@/components/statement-editor";
 
 export const metadata = { title: "Statement" };
@@ -9,7 +10,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
   const supabase = await createClient();
   const [{ data: { user } }, { data: statement }, { data: snapshots }] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from("statements").select("id, kind, title, prompt, word_limit, body, status, sent_on, school_id").eq("id", id).single(),
+    supabase.from("statements").select("id, kind, title, prompt, word_limit, body, status, sent_on, school_id, body_version").eq("id", id).single(),
     supabase.from("statement_snapshots").select("id, body, words, note, created_at").eq("statement_id", id).order("created_at", { ascending: false }),
   ]);
   if (!user || user.id !== OWNER_USER_ID) {
@@ -23,7 +24,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
   }
   return (
     <main className="p-4 md:p-8 max-w-3xl mx-auto">
-      <StatementEditor statement={{ ...(statement as Omit<EditorStatement, "schoolName">), schoolName }} snapshots={(snapshots ?? []) as EditorSnapshot[]} />
+      <StatementEditor statement={{ ...(statement as Omit<EditorStatement, "schoolName">), schoolName }} snapshots={((snapshots ?? []) as Omit<EditorSnapshot, "html">[]).map((s) => ({ ...s, html: renderRich(s.body) }))} />
     </main>
   );
 }
