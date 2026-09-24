@@ -2,10 +2,13 @@
 // Usage: SUPABASE_PROJECT_REF=<ref> node scripts/backup.mjs
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const root = fileURLToPath(new URL("../", import.meta.url));
 
 const ref = process.env.SUPABASE_PROJECT_REF;
 if (!ref) { console.error("Set SUPABASE_PROJECT_REF."); process.exit(2); }
-const token = process.env.SUPABASE_ACCESS_TOKEN ?? (fs.existsSync(".supabase-token") ? fs.readFileSync(".supabase-token", "utf8").trim() : null);
+const token = process.env.SUPABASE_ACCESS_TOKEN ?? (fs.existsSync(path.join(root, ".supabase-token")) ? fs.readFileSync(path.join(root, ".supabase-token"), "utf8").trim() : null);
 if (!token) { console.error("Provide SUPABASE_ACCESS_TOKEN or a .supabase-token file."); process.exit(2); }
 
 async function query(sql) {
@@ -20,7 +23,7 @@ async function query(sql) {
 }
 
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-const out = path.join("backups", ref, stamp);
+const out = path.join(root, "backups", ref, stamp);
 fs.mkdirSync(out, { recursive: true });
 
 try {

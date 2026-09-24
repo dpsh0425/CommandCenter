@@ -44,4 +44,4 @@ scripts/.pytest_cache/
 *.pyc
 
 # database backups (contain personal data)
-/backups/
+backups/
