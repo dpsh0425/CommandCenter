@@ -18,7 +18,7 @@ export async function addLetterRequest(schoolId: string, recommenderId: string, 
   return toResult(async () => {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new UserError("not authenticated");
+    if (!user) throw new UserError("You are signed out. Sign in again and retry.");
     const { error } = await supabase.from("letter_requests").insert({
       owner_id: user.id, school_id: schoolId, recommender_id: recommenderId, letter_deadline: letterDeadline,
     });

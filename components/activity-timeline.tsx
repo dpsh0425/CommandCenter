@@ -23,7 +23,7 @@ export function ActivityTimeline({ items, schoolId }: { items: Activity[]; schoo
               {schoolId && a.type === "note" && <DeleteNoteButton schoolId={schoolId} activityId={a.id} />}
             </span>
           </div>
-          {a.type === "note" && a.html ? <RichHtml html={a.html} className="text-sm" /> : <p className="whitespace-pre-line">{a.content}</p>}
+          {a.type === "note" && a.html ? <RichHtml html={a.html} className="text-sm" onDark /> : <p className="whitespace-pre-line">{a.content}</p>}
           {a.email_snippet && <p className="text-gray-500 italic mt-1">&ldquo;{a.email_snippet}&rdquo;</p>}
         </li>
       ))}

@@ -195,7 +195,7 @@ export function LetterRow({
         <div className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
           {facts.length > 0 && <span>{facts.join(" · ")}</span>}
           {flags.map((f) => <span key={f} className="border rounded px-1.5 py-0.5">{FLAG_LABEL[f]}</span>)}
-          {recommenderId && <Link href={`/materials/letters?focus=${recommenderId}`} className="underline">Draft email →</Link>}
+          {recommenderId && <Link href={`/materials/letters?focus=${recommenderId}`} className="underline inline-block py-2 -my-2">Draft email →</Link>}
         </div>
       )}
       <Err message={error} />
@@ -219,7 +219,7 @@ export function AddLetterForm({ schoolId, people }: { schoolId: string; people: 
         if (rec) run(() => addLetterRequest(schoolId, rec, String(f.get("letter_deadline") ?? "") || undefined), () => form.reset());
       }}
     >
-      <select name="recommender_id" required defaultValue="" className="border rounded px-2 py-1.5 text-sm">
+      <select name="recommender_id" required defaultValue="" aria-label="Recommender" className="border rounded px-2 py-1.5 text-sm">
         <option value="" disabled>Choose recommender…</option>
         {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
       </select>
@@ -342,7 +342,7 @@ export function ScheduleInterviewForm({ schoolId }: { schoolId: string }) {
         if (at) run(() => scheduleInterview(schoolId, new Date(at).toISOString(), String(f.get("prep_notes") ?? "").trim() || undefined), () => form.reset());
       }}
     >
-      <input type="datetime-local" name="scheduled_at" required className="border rounded px-2 py-1.5 text-sm" />
+      <input type="datetime-local" name="scheduled_at" required aria-label="Interview date and time" className="border rounded px-2 py-1.5 text-sm" />
       <input name="prep_notes" placeholder="Prep notes (optional)" className="border rounded px-2 py-1.5 text-sm" />
       <Err message={error} />
       <button disabled={pending} className={`${btn} self-start`}>{pending ? "Scheduling…" : "Schedule interview"}</button>

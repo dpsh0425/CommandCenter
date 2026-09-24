@@ -105,7 +105,7 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
-        <Link href="/materials/statements" className="text-xs text-gray-500 hover:text-cream self-start">← Statements</Link>
+        <Link href="/materials/statements" className="text-xs text-gray-500 hover:text-cream self-start py-2 -my-2">← Statements</Link>
         <h1 className="text-3xl leading-tight break-words">{statement.title}</h1>
         <p className="text-sm text-gray-500">
           {[statementKindLabel(statement.kind), statement.schoolName ? (

@@ -117,3 +117,23 @@ textarea.paper::placeholder { color: #8c8674; }
 
 /* Focus mode hides the fixed phone navigation so the writing overlay covers the whole screen. */
 body.writing-focus nav.fixed { display: none; }
+
+/* Saved rich text shown straight on the dark app surface (notes, journal details): light text in the app's own font. */
+.paper-content.on-dark { font-family: inherit; font-size: inherit; line-height: 1.55; color: #e9e7de; }
+.paper-content.on-dark h1, .paper-content.on-dark h2, .paper-content.on-dark h3 { font-family: inherit; font-size: 1em; color: #e9e7de; margin: 0.8em 0 0.3em; }
+.paper-content.on-dark p { margin: 0 0 0.6em; }
+.paper-content.on-dark p:last-child { margin-bottom: 0; }
+.paper-content.on-dark blockquote { color: #9aa2b1; border-left-color: #4a5468; }
+.paper-content.on-dark hr { border-top-color: #313a4a; }
+.paper-content.on-dark a { color: #d99456; }
+
+/* Touch: on phones every button and select is at least 40px tall. Toolbar controls keep their own size. */
+@media (max-width: 640px) {
+  main button:not([data-tb]), main select:not([data-tb]) { min-height: 2.5rem; }
+  main button[aria-label^="Remove"], main button[aria-label^="Delete"], main button[aria-label^="Delete"] { min-width: 2.5rem; }
+}
+/* Scrollbars follow the dark theme instead of showing as white strips. */
+:root { color-scheme: dark; }
+
+/* A clear focus ring for keyboard users on every control. */
+:where(a, button, select, input, textarea, summary):focus-visible { outline: 2px solid #c98a3e; outline-offset: 2px; }

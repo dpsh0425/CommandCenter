@@ -81,7 +81,7 @@ export function LetterRequestForm({ people, schools, letters }: { people: Person
                           {s.name}
                           {s.applying && <span className="ml-2 text-xs rounded border border-brass text-brass px-1.5 py-0.5">applying</span>}
                           {s.deadline_date && <span className="ml-2 text-xs text-gray-500">due {fmt(s.deadline_date)}</span>}
-                          {already && <span className="ml-2 text-xs text-gray-400">already requested</span>}
+                          {already && <span className="ml-2 text-xs text-gray-400">{" "}(already requested)</span>}
                         </span>
                       </label>
                     </li>

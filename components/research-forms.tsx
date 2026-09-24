@@ -250,7 +250,7 @@ export function EntryRow({ e, projectId }: { e: EntryRowData; projectId: string 
         </button>
         <button onClick={() => { if (confirm("Delete this entry?")) run(() => deleteEntry(e.id, projectId)); }} className="text-xs text-gray-500 hover:text-red-600 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100" aria-label="Delete entry">✕</button>
       </div>
-      {open && e.bodyHtml && <RichHtml html={e.bodyHtml} className="text-sm pl-[5.75rem] pt-1" />}
+      {open && e.bodyHtml && <RichHtml html={e.bodyHtml} className="text-sm pl-[5.75rem] pt-1" onDark />}
       {error && <p className="text-red-600 text-xs pl-[5.75rem]">{error}</p>}
     </li>
   );

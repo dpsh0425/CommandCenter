@@ -91,10 +91,10 @@ export function LettersBoard({ letters, people, schools, today, focus }: { lette
           <section key={g.key} id={`rec-${g.id ?? "none"}`} className={`flex flex-col gap-3 rounded border border-line p-4 ${g.id === focus ? "ring-2 ring-brass" : ""}`}>
             <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h2 className="font-sans text-[15px] font-semibold">
-                {g.id ? <Link href={`/people/${g.id}`} className="hover:text-brass">{g.name}</Link> : g.name}
+                {g.id ? <Link href={`/people/${g.id}`} className="hover:text-brass inline-block py-1.5 -my-1.5">{g.name}</Link> : g.name}
               </h2>
               <span className="text-xs text-gray-500">
-                {g.email ?? (<>No email saved{g.id && <> · <Link href={`/people/${g.id}`} className="text-brass hover:underline">Add one</Link></>}</>)}
+                {g.email ?? (<>No email saved{g.id && <> · <Link href={`/people/${g.id}`} className="text-brass hover:underline inline-block py-1.5 -my-1.5">Add one</Link></>}</>)}
               </span>
               <span className="text-xs text-gray-400">{g.open} open</span>
               {g.heavy && <span className="text-xs rounded border border-brass text-brass px-1.5 py-0.5">Heavy load: {g.open} open letters ({HEAVY_LOAD} or more)</span>}
@@ -112,7 +112,7 @@ export function LettersBoard({ letters, people, schools, today, focus }: { lette
                 return (
                   <li key={l.id} className="border-b border-line/60 last:border-0 py-2.5 flex flex-col gap-1">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                      <Link href={`/schools/${l.school_id}?tab=application`} className="font-medium hover:text-brass">{l.school_name}</Link>
+                      <Link href={`/schools/${l.school_id}?tab=application`} className="font-medium hover:text-brass inline-block py-1.5 -my-1.5">{l.school_name}</Link>
                       {l.letter_deadline && <span className={`text-xs ${late ? "text-red-600" : "text-gray-500"}`}>due {fmt(l.letter_deadline)}</span>}
                       <select
                         aria-label={`Status for ${l.school_name}`} value={l.status} disabled={pending}
