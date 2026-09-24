@@ -6,7 +6,7 @@
 
 **Architecture:** Pure functions in `lib/` get Vitest unit tests. Database behaviour is tested by SQL files that return `{name, ok}` rows, run by a small Node script through the Supabase Management API. Operational scripts (`backup`, `apply-migrations`, `check-auth-config`) are dependency-free Node ES modules in `scripts/`. CI runs type-check, unit tests and a build.
 
-**Tech Stack:** Next.js 14, TypeScript, Vitest, Node 20+ ES modules, Supabase Management API, GitHub Actions, Vercel.
+**Tech Stack:** Next.js 14, TypeScript, Vitest, Node 22+ ES modules, Supabase Management API, GitHub Actions, Vercel.
 
 **Spec:** `docs/superpowers/specs/2026-09-24-workspaces-teams-github-design.md` (section 12, phase 0). This plan covers phase 0 only. Each later phase gets its own plan once this one is finished.
 
@@ -831,7 +831,7 @@ Expected today: `FAIL  public sign-up is disabled (invite-only)`, `PASS  custom 
 
 - [ ] **Step 3: Confirm owner login still works with sign-up disabled (user action, on staging first)**
 
-Before changing production, the user confirms on a scratch or staging project that with sign-up disabled: (a) an existing user can sign in by email link and by password, and (b) an invite sent from the People page still arrives and works. The agent does not change production auth settings on its own.
+Before changing production, the user confirms on the staging project created per `docs/deployment.md` that with sign-up disabled: (a) an existing user can sign in by email link and by password, and (b) an invite sent from the People page still arrives and works. The agent does not change production auth settings on its own.
 
 - [ ] **Step 4: Apply the fix on production (user runs it, after step 3)**
 
