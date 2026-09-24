@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { Avatar } from "@/components/avatar";
 import { ProjectLibrary, type LibItem } from "@/components/project-library";
+import { ExperimentsBoard, type ExperimentRow } from "@/components/experiments-board";
+import { WritingBoard, type SectionRow } from "@/components/writing-board";
 import { MilestoneStatusSelect } from "@/components/milestone-controls";
 import {
   AddMemberForm, AddMilestoneForm, AddTaskForm, DeleteProjectButton, EntryForm, EntryRow, MeetingCard, MeetingForm, PaperForm, PaperRow,
@@ -15,8 +17,10 @@ const TABS = [
   { key: "overview", label: "Overview" },
   { key: "plan", label: "Plan" },
   { key: "journal", label: "Journal" },
+  { key: "experiments", label: "Experiments" },
   { key: "library", label: "Library" },
   { key: "reading", label: "Reading" },
+  { key: "writing", label: "Writing" },
   { key: "meetings", label: "Meetings" },
   { key: "team", label: "Team" },
 ] as const;
@@ -42,7 +46,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
 
   const { data: milestones } = await supabase.from("research_milestones").select("*").eq("project_id", id).order("target_date", { ascending: true, nullsFirst: false });
   const msIds = (milestones ?? []).map((m) => m.id);
-  const [{ data: tasksA }, { data: tasksB }, { data: entries }, { data: papers }, { data: meetings }, { data: members }, { data: people }, { data: links }, { data: docs }] = await Promise.all([
+  const [{ data: tasksA }, { data: tasksB }, { data: entries }, { data: papers }, { data: meetings }, { data: members }, { data: people }, { data: links }, { data: docs }, { data: experiments }, { data: sections }] = await Promise.all([
     supabase.from("tasks").select("id, title, status, priority, due_date, assignee_id, research_milestone_id, people(name)").eq("project_id", id),
     msIds.length ? supabase.from("tasks").select("id, title, status, priority, due_date, assignee_id, research_milestone_id, people(name)").in("research_milestone_id", msIds) : Promise.resolve({ data: [] as any[] }),
     supabase.from("research_entries").select("*").eq("project_id", id).order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).limit(300),
@@ -52,6 +56,8 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
     supabase.from("people").select("id, name, color, role").order("name"),
     supabase.from("links").select("*").eq("project_id", id),
     supabase.from("documents").select("*").eq("project_id", id),
+    supabase.from("research_experiments").select("*").eq("project_id", id).order("created_at", { ascending: false }),
+    supabase.from("research_sections").select("*").eq("project_id", id).order("position"),
   ]);
 
   const personById = new Map((people ?? []).map((p) => [p.id, p]));
@@ -76,6 +82,10 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       id: l.id, source: "link", title: l.title, kind: l.kind, folder: l.folder, tags: l.tags ?? [], notes: l.notes, pinned: l.pinned, created_at: l.created_at, url: l.url, meta: l.meta ?? {},
     })),
   ];
+  const expRows = (experiments ?? []) as ExperimentRow[];
+  const secRows = (sections ?? []) as SectionRow[];
+  const wordsTotal = secRows.reduce((n, x) => n + x.words, 0);
+  const wordsTarget = secRows.reduce((n, x) => n + (x.target_words ?? 0), 0);
   const pinnedItems = libItems.filter((i) => i.pinned).slice(0, 4);
 
   return (
@@ -101,6 +111,8 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
             <span className="font-mono text-cream">{openTasks.length}</span> open tasks ·{" "}
             <span className="font-mono text-cream">{weekMinutes ? formatMinutes(weekMinutes) : "0m"}</span> logged this week ·{" "}
             <span className="font-mono text-cream">{toRead}</span> papers to read
+            {expRows.length > 0 && <> · <span className="font-mono text-cream">{expRows.length}</span> experiments{expRows.filter((x) => x.status === "running").length ? ` (${expRows.filter((x) => x.status === "running").length} running)` : ""}</>}
+            {secRows.length > 0 && <> · <span className="font-mono text-cream">{wordsTotal.toLocaleString()}</span>{wordsTarget ? ` of ${wordsTarget.toLocaleString()}` : ""} words written</>}
           </p>
 
           <Section title="Next milestones" action={<Link href={`${base}?tab=plan`} className="text-xs text-gray-500 hover:text-cream">Open plan →</Link>}>
@@ -151,7 +163,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
             <ProjectEditForm p={project} />
           </Fold>
 
-          <div><DeleteProjectButton id={id} title={project.title} counts={`its ${(milestones ?? []).length} milestones, ${tasks.length} tasks, ${(entries ?? []).length} journal entries, ${(papers ?? []).length} papers and ${(meetings ?? []).length} meetings`} /></div>
+          <div><DeleteProjectButton id={id} title={project.title} counts={`its ${(milestones ?? []).length} milestones, ${expRows.length} experiments, ${secRows.length} writing sections, ${tasks.length} tasks, ${(entries ?? []).length} journal entries, ${(papers ?? []).length} papers and ${(meetings ?? []).length} meetings`} /></div>
         </div>
       )}
 
@@ -236,6 +248,12 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           </div>
         );
       })()}
+
+      {tab === "experiments" && <ExperimentsBoard projectId={id} experiments={expRows} people={peopleOpts} milestones={msOpts} />}
+
+      {tab === "writing" && (
+        <WritingBoard projectId={id} sections={secRows} people={peopleOpts} venue={project.venue} deadlineText={project.venue_deadline ? `${project.venue_deadline} (${relative(daysBetween(today, project.venue_deadline))})` : null} />
+      )}
 
       {tab === "library" && <ProjectLibrary projectId={id} userId={user.id} items={libItems} />}
 
