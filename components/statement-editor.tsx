@@ -54,17 +54,26 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
   // The text as last stored on the server (or as loaded). Nothing saves while the editor matches it, which also keeps
   // React's development double-run of effects from saving an unchanged statement.
   const lastSaved = useRef(statement.body);
+  const wroteBackup = useRef(false);
   const latest = useRef(text);
   latest.current = text;
   const unsaved = useRef(false);
 
   // Autosave 1.5 seconds after the last keystroke; saves again on leaving the page. After a conflict nothing saves again.
   useEffect(() => {
-    if (text === lastSaved.current) { if (!conflict.current) { unsaved.current = false; setSaveState("saved"); } return; }
+    if (text === lastSaved.current) {
+      if (!conflict.current) {
+        unsaved.current = false; setSaveState("saved");
+        // Undoing back to the stored text leaves nothing unsaved, so drop the copy written a moment ago. A backup from an earlier session is untouched.
+        if (wroteBackup.current) { wroteBackup.current = false; clearBackup(); }
+      }
+      return;
+    }
     if (conflict.current) return;
     setSaveState("dirty");
     unsaved.current = true;
     writeBackup(text, version.current);
+    wroteBackup.current = true;
     const t = setTimeout(async () => {
       if (conflict.current || text === lastSaved.current) return;
       setSaveState("saving");
@@ -79,6 +88,11 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
   }, [text, statement.id, writeBackup, clearBackup]);
   useEffect(() => () => { if (unsaved.current && !conflict.current) saveStatementBody(statement.id, latest.current, version.current).catch(() => {}); }, [statement.id]);
   useUnsavedGuard(saveState !== "saved");
+  // The page's entry animation makes its own stacking layer, so the phone nav would sit over the overlay; hide it while focused.
+  useEffect(() => {
+    document.body.classList.toggle("writing-focus", focus);
+    return () => document.body.classList.remove("writing-focus");
+  }, [focus]);
 
   // Saves pending text before an export. Applies the result exactly like the autosave; resolves true when it is safe to export.
   async function flushSave(): Promise<boolean> {

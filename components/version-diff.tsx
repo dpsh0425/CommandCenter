@@ -12,7 +12,7 @@ export function VersionDiff({ before, after }: { before: string; after: string }
   return (
     <div className="mt-2 flex flex-col gap-2">
       <p className="text-xs text-gray-400">From this version to your current text: struck-through words were removed, highlighted words were added.</p>
-      <p className="font-mono text-xs text-gray-500">{removed.toLocaleString()} words removed, {added.toLocaleString()} added</p>
+      <p className="font-mono text-xs text-gray-500">{removed.toLocaleString()} {removed === 1 ? "word" : "words"} removed, {added.toLocaleString()} added</p>
       <p className="max-h-72 overflow-auto text-sm leading-relaxed whitespace-pre-wrap border border-line rounded p-3">
         {parts.map((p, i) =>
           <span key={i}>

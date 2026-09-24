@@ -114,3 +114,6 @@ textarea.paper::placeholder { color: #8c8674; }
   .statement-print .paper-content { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.4; color: #000; min-height: 0 !important; }
   .statement-print .paper-content a { color: #000; text-decoration: none; }
 }
+
+/* Focus mode hides the fixed phone navigation so the writing overlay covers the whole screen. */
+body.writing-focus nav.fixed { display: none; }
