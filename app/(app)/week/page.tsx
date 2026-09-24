@@ -2,6 +2,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { Fold, PageHeader, Section, SubNav, TODAY_TABS } from "@/components/ui";
+import { CopyUpdate } from "@/components/copy-update";
+import { loadResearchWeek, type ProjectWeek } from "@/lib/research-week";
+import { formatMinutes, kindLabel, projectStatusLabel } from "@/lib/research";
 
 export const metadata = { title: "This week" };
 
@@ -96,6 +99,36 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
       return { s, days: daysBetween(today, s.deadline_date), checks, ready: checks.filter((c) => c.ok).length };
     });
 
+  // ---- Research ----
+  const research = await loadResearchWeek(supabase, startS, today);
+  const isPastWeek = endS < today;
+  const researchLines = (r: ProjectWeek): Array<{ k: string; v: string }> => {
+    const out: Array<{ k: string; v: string }> = [];
+    if (r.minutes > 0) {
+      const diff = r.minutes - r.prevMinutes;
+      const vs = r.prevMinutes > 0 ? ` (${diff >= 0 ? "+" : "-"}${formatMinutes(Math.abs(diff))} vs the week before)` : "";
+      out.push({ k: "Time", v: `${formatMinutes(r.minutes)} across ${r.entryCount} ${r.entryCount === 1 ? "entry" : "entries"}${vs}. ${r.byKind.slice(0, 4).map((x) => `${kindLabel(x.kind)} ${formatMinutes(x.minutes)}`).join(", ")}` });
+    } else if (r.entryCount > 0) out.push({ k: "Time", v: `${r.entryCount} ${r.entryCount === 1 ? "entry" : "entries"} logged, no minutes recorded` });
+    if (r.byPerson.length > 1) out.push({ k: "Who", v: r.byPerson.map((x) => `${x.name} ${formatMinutes(x.minutes)}`).join(", ") });
+    if (r.finished.length > 0) out.push({ k: "Experiments finished", v: r.finished.map((x) => `${x.name}${x.status === "failed" ? " (failed)" : x.outcome ? ` (${x.outcome})` : ""}`).join("; ") });
+    if (r.started.length > 0) out.push({ k: "Experiments run", v: r.started.map((x) => x.name).join("; ") });
+    if (!isPastWeek && r.running > 0) out.push({ k: "Still running", v: `${r.running} experiment${r.running === 1 ? "" : "s"}` });
+    if (r.meetings.length > 0) out.push({ k: "Meetings", v: r.meetings.map((m) => m.title).join("; ") });
+    if (r.tasksDone > 0) out.push({ k: "Tasks done", v: String(r.tasksDone) });
+    const lib = [r.filesAdded && `${r.filesAdded} file${r.filesAdded === 1 ? "" : "s"}`, r.linksAdded && `${r.linksAdded} link${r.linksAdded === 1 ? "" : "s"}`, r.papersAdded && `${r.papersAdded} paper${r.papersAdded === 1 ? "" : "s"} on the reading list`].filter(Boolean);
+    if (lib.length > 0) out.push({ k: "Added", v: lib.join(", ") });
+    if (r.sectionsEdited > 0 || (!isPastWeek && r.words > 0)) out.push({ k: "Writing", v: `${r.sectionsEdited} section${r.sectionsEdited === 1 ? "" : "s"} edited${!isPastWeek && r.words ? `, ${r.words.toLocaleString()}${r.targetWords ? ` of ${r.targetWords.toLocaleString()}` : ""} words in total` : ""}` });
+    if (!isPastWeek && r.upcoming.length > 0) out.push({ k: "Next", v: r.upcoming.map((u) => `${u.label} (${u.days < 0 ? `${-u.days}d overdue` : u.days === 0 ? "today" : `in ${u.days}d`})`).join("; ") });
+    return out;
+  };
+  const researchText = research.length
+    ? [`Research update, ${short(start)} to ${short(end)}`, "", ...research.flatMap((r) => {
+        const ls = researchLines(r);
+        return [`${r.title} (${projectStatusLabel(r.status)})`, ...(ls.length ? ls.map((l) => `- ${l.k}: ${l.v}`) : ["- Nothing recorded this week."]), ""];
+      })].join("\n").trim()
+    : "";
+  const researchTotal = research.reduce((n, r) => n + r.minutes, 0);
+
   // ---- Outreach ----
   const P = (profs ?? []) as any[];
   const followUps = P.filter((p) => (p.outreach === "contacted" || p.outreach === "no_response") && p.last_contacted_on && p.last_contacted_on <= tenDaysAgo)
@@ -186,6 +219,38 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
           </div>
         ))}
       </Section>
+
+      {research.length > 0 && (
+        <Section
+          title="Research"
+          hint={researchTotal ? `${formatMinutes(researchTotal)} logged` : undefined}
+          action={<CopyUpdate text={researchText} />}
+        >
+          {research.map((r) => {
+            const ls = researchLines(r);
+            return (
+              <div key={r.id} className="flex flex-col gap-1.5">
+                <h3 className="font-sans text-sm flex items-baseline justify-between gap-3">
+                  <Link href={`/research/projects/${r.id}`} className="font-semibold hover:text-brass">{r.title}</Link>
+                  <span className="text-xs text-gray-400">{projectStatusLabel(r.status)}</span>
+                </h3>
+                {ls.length === 0 ? (
+                  <p className="text-sm text-gray-500">Nothing recorded {offset === 0 ? "yet this week" : "that week"}. <Link href={`/research/projects/${r.id}?tab=journal`} className="underline hover:text-cream">Log what you did</Link>.</p>
+                ) : (
+                  <dl className="flex flex-col divide-y divide-line/60 text-sm">
+                    {ls.map((l) => (
+                      <div key={l.k} className="flex gap-4 py-1.5">
+                        <dt className="w-36 flex-shrink-0 text-gray-500">{l.k}</dt>
+                        <dd className="min-w-0 break-words">{l.v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+              </div>
+            );
+          })}
+        </Section>
+      )}
 
       <Fold
         title="People to contact"
