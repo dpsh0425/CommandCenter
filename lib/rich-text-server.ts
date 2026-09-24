@@ -1,5 +1,5 @@
 import sanitize from "sanitize-html";
-import { toEditorHtml } from "@/lib/rich-text";
+import { htmlToText, toEditorHtml } from "@/lib/rich-text";
 
 // Server-side only: this pulls in the sanitizer library, so never import it from a client component.
 const ALIGN = /^(left|center|right|justify)$/;
@@ -28,3 +28,11 @@ export function sanitizeHtml(html: string): string {
 
 // Stored text (HTML or old plain text) as cleaned HTML, ready to show.
 export const renderRich = (stored: string) => sanitizeHtml(toEditorHtml(stored));
+
+// Text from a form or an editor, cleaned for storing. Null when nothing visible is left, so an empty editor never
+// saves "<p></p>".
+export function cleanRichBody(stored: string | null | undefined): string | null {
+  if (!stored || !stored.trim()) return null;
+  const clean = sanitizeHtml(toEditorHtml(stored));
+  return htmlToText(clean).trim() ? clean : null;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderRich, sanitizeHtml } from "@/lib/rich-text-server";
+import { cleanRichBody, renderRich, sanitizeHtml } from "@/lib/rich-text-server";
 
 describe("sanitizeHtml", () => {
   it("keeps the formatting the editor produces", () => {
@@ -47,5 +47,13 @@ describe("renderRich", () => {
     expect(renderRich("Hello\n\nWorld")).toBe("<p>Hello</p><p>World</p>");
     expect(renderRich("<p>a</p><script>x</script>")).toBe("<p>a</p>");
     expect(renderRich("<b>not a block start</b>")).toBe("<p>&lt;b&gt;not a block start&lt;/b&gt;</p>");
+  });
+});
+
+describe("cleanRichBody", () => {
+  it("returns cleaned HTML for real text", () => expect(cleanRichBody("<p>hi</p><script>x</script>")).toBe("<p>hi</p>"));
+  it("converts old plain text", () => expect(cleanRichBody("Hello\n\nWorld")).toBe("<p>Hello</p><p>World</p>"));
+  it("returns null when there is nothing to keep", () => {
+    for (const v of [null, undefined, "", "   ", "<p></p>", "<p> </p><p><br></p>"]) expect(cleanRichBody(v)).toBeNull();
   });
 });
