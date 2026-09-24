@@ -5,22 +5,25 @@ import { useRouter } from "next/navigation";
 import {
   deleteSnapshot, deleteStatement, restoreSnapshot, saveSnapshot, saveStatementBody, setStatementStatus, updateStatementMeta, type SaveResult,
 } from "@/app/(app)/materials/statement-actions";
-import { countWordsHtml, htmlToText } from "@/lib/rich-text";
+import { htmlToText } from "@/lib/rich-text";
 import { RichEditorLazy } from "@/components/rich-editor-lazy";
 import { RichHtml } from "@/components/rich-view";
+import { StatementMetrics } from "@/components/statement-metrics";
+import { WritingHintsPanel } from "@/components/writing-hints-panel";
+import { VersionDiff } from "@/components/version-diff";
+import { StatementExport } from "@/components/statement-export";
 import { useDraftBackup } from "@/lib/use-draft-backup";
-import { STATEMENT_KINDS, STATEMENT_STATUS, limitState, statementKindLabel, type LimitState } from "@/lib/statements";
+import { STATEMENT_KINDS, STATEMENT_STATUS, statementKindLabel } from "@/lib/statements";
 import { useUnsavedGuard } from "@/lib/use-unsaved-guard";
 
 export type EditorStatement = {
-  id: string; kind: string; title: string; prompt: string | null; word_limit: number | null; body: string; status: string; sent_on: string | null;
+  id: string; kind: string; title: string; prompt: string | null; word_limit: number | null; char_limit: number | null; body: string; status: string; sent_on: string | null;
   school_id: string | null; schoolName: string | null; body_version: number;
 };
 export type EditorSnapshot = { id: string; body: string; words: number; note: string | null; created_at: string; html: string };
 
 const field = "border rounded px-2 py-1.5 text-sm w-full";
 const primary = "bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm disabled:opacity-50";
-const COUNT_TONE: Record<LimitState, string> = { none: "text-gray-400", ok: "text-gray-400", near: "text-brass", over: "text-red-600" };
 
 function useRun() {
   const [pending, start] = useTransition();
@@ -37,6 +40,7 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
   const { pending, error, run } = useRun();
   const [text, setText] = useState(statement.body);
   const [limit, setLimit] = useState<number | null>(statement.word_limit);
+  const [charLimit, setCharLimit] = useState<number | null>(statement.char_limit);
   const [saveState, setSaveState] = useState<"saved" | "dirty" | "saving" | "error" | "conflict">("saved");
   const version = useRef(statement.body_version);
   const [resetKey, setResetKey] = useState(0);
@@ -45,22 +49,33 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
   const { write: writeBackup, clear: clearBackup } = backup;
   const [metaSaved, setMetaSaved] = useState(false);
   const [viewing, setViewing] = useState<string | null>(null);
+  const [comparing, setComparing] = useState<string | null>(null);
+  const [focus, setFocus] = useState(false);
   // The text as last stored on the server (or as loaded). Nothing saves while the editor matches it, which also keeps
   // React's development double-run of effects from saving an unchanged statement.
   const lastSaved = useRef(statement.body);
+  const wroteBackup = useRef(false);
   const latest = useRef(text);
   latest.current = text;
   const unsaved = useRef(false);
 
   // Autosave 1.5 seconds after the last keystroke; saves again on leaving the page. After a conflict nothing saves again.
   useEffect(() => {
-    if (text === lastSaved.current) { if (!conflict.current) { unsaved.current = false; setSaveState("saved"); } return; }
+    if (text === lastSaved.current) {
+      if (!conflict.current) {
+        unsaved.current = false; setSaveState("saved");
+        // Undoing back to the stored text leaves nothing unsaved, so drop the copy written a moment ago. A backup from an earlier session is untouched.
+        if (wroteBackup.current) { wroteBackup.current = false; clearBackup(); }
+      }
+      return;
+    }
     if (conflict.current) return;
     setSaveState("dirty");
     unsaved.current = true;
     writeBackup(text, version.current);
+    wroteBackup.current = true;
     const t = setTimeout(async () => {
-      if (conflict.current) return;
+      if (conflict.current || text === lastSaved.current) return;
       setSaveState("saving");
       const r = await saveStatementBody(statement.id, text, version.current).catch(
         (): SaveResult => ({ ok: false, reason: "error", message: "Could not save." }),
@@ -73,9 +88,26 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
   }, [text, statement.id, writeBackup, clearBackup]);
   useEffect(() => () => { if (unsaved.current && !conflict.current) saveStatementBody(statement.id, latest.current, version.current).catch(() => {}); }, [statement.id]);
   useUnsavedGuard(saveState !== "saved");
+  // The page's entry animation makes its own stacking layer, so the phone nav would sit over the overlay; hide it while focused.
+  useEffect(() => {
+    document.body.classList.toggle("writing-focus", focus);
+    return () => document.body.classList.remove("writing-focus");
+  }, [focus]);
 
-  const words = countWordsHtml(text);
-  const state = limitState(words, limit);
+  // Saves pending text before an export. Applies the result exactly like the autosave; resolves true when it is safe to export.
+  async function flushSave(): Promise<boolean> {
+    const current = latest.current;
+    if (current === lastSaved.current) return !conflict.current;
+    if (conflict.current) return false;
+    setSaveState("saving");
+    const r = await saveStatementBody(statement.id, current, version.current).catch(
+      (): SaveResult => ({ ok: false, reason: "error", message: "Could not save." }),
+    );
+    if (r.ok) { version.current = r.version; lastSaved.current = current; unsaved.current = latest.current !== current; setSaveState(latest.current === current ? "saved" : "dirty"); if (latest.current === current) clearBackup(); return true; }
+    if (r.reason === "stale") { conflict.current = true; setSaveState("conflict"); }
+    else setSaveState("error");
+    return false;
+  }
   const saveLabel = saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving…" : saveState === "dirty" ? "Unsaved changes" : saveState === "conflict" ? "Not saved: changed elsewhere" : "Could not save. Copy your text before leaving.";
 
   return (
@@ -91,13 +123,21 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
       </div>
 
       {statement.prompt && (
-        <section className="border-l-2 border-line pl-4">
-          <h2 className="font-sans text-xs font-semibold text-gray-400 mb-1">The prompt</h2>
+        <details open className="border-l-2 border-line pl-4">
+          <summary className="cursor-pointer font-sans text-xs font-semibold text-gray-400 mb-1">The prompt</summary>
           <p className="text-sm text-gray-500 whitespace-pre-line">{statement.prompt}</p>
-        </section>
+        </details>
       )}
 
-      <section className="flex flex-col gap-1">
+      <section
+        className={focus ? "fixed inset-0 z-50 bg-ink overflow-auto p-4 md:px-[12%] md:py-8 flex flex-col gap-1" : "flex flex-col gap-1"}
+        onKeyDown={(e) => { if (focus && e.key === "Escape" && !e.defaultPrevented) setFocus(false); }}
+      >
+        {focus && (
+          <div className="flex justify-end mb-2">
+            <button type="button" onClick={() => setFocus(false)} className="text-xs text-gray-500 hover:text-cream">Exit focus mode</button>
+          </div>
+        )}
         {backup.offer && (
           <div className="flex flex-wrap items-center gap-3 text-sm border border-brass rounded px-3 py-2 mb-2" role="status">
             <span>We found changes from {new Date(backup.offer.savedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} on this device that were never saved. Restore them?</span>
@@ -114,14 +154,16 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
         )}
         <RichEditorLazy
           value={text} onChange={(html) => { if (html !== latest.current) setText(html); }} label="Statement text" variant="full"
-          placeholder="Write here. It saves on its own." resetKey={resetKey}
+          placeholder="Write here. It saves on its own." resetKey={resetKey} printable
         />
         <div className="flex flex-wrap items-baseline justify-between gap-3 text-xs">
-          <span className={`font-mono ${COUNT_TONE[state]}`}>
-            {words.toLocaleString()}{limit ? ` of ${limit.toLocaleString()}` : ""} words{state === "over" ? ` · ${(words - (limit ?? 0)).toLocaleString()} over` : state === "near" ? " · close to the limit" : ""}
+          <StatementMetrics text={text} wordLimit={limit} charLimit={charLimit} />
+          <span className="flex items-baseline gap-3">
+            {!focus && <button type="button" onClick={() => setFocus(true)} className="text-gray-500 hover:text-cream">Focus mode</button>}
+            <span className={saveState === "error" || saveState === "conflict" ? "text-red-600" : "text-gray-400"} aria-live="polite">{saveLabel}</span>
           </span>
-          <span className={saveState === "error" || saveState === "conflict" ? "text-red-600" : "text-gray-400"} aria-live="polite">{saveLabel}</span>
         </div>
+        <WritingHintsPanel text={text} />
       </section>
 
       <section className="flex flex-col gap-3">
@@ -139,6 +181,11 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
           {statement.sent_on && <span className="text-xs text-gray-400">Sent {statement.sent_on}</span>}
         </div>
         <p className="text-xs text-gray-400">{statement.school_id && statement.kind === "statement_of_purpose" ? "Marking this Final or Sent ticks the statement on the school's readiness checklist." : "Final means it is ready to submit."}</p>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-sans text-[15px] font-semibold border-b border-line pb-2">Export</h2>
+        <StatementExport statementId={statement.id} text={text} beforeExport={flushSave} />
       </section>
 
       <section className="flex flex-col gap-3">
@@ -177,6 +224,7 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
                   </span>
                   <span className="flex gap-3 text-xs text-gray-500 whitespace-nowrap">
                     <button onClick={() => setViewing(viewing === s.id ? null : s.id)} className="hover:text-cream">{viewing === s.id ? "Hide" : "View"}</button>
+                    <button onClick={() => setComparing(comparing === s.id ? null : s.id)} className="hover:text-cream">{comparing === s.id ? "Hide compare" : "Compare"}</button>
                     <button
                       disabled={pending}
                       onClick={() => { if (confirm("Replace the current text with this version? Your current text is saved as a version first.")) run(async () => { const r = await restoreSnapshot(s.id); lastSaved.current = r.body; setText(r.body); version.current = r.version; setResetKey((k) => k + 1); unsaved.current = false; conflict.current = false; setSaveState("saved"); clearBackup(); }, () => router.refresh()); }}
@@ -188,6 +236,7 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
                   </span>
                 </div>
                 {viewing === s.id && <RichHtml html={s.html} className="paper paper-page max-h-72 overflow-auto mt-2" />}
+                {comparing === s.id && <VersionDiff before={s.body} after={text} />}
               </li>
             ))}
           </ul>
@@ -195,15 +244,16 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
       </section>
 
       <details className="text-sm group">
-        <summary className="cursor-pointer text-gray-500 hover:text-cream list-none border-b border-line pb-2">Details: title, type, prompt, word limit</summary>
+        <summary className="cursor-pointer text-gray-500 hover:text-cream list-none border-b border-line pb-2">Details: title, type, prompt, limits</summary>
         <form
           className="grid gap-3 sm:grid-cols-2 pt-4"
           onSubmit={(e) => {
             e.preventDefault();
             const f = new FormData(e.currentTarget); const v = (k: string) => String(f.get(k) ?? "").trim();
             const wl = Number(v("limit")) || null;
+            const cl = Number(v("charlimit")) || null;
             setMetaSaved(false);
-            run(() => updateStatementMeta(statement.id, { title: v("title"), kind: v("kind"), prompt: v("prompt") || null, wordLimit: wl }), () => { setLimit(wl); setMetaSaved(true); router.refresh(); });
+            run(() => updateStatementMeta(statement.id, { title: v("title"), kind: v("kind"), prompt: v("prompt") || null, wordLimit: wl, charLimit: cl }), () => { setLimit(wl); setCharLimit(cl); setMetaSaved(true); router.refresh(); });
           }}
         >
           <label className="sm:col-span-2 flex flex-col gap-1 text-gray-500">Title<input name="title" defaultValue={statement.title} required className={field + " text-cream"} /></label>
@@ -211,6 +261,7 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
             <select name="kind" defaultValue={statement.kind} className={field + " text-cream bg-transparent"}>{STATEMENT_KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}</select>
           </label>
           <label className="flex flex-col gap-1 text-gray-500">Word limit<input name="limit" type="number" min={1} defaultValue={statement.word_limit ?? ""} placeholder="No limit" className={field + " text-cream"} /></label>
+          <label className="flex flex-col gap-1 text-gray-500">Character limit<input name="charlimit" type="number" min={1} defaultValue={statement.char_limit ?? ""} placeholder="No limit" className={field + " text-cream"} /></label>
           <label className="sm:col-span-2 flex flex-col gap-1 text-gray-500">The school&rsquo;s prompt<textarea name="prompt" defaultValue={statement.prompt ?? ""} rows={4} placeholder="Paste the question or instructions from the application" className={field + " text-cream"} /></label>
           <div className="sm:col-span-2 flex items-center gap-3">
             <button disabled={pending} className={primary}>Save details</button>

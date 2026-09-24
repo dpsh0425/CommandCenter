@@ -105,3 +105,15 @@ textarea.paper::placeholder { color: #8c8674; }
 .paper-content a { color: #8a5a1c; text-decoration: underline; }
 .paper-content .ProseMirror-selectednode { outline: 2px solid #c98a3e; }
 .paper-content p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; pointer-events: none; color: #8c8674; }
+
+/* Printing a statement: only the page text, in a plain document style. Other pages print normally. */
+@media print {
+  body:has(.statement-print) * { visibility: hidden; }
+  body:has(.statement-print) .statement-print, body:has(.statement-print) .statement-print * { visibility: visible; }
+  body:has(.statement-print) .statement-print { position: absolute; left: 0; top: 0; width: 100%; padding: 0; background: #fff; }
+  .statement-print .paper-content { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.4; color: #000; min-height: 0 !important; }
+  .statement-print .paper-content a { color: #000; text-decoration: none; }
+}
+
+/* Focus mode hides the fixed phone navigation so the writing overlay covers the whole screen. */
+body.writing-focus nav.fixed { display: none; }

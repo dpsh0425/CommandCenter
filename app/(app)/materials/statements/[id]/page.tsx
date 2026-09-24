@@ -10,7 +10,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
   const supabase = await createClient();
   const [{ data: { user } }, { data: statement }, { data: snapshots }] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from("statements").select("id, kind, title, prompt, word_limit, body, status, sent_on, school_id, body_version").eq("id", id).single(),
+    supabase.from("statements").select("id, kind, title, prompt, word_limit, char_limit, body, status, sent_on, school_id, body_version").eq("id", id).single(),
     supabase.from("statement_snapshots").select("id, body, words, note, created_at").eq("statement_id", id).order("created_at", { ascending: false }),
   ]);
   if (!user || user.id !== OWNER_USER_ID) {

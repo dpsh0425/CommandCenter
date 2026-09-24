@@ -8,7 +8,7 @@ import { linkHref, toEditorHtml } from "@/lib/rich-text";
 
 export type RichEditorProps = {
   value: string; onChange: (html: string) => void; label: string;
-  variant?: "full" | "compact"; placeholder?: string; readOnly?: boolean; minHeight?: string; resetKey?: string | number;
+  variant?: "full" | "compact"; placeholder?: string; readOnly?: boolean; minHeight?: string; resetKey?: string | number; printable?: boolean;
 };
 
 type Block = "p" | "h1" | "h2" | "h3";
@@ -131,7 +131,7 @@ function Toolbar({ editor, variant }: { editor: Editor; variant: "full" | "compa
   );
 }
 
-export function RichEditor({ value, onChange, label, variant = "full", placeholder, readOnly = false, minHeight, resetKey }: RichEditorProps) {
+export function RichEditor({ value, onChange, label, variant = "full", placeholder, readOnly = false, minHeight, resetKey, printable = false }: RichEditorProps) {
   const height = minHeight ?? "24rem";
   const editor = useEditor({
     extensions: [
@@ -168,7 +168,7 @@ export function RichEditor({ value, onChange, label, variant = "full", placehold
   return (
     <div className="paper focus-within:ring-1 focus-within:ring-brass">
       {!readOnly && <Toolbar editor={editor} variant={variant} />}
-      <div className="paper-page" onClick={() => { if (!readOnly) editor.commands.focus(); }}>
+      <div className={`paper-page${printable ? " statement-print" : ""}`} onClick={() => { if (!readOnly) editor.commands.focus(); }}>
         <EditorContent editor={editor} />
       </div>
     </div>

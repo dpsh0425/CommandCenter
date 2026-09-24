@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  defaultTitle, hasFinalStatement, isStatementKind, isStatementStatus, limitState, statementKindLabel, statusChange,
+  contentDisposition, defaultTitle, exportFileName, hasFinalStatement, isStatementKind, isStatementStatus, limitParts, limitState, statementKindLabel, statusChange, worstState,
 } from "@/lib/statements";
 
 describe("limitState", () => {
@@ -59,5 +59,36 @@ describe("kinds, statuses and titles", () => {
   it("builds default titles", () => {
     expect(defaultTitle("statement_of_purpose")).toBe("Statement of purpose (general draft)");
     expect(defaultTitle("statement_of_purpose", "Stanford University")).toBe("Statement of purpose: Stanford University");
+  });
+});
+
+describe("limitParts and worstState", () => {
+  it("returns a part for each limit that is set", () => {
+    expect(limitParts({ words: 500, characters: 3000 }, { wordLimit: null, charLimit: null })).toEqual([]);
+    const parts = limitParts({ words: 460, characters: 5100 }, { wordLimit: 500, charLimit: 5000 });
+    expect(parts).toEqual([
+      { unit: "words", used: 460, limit: 500, state: "near", over: 0 },
+      { unit: "characters", used: 5100, limit: 5000, state: "over", over: 100 },
+    ]);
+  });
+  it("shows the worst state", () => {
+    expect(worstState([])).toBe("none");
+    expect(worstState([{ state: "ok" }, { state: "near" }])).toBe("near");
+    expect(worstState([{ state: "near" }, { state: "over" }, { state: "ok" }])).toBe("over");
+  });
+});
+
+describe("exportFileName and contentDisposition", () => {
+  it("builds a safe file name from the title and school", () => {
+    expect(exportFileName("Statement of purpose: MIT", "MIT", "docx")).toBe("Statement of purpose MIT.docx");
+    expect(exportFileName("Personal statement", "Yale", "docx")).toBe("Personal statement - Yale.docx");
+    expect(exportFileName("Personal statement", null, "docx")).toBe("Personal statement.docx");
+    expect(exportFileName('a/b\\c*d?"e', null, "docx")).toBe("a b c d e.docx");
+    expect(exportFileName("   ", null, "docx")).toBe("Statement.docx");
+    expect(exportFileName("x".repeat(300), null, "docx").length).toBe(125);
+  });
+  it("gives a header that survives non-ASCII names", () => {
+    expect(contentDisposition("Résumé.docx")).toBe(`attachment; filename="R_sum_.docx"; filename*=UTF-8''R%C3%A9sum%C3%A9.docx`);
+    expect(contentDisposition('a"b.docx')).toBe(`attachment; filename="ab.docx"; filename*=UTF-8''a%22b.docx`);
   });
 });
