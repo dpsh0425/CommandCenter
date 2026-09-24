@@ -9,9 +9,9 @@ import fs from "fs";
 import tls from "tls";
 
 const ref = process.env.SUPABASE_PROJECT_REF;
-if (!ref) { console.error("Set SUPABASE_PROJECT_REF."); process.exit(2); }
+if (!ref) { console.error("Set SUPABASE_PROJECT_REF."); process.exitCode = 2; }
 const token = process.env.SUPABASE_ACCESS_TOKEN ?? (fs.existsSync(".supabase-token") ? fs.readFileSync(".supabase-token", "utf8").trim() : null);
-if (!token) { console.error("Provide SUPABASE_ACCESS_TOKEN or a .supabase-token file."); process.exit(2); }
+if (!token) { console.error("Provide SUPABASE_ACCESS_TOKEN or a .supabase-token file."); process.exitCode = 2; }
 const apply = process.argv.includes("--apply");
 
 function readKey() {
@@ -46,25 +46,30 @@ function smtpLogin(pass) {
   });
 }
 
-const key = readKey();
-if (!key || !key.startsWith("re_")) { console.error("No Resend key found. Set SMTP_KEY to a key that starts with re_."); process.exit(2); }
+async function main() {
+  if (!ref || !token) return;
+  const key = readKey();
+  if (!key || !key.startsWith("re_")) { console.error("No Resend key found. Set SMTP_KEY to a key that starts with re_."); { process.exitCode = 2; return; } }
 
-const login = await smtpLogin(key);
-console.log(`Resend accepts this key: ${login.ok ? "YES" : "NO"} (${login.detail})`);
-if (!login.ok) { console.error("Not changing anything: this key does not work. Create a new key in Resend (Sending access) and set SMTP_KEY."); process.exit(1); }
+  const login = await smtpLogin(key);
+  console.log(`Resend accepts this key: ${login.ok ? "YES" : "NO"} (${login.detail})`);
+  if (!login.ok) { console.error("Not changing anything: this key does not work. Create a new key in Resend (Sending access) and set SMTP_KEY."); { process.exitCode = 1; return; } }
 
-const url = `https://api.supabase.com/v1/projects/${ref}/config/auth`;
-const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
-const cur = await (await fetch(url, { headers })).json();
-console.log(`Supabase mail settings now: host ${cur.smtp_host}, port ${cur.smtp_port}, user ${cur.smtp_user}, from ${cur.smtp_admin_email}`);
-console.log("Will set: host smtp.resend.com, port 465, user resend, and the password to the key above.");
+  const url = `https://api.supabase.com/v1/projects/${ref}/config/auth`;
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+  const cur = await (await fetch(url, { headers })).json();
+  console.log(`Supabase mail settings now: host ${cur.smtp_host}, port ${cur.smtp_port}, user ${cur.smtp_user}, from ${cur.smtp_admin_email}`);
+  console.log("Will set: host smtp.resend.com, port 465, user resend, and the password to the key above.");
 
-if (!apply) { console.log("Dry run only. Run again with --apply to make the change."); process.exit(0); }
+  if (!apply) { console.log("Dry run only. Run again with --apply to make the change."); { process.exitCode = 0; return; } }
 
-const res = await fetch(url, {
-  method: "PATCH",
-  headers,
-  body: JSON.stringify({ smtp_host: "smtp.resend.com", smtp_port: "465", smtp_user: "resend", smtp_pass: key, smtp_admin_email: cur.smtp_admin_email || "kcc@kacof.tech", smtp_sender_name: cur.smtp_sender_name || "Command Center" }),
-});
-if (!res.ok) { console.error(`Could not update: ${res.status} ${(await res.text()).slice(0, 300)}`); process.exit(1); }
-console.log("Updated. Now try the magic link or forgot-password again.");
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ smtp_host: "smtp.resend.com", smtp_port: "465", smtp_user: "resend", smtp_pass: key, smtp_admin_email: cur.smtp_admin_email || "kcc@kacof.tech", smtp_sender_name: cur.smtp_sender_name || "Command Center" }),
+  });
+  if (!res.ok) { console.error(`Could not update: ${res.status} ${(await res.text()).slice(0, 300)}`); { process.exitCode = 1; return; } }
+  console.log("Updated. Now try the magic link or forgot-password again.");
+}
+
+main().catch((e) => { console.error(`Failed: ${e.message}`); process.exitCode = 1; });
