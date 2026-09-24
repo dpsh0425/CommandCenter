@@ -236,7 +236,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         const usedKinds = Array.from(new Set((entries ?? []).map((e) => e.kind)));
         return (
           <div className="flex flex-col gap-6">
-            <EntryForm projectId={id} people={peopleOpts} milestones={msOpts} />
+            <EntryForm projectId={id} people={peopleOpts.filter((p) => memberIds.has(p.id)).length ? peopleOpts.filter((p) => memberIds.has(p.id)) : peopleOpts} milestones={msOpts} teamSize={memberIds.size} />
             {weekMinutes > 0 && (
               <p className="text-sm text-gray-500">Last 7 days: <span className="font-mono text-cream">{formatMinutes(weekMinutes)}</span> · {Array.from(byKind.entries()).filter(([, m]) => m > 0).sort((a, b) => b[1] - a[1]).map(([k, m]) => `${kindLabel(k)} ${formatMinutes(m)}`).join(" · ")}</p>
             )}

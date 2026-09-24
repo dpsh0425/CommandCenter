@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   addEntry, addMeeting, addMember, addPaper, addProjectMilestone, addProjectTask, createProject, deleteEntry, deleteMeeting, deletePaper,
@@ -159,9 +159,24 @@ export function AddTaskForm({ projectId, milestones, people }: { projectId: stri
   );
 }
 
-export function EntryForm({ projectId, people, milestones }: { projectId: string; people: Opt[]; milestones: Opt[] }) {
+export function EntryForm({ projectId, people, milestones, teamSize }: { projectId: string; people: Opt[]; milestones: Opt[]; teamSize: number }) {
   const { pending, error, run } = useRun();
   const [more, setMore] = useState(false);
+  const storageKey = `research-journal-person:${projectId}`;
+  // Default to whoever logged last on this project; a one-person team defaults to that person.
+  const [person, setPerson] = useState<string>(people.length === 1 && teamSize === 1 ? people[0].id : "");
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved && people.some((p) => p.id === saved)) setPerson(saved);
+    } catch { /* storage unavailable: keep the computed default */ }
+  }, [storageKey, people]);
+  const choose = (id: string) => {
+    setPerson(id);
+    try { if (id) localStorage.setItem(storageKey, id); else localStorage.removeItem(storageKey); } catch { /* ignore */ }
+  };
+  const showPerson = people.length > 0;
+
   return (
     <form
       className="flex flex-col gap-2 text-sm border-b border-line pb-6"
@@ -170,7 +185,7 @@ export function EntryForm({ projectId, people, milestones }: { projectId: string
         const form = e.currentTarget; const f = new FormData(form);
         run(() => addEntry(projectId, {
           kind: val(f, "kind"), title: val(f, "title"), body: val(f, "body"), occurredOn: val(f, "date") || undefined,
-          minutes: Number(val(f, "minutes")) || null, personId: val(f, "person") || null, milestoneId: val(f, "milestone") || null,
+          minutes: Number(val(f, "minutes")) || null, personId: person || null, milestoneId: val(f, "milestone") || null,
         }), () => { form.reset(); setMore(false); });
       }}
     >
@@ -180,20 +195,28 @@ export function EntryForm({ projectId, people, milestones }: { projectId: string
         </select>
         <input name="title" required placeholder="What did you do? e.g. Ran pilot on 200 items" className={field + " flex-1 min-w-[12rem]"} />
         <input name="minutes" type="number" min={0} placeholder="Minutes" className={field + " max-w-[6rem]"} aria-label="Minutes spent" />
+        {showPerson && (
+          <select value={person} onChange={(e) => choose(e.target.value)} className={field + " max-w-[10rem] bg-transparent"} aria-label="Who did it">
+            <option value="">Who did it?</option>
+            {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        )}
         <button disabled={pending} className={primary}>Log it</button>
       </div>
+      {showPerson && !person && teamSize > 0 && (
+        <p className="text-xs text-gray-400">Pick who did this so it counts in the team&rsquo;s weekly view. Your choice is remembered.</p>
+      )}
       {more && (
         <div className="flex flex-col gap-2">
           <textarea name="body" rows={3} placeholder="Details, results, what you'd do next. Numbers, file names and decisions belong here." className={field} />
           <div className="flex flex-wrap gap-2">
             <input type="date" name="date" defaultValue={localDate(new Date())} className={field + " max-w-[10rem]"} aria-label="Date" />
-            <select name="person" className={field + " max-w-[10rem] bg-transparent"} aria-label="Who did it"><option value="">Who did it</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
             <select name="milestone" className={field + " max-w-[12rem] bg-transparent"} aria-label="Milestone"><option value="">No milestone</option>{milestones.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
           </div>
         </div>
       )}
       <div className="flex items-center gap-3 text-xs">
-        <button type="button" onClick={() => setMore((v) => !v)} className="text-gray-500 underline hover:text-cream">{more ? "Fewer details" : "Add details, date, person or milestone"}</button>
+        <button type="button" onClick={() => setMore((v) => !v)} className="text-gray-500 underline hover:text-cream">{more ? "Fewer details" : "Add details, date or milestone"}</button>
         {error && <span className="text-red-600">{error}</span>}
       </div>
     </form>
