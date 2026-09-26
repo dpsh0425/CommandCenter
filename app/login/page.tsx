@@ -76,10 +76,10 @@ export default function LoginPage() {
         setError(null);
         setSent(false);
       }}
-      className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all duration-150 ${
+      className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
         mode === m
-          ? "bg-white text-slate-900 shadow-sm border border-slate-200/80 font-medium"
-          : "text-slate-500 hover:text-slate-900"
+          ? "bg-slate-800/90 text-white shadow-lg shadow-black/20 border border-slate-700/60"
+          : "text-slate-400 hover:text-white hover:bg-white/5"
       }`}
     >
       {label}
@@ -87,44 +87,57 @@ export default function LoginPage() {
   );
 
   return (
-    <main className="min-h-screen w-full flex bg-slate-50 text-slate-900 font-sans antialiased">
-      <div className="flex flex-1 w-full min-h-screen">
-        {/* LEFT PANEL: Enterprise Auth Form */}
-        <div className="w-full lg:w-[45%] flex flex-col justify-between p-8 sm:p-12 xl:p-16 bg-white border-r border-slate-200/80">
+    <main className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-100 font-sans antialiased relative overflow-hidden selection:bg-blue-500/30 selection:text-blue-200">
+      {/* Background Glows & Depth Grids */}
+      <div
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage: `radial-gradient(circle, #ffffff 1px, transparent 1px)`,
+          backgroundSize: "28px 28px",
+        }}
+      />
+      <div className="absolute top-1/4 -left-20 w-[500px] h-[500px] bg-blue-600/15 rounded-full blur-[125px] pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-20 w-[500px] h-[500px] bg-indigo-600/15 rounded-full blur-[125px] pointer-events-none" />
+
+      {/* Main Glassmorphic Wrapper */}
+      <div className="relative z-10 w-full max-w-5xl mx-4 my-8 grid grid-cols-1 lg:grid-cols-12 backdrop-blur-2xl bg-slate-900/60 border border-slate-800/80 rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] overflow-hidden">
+        
+        {/* LEFT PANEL: Glass Auth Card Form */}
+        <div className="lg:col-span-6 p-8 sm:p-12 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800/60 bg-slate-900/40">
           {/* Brand Header */}
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-600/20">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25 border border-blue-400/30">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <span className="font-sans font-bold text-base tracking-tight text-slate-900">
-              COMMAND<span className="text-blue-600">CENTER</span>
+            <span className="font-bold text-base tracking-tight text-white">
+              COMMAND<span className="text-blue-400">CENTER</span>
             </span>
           </div>
 
-          {/* Form Container */}
-          <div className="my-auto max-w-sm w-full mx-auto py-6">
-            <div className="mb-6">
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-sans">
-                Welcome Back
+          {/* Core Content Form */}
+          <div className="my-auto py-8 max-w-md w-full mx-auto">
+            <div className="mb-8">
+              <h1 className="text-3xl font-extrabold text-white tracking-tight">
+                Welcome back
               </h1>
-              <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
-                Sign in to access your application workspace.
+              <p className="text-sm text-slate-400 mt-2 leading-relaxed">
+                Enter your credentials to access your centralized command dashboard.
               </p>
             </div>
 
-            {/* Mode Selector */}
-            <div className="grid grid-cols-2 p-1 bg-slate-100/80 rounded-lg border border-slate-200/60 mb-6">
+            {/* Tactile Mode Switcher */}
+            <div className="grid grid-cols-2 p-1.5 bg-slate-950/60 backdrop-blur-md rounded-xl border border-slate-800/80 mb-6 shadow-inner">
               {tab("password", "Password")}
               {tab("magic", "Email Link")}
             </div>
 
             {/* Password Form */}
             {mode === "password" ? (
-              <form onSubmit={handlePassword} className="flex flex-col gap-4">
+              <form onSubmit={handlePassword} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
                     Email Address
                   </label>
                   <input
@@ -135,13 +148,13 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@university.edu"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300/80 rounded-lg text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
+                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-800 rounded-xl text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all shadow-inner"
                   />
                 </div>
 
                 <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
                       Password
                     </label>
                     <button
@@ -151,7 +164,7 @@ export default function LoginPage() {
                         setError(null);
                         setSent(false);
                       }}
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                      className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
                     >
                       Forgot password?
                     </button>
@@ -163,36 +176,36 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300/80 rounded-lg text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
+                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-800 rounded-xl text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all shadow-inner"
                   />
                 </div>
 
                 {error && (
-                  <p className="text-red-600 text-xs font-medium bg-red-50 p-3 rounded-lg border border-red-200/80 leading-snug">
+                  <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-medium leading-snug">
                     {error}
-                  </p>
+                  </div>
                 )}
 
                 <button
                   type="submit"
                   disabled={pending}
-                  className="w-full mt-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold text-sm rounded-lg shadow-md shadow-blue-600/15 transition-all disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+                  className="w-full mt-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.99] text-white font-semibold text-sm rounded-xl shadow-lg shadow-blue-600/25 border border-blue-400/20 transition-all disabled:opacity-50"
                 >
                   {pending ? "Signing in…" : "Sign In to Workspace"}
                 </button>
               </form>
             ) : mode === "reset" ? (
               sent ? (
-                <div className="p-4 bg-blue-50/80 border border-blue-200/80 rounded-lg text-sm text-blue-900 leading-relaxed">
-                  If <span className="font-semibold text-blue-700">{email}</span> has an account, a reset link is on its way.
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl text-sm text-blue-200 leading-relaxed">
+                  If <span className="font-semibold text-white">{email}</span> has an account, a reset link is on its way.
                 </div>
               ) : (
-                <form onSubmit={handleReset} className="flex flex-col gap-4">
-                  <p className="text-sm text-slate-500 leading-relaxed">
-                    Enter your email address and we'll send a link to choose a new password.
+                <form onSubmit={handleReset} className="space-y-4">
+                  <p className="text-sm text-slate-400 leading-relaxed">
+                    Enter your email address and we'll send a link to reset your password.
                   </p>
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
                       Email Address
                     </label>
                     <input
@@ -203,18 +216,18 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="name@university.edu"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300/80 rounded-lg text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
+                      className="w-full px-4 py-3 bg-slate-950/50 border border-slate-800 rounded-xl text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all shadow-inner"
                     />
                   </div>
                   {error && (
-                    <p className="text-red-600 text-xs font-medium bg-red-50 p-3 rounded-lg border border-red-200/80">
+                    <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-medium">
                       {error}
-                    </p>
+                    </div>
                   )}
                   <button
                     type="submit"
                     disabled={pending}
-                    className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold text-sm rounded-lg shadow-md shadow-blue-600/15 transition-all disabled:opacity-50"
+                    className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-blue-600/25 transition-all disabled:opacity-50"
                   >
                     {pending ? "Sending…" : "Send Reset Link"}
                   </button>
@@ -225,23 +238,23 @@ export default function LoginPage() {
                       setError(null);
                       setSent(false);
                     }}
-                    className="text-xs text-slate-500 hover:text-slate-800 self-center font-medium mt-1 transition-colors"
+                    className="text-xs text-slate-400 hover:text-white block mx-auto pt-2 transition-colors font-medium"
                   >
                     ← Back to Sign In
                   </button>
                 </form>
               )
             ) : sent ? (
-              <div className="p-4 bg-blue-50/80 border border-blue-200/80 rounded-lg text-sm text-blue-900 leading-relaxed">
-                Check <span className="font-semibold text-blue-700">{email}</span> for a sign-in magic link.
+              <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl text-sm text-blue-200 leading-relaxed">
+                Check <span className="font-semibold text-white">{email}</span> for a sign-in magic link.
               </div>
             ) : (
-              <form onSubmit={handleMagic} className="flex flex-col gap-4">
-                <p className="text-sm text-slate-500 leading-relaxed">
-                  Enter your email address to receive a secure, passwordless magic link.
+              <form onSubmit={handleMagic} className="space-y-4">
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  Enter your email address to receive a passwordless magic link.
                 </p>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
                     Email Address
                   </label>
                   <input
@@ -252,18 +265,18 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@university.edu"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300/80 rounded-lg text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
+                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-800 rounded-xl text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all shadow-inner"
                   />
                 </div>
                 {error && (
-                  <p className="text-red-600 text-xs font-medium bg-red-50 p-3 rounded-lg border border-red-200/80">
+                  <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-medium">
                     {error}
-                  </p>
+                  </div>
                 )}
                 <button
                   type="submit"
                   disabled={pending}
-                  className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold text-sm rounded-lg shadow-md shadow-blue-600/15 transition-all disabled:opacity-50"
+                  className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-blue-600/25 transition-all disabled:opacity-50"
                 >
                   {pending ? "Sending…" : "Send Magic Link"}
                 </button>
@@ -271,126 +284,67 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-4">
+          <div className="flex items-center justify-between text-xs text-slate-500 pt-6 border-t border-slate-800/60">
             <span>© 2026 Command Center</span>
-            <div className="flex gap-4">
-              <a href="#" className="hover:text-slate-800 transition-colors">
-                Security
-              </a>
-              <a href="#" className="hover:text-slate-800 transition-colors">
-                Privacy
-              </a>
-            </div>
+            <span className="font-mono text-[11px] text-slate-400">Encrypted SSO</span>
           </div>
         </div>
 
-        {/* RIGHT PANEL: Layered Enterprise Command Graphic */}
-        <div className="hidden lg:flex lg:w-[55%] bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-12 xl:p-16 flex-col justify-between relative overflow-hidden text-white">
-          {/* Subtle Grid Pattern Overlay */}
-          <div
-            className="absolute inset-0 opacity-[0.04] pointer-events-none"
-            style={{
-              backgroundImage: `radial-gradient(circle, #ffffff 1px, transparent 1px)`,
-              backgroundSize: "24px 24px",
-            }}
-          />
-
-          {/* Glowing Ambient Accents */}
-          <div className="absolute top-1/4 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-1/4 left-10 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Status Indicator Bar */}
-          <div className="relative z-10 flex justify-end items-center gap-2.5 text-xs font-mono text-slate-400">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        {/* RIGHT PANEL: Live Telemetry & Glass Display */}
+        <div className="lg:col-span-6 p-8 sm:p-12 flex flex-col justify-between bg-slate-950/50 relative overflow-hidden">
+          <div className="flex justify-between items-center text-xs font-mono text-slate-400">
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+              SYSTEM ACTIVE
             </span>
-            <span>SYSTEM ONLINE</span>
-            <span className="text-slate-600">•</span>
-            <span className="text-slate-300">v2.4.0-release</span>
+            <span>v2.4.0</span>
           </div>
 
-          {/* Central Feature Section */}
-          <div className="relative z-10 my-auto max-w-lg mx-auto w-full">
-            <div className="mb-8">
-              <span className="inline-flex items-center gap-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[11px] font-mono uppercase tracking-wider px-2.5 py-1 rounded-md mb-3">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                Unified Operations
-              </span>
-              <h2 className="text-3xl font-bold text-white tracking-tight leading-tight font-sans">
-                Grad-School Application Workspace
-              </h2>
-              <p className="text-slate-400 text-sm mt-2.5 leading-relaxed">
-                Manage university deadlines, faculty research alignment, and application status tracking in one high-throughput command dashboard.
-              </p>
-            </div>
+          <div className="my-auto py-6">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono text-blue-400 bg-blue-500/10 border border-blue-500/20 mb-4">
+              Unified Workspace
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              Application Pipeline Overview
+            </h2>
+            <p className="text-sm text-slate-400 mt-2 leading-relaxed">
+              Track deadlines, faculty outreach, and milestone telemetry in real time.
+            </p>
 
-            {/* Glassmorphic Live Telemetry Preview Card */}
-            <div className="backdrop-blur-md bg-white/[0.04] border border-white/10 rounded-xl p-6 shadow-2xl relative overflow-hidden">
-              {/* Card Header Bar */}
-              <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-rose-500/80"></div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80"></div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></div>
-                  <span className="text-xs font-mono text-slate-400 ml-2">analytics_telemetry.sys</span>
+            {/* Frosted Telemetry Widget */}
+            <div className="mt-6 p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md shadow-2xl space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/60">
+                  <span className="text-[10px] font-mono uppercase text-slate-400 block">Shortlist</span>
+                  <span className="text-base font-bold text-white mt-0.5 block">8 Schools</span>
                 </div>
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  VERIFIED ACTIVE
-                </span>
-              </div>
-
-              {/* Metrics Grid */}
-              <div className="grid grid-cols-3 gap-3 my-5">
-                <div className="bg-slate-900/60 p-3.5 rounded-lg border border-white/5">
-                  <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
-                    Shortlist
-                  </span>
-                  <span className="text-lg font-bold text-white block mt-0.5">8 Schools</span>
-                  <span className="text-[10px] text-emerald-400 font-medium mt-1 block">NLP Ranked</span>
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/60">
+                  <span className="text-[10px] font-mono uppercase text-slate-400 block">Submissions</span>
+                  <span className="text-base font-bold text-amber-400 mt-0.5 block">3 Pending</span>
                 </div>
-                <div className="bg-slate-900/60 p-3.5 rounded-lg border border-white/5">
-                  <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
-                    Submissions
-                  </span>
-                  <span className="text-lg font-bold text-white block mt-0.5">3 Pending</span>
-                  <span className="text-[10px] text-amber-400 font-medium mt-1 block">Next in 4d</span>
-                </div>
-                <div className="bg-slate-900/60 p-3.5 rounded-lg border border-white/5">
-                  <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
-                    Avg Fit Score
-                  </span>
-                  <span className="text-lg font-bold text-white block mt-0.5">84.2%</span>
-                  <span className="text-[10px] text-blue-400 font-medium mt-1 block">Verified</span>
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/60">
+                  <span className="text-[10px] font-mono uppercase text-slate-400 block">Fit Score</span>
+                  <span className="text-base font-bold text-emerald-400 mt-0.5 block">84.2%</span>
                 </div>
               </div>
 
-              {/* Pipeline Progress Indicator */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs text-slate-300 font-mono">
-                  <span>Application Pipeline Status</span>
-                  <span className="text-blue-400 font-bold">78% Complete</span>
+              <div className="space-y-1.5 pt-2">
+                <div className="flex justify-between text-xs text-slate-400 font-mono">
+                  <span>Overall Readiness</span>
+                  <span className="text-blue-400 font-bold">78%</span>
                 </div>
-                <div className="w-full bg-slate-900/80 h-2 rounded-full overflow-hidden border border-white/10 p-0.5">
-                  <div className="bg-gradient-to-r from-blue-500 to-emerald-400 h-full rounded-full transition-all duration-500 w-[78%]" />
+                <div className="h-2 w-full bg-slate-950/80 rounded-full overflow-hidden border border-slate-800/60 p-0.5">
+                  <div className="h-full bg-gradient-to-r from-blue-500 to-emerald-400 rounded-full w-[78%]" />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Panel Footer */}
-          <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 font-mono">
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              ENCRYPTED SINGLE SIGN-ON
-            </span>
-            <span>SOC2 TYPE II CERTIFIED</span>
+          <div className="text-xs text-slate-500 font-mono">
+            SOC2 TYPE II CERTIFIED • END-TO-END ENCRYPTED
           </div>
         </div>
+
       </div>
     </main>
   );
