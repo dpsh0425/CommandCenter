@@ -18,9 +18,9 @@ export type WeekPoint = { week: string; tasks: number; wins: number };
 const STATUSES = ["not_started", "researching", "contacted", "replied", "submitted", "interview", "accepted", "rejected"];
 const STATUS_COLOR: Record<string, string> = {
   not_started: "#64748B",
-  researching: "#0EA5E9",
+  researching: "#0284C7",
   contacted: "#2563EB",
-  replied: "#0284C7",
+  replied: "#1D4ED8",
   submitted: "#1E3A8A",
   interview: "#D97706",
   accepted: "#059669",
@@ -28,11 +28,11 @@ const STATUS_COLOR: Record<string, string> = {
 };
 const COUNTRY_COLOR: Record<string, string> = {
   USA: "#2563EB",
-  Canada: "#0EA5E9",
+  Canada: "#0284C7",
   Australia: "#1E3A8A",
 };
 const COUNTRIES = ["USA", "Canada", "Australia"];
-const AXIS = { fill: "#64748B" };
+const AXIS = { fill: "#475569" };
 const GRID = "#E2E8F0";
 const tipStyle = {
   background: "#FFFFFF",
@@ -112,7 +112,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
       key={t}
       type="button"
       onClick={() => setTab(t)}
-      className={`relative pb-3 text-sm font-semibold tracking-tight transition-colors ${
+      className={`relative pb-3 text-sm font-semibold transition-colors ${
         tab === t ? "text-blue-700" : "text-slate-600 hover:text-blue-600"
       }`}
     >
@@ -126,9 +126,9 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
   const momentumEmpty = weekly.every((w) => w.tasks === 0 && w.wins === 0);
 
   return (
-    <section className="flex flex-col gap-6 font-sans text-slate-900">
-      {/* Navigation Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-0 bg-white px-4 pt-3 rounded-t-lg shadow-sm">
+    <section className="flex flex-col gap-6 font-sans text-slate-900 bg-slate-50 p-6 rounded-xl border border-slate-200/80 shadow-sm">
+      {/* SAP Style Navigation Header */}
+      <div className="flex items-center justify-between border-b border-slate-200 pb-0 bg-white px-5 pt-3.5 rounded-t-lg border-t border-x border-slate-200">
         <div className="flex gap-8">
           {tabBtn("fit", "Fit map")}
           {tabBtn("pipeline", "Pipeline")}
@@ -137,13 +137,13 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
         </div>
       </div>
 
-      {/* Unified Toolbar */}
+      {/* Structured Filter Bar */}
       {tab !== "momentum" && (
-        <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-slate-100/80 border border-slate-200 text-sm shadow-sm">
+        <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-white border border-slate-200 text-sm shadow-sm">
           <select
             value={country}
             onChange={(e) => setCountry(e.target.value)}
-            className="rounded-md px-3 py-1.5 bg-white border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 cursor-pointer text-xs font-medium shadow-sm"
+            className="rounded px-3 py-1.5 bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 cursor-pointer text-xs font-medium"
             aria-label="Country"
           >
             <option value="all">All countries</option>
@@ -152,7 +152,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
             ))}
           </select>
 
-          <label className="flex items-center gap-2 text-xs font-medium text-slate-600 hover:text-slate-900 cursor-pointer select-none px-2.5 py-1.5 rounded-md hover:bg-slate-200/60 transition-colors">
+          <label className="flex items-center gap-2 text-xs font-medium text-slate-700 hover:text-slate-900 cursor-pointer select-none px-2.5 py-1.5 rounded hover:bg-slate-100 transition-colors">
             <input
               type="checkbox"
               checked={verifiedOnly}
@@ -164,17 +164,17 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
 
           {tab === "fit" && (
             <>
-              <div className="h-4 w-px bg-slate-300 hidden sm:block" />
+              <div className="h-4 w-px bg-slate-200 hidden sm:block" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Highlight a school or professor..."
-                className="rounded-md px-3 py-1.5 bg-white border border-slate-200 text-slate-800 text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 w-56 max-w-full shadow-sm"
+                className="rounded px-3 py-1.5 bg-slate-50 border border-slate-300 text-slate-800 text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 w-56 max-w-full"
               />
               <select
                 value={colorBy}
                 onChange={(e) => setColorBy(e.target.value as ColorBy)}
-                className="rounded-md px-3 py-1.5 bg-white border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 cursor-pointer text-xs font-medium shadow-sm"
+                className="rounded px-3 py-1.5 bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 cursor-pointer text-xs font-medium"
                 aria-label="Colour by"
               >
                 <option value="fit">Colour by fit</option>
@@ -196,7 +196,6 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
           <Empty>No schools match these filters.</Empty>
         ) : (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start">
-            {/* Scatter Plot Side */}
             <div className="flex flex-col gap-3 min-w-0 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
               <ResponsiveContainer width="100%" height={360}>
                 <ScatterChart margin={{ top: 12, right: 16, bottom: 28, left: 8 }}>
@@ -233,7 +232,6 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
                           <div style={{ fontFamily: "monospace", marginTop: 6, fontSize: "11px", color: "#1E3A8A", fontWeight: 600 }}>
                             score {s.composite_score?.toFixed(1)} · rank #{s.csranking_nlp_rank}
                           </div>
-                          <div style={{ color: "#64748B", marginTop: 6, fontSize: "10px" }}>Click point to select</div>
                         </div>
                       );
                     }}
@@ -277,17 +275,14 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
               </div>
             </div>
 
-            {/* Sidebar Details & Matches */}
             <div className="flex flex-col gap-5 min-w-0">
-              {/* Selected Card */}
               {selected ? (
                 <div className="flex flex-col gap-3 p-4 rounded-lg bg-white border-l-4 border-l-blue-600 border border-slate-200 shadow-sm">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-semibold text-lg text-slate-900 leading-tight">{selected.name}</h3>
                     <button
                       onClick={() => setSelectedId(null)}
-                      className="text-xs text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors"
-                      aria-label="Clear selection"
+                      className="text-xs text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100"
                     >
                       ✕
                     </button>
@@ -304,22 +299,21 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
                   <p className="text-xs font-mono text-slate-800 bg-slate-50 p-2.5 rounded border border-slate-200 font-medium">
                     score {selected.composite_score?.toFixed(1) ?? "—"} · NLP rank #{selected.csranking_nlp_rank ?? "?"}
                   </p>
-                  {selected.faculty && <p className="text-xs font-medium text-slate-800 font-sans">{selected.faculty}</p>}
+                  {selected.faculty && <p className="text-xs font-medium text-slate-800">{selected.faculty}</p>}
                   {selected.fit_note && <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{selected.fit_note}</p>}
                   <Link
                     href={`/schools/${selected.id}`}
-                    className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-800 hover:underline transition-colors"
+                    className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-800 hover:underline"
                   >
                     Open school →
                   </Link>
                 </div>
               ) : (
-                <div className="p-4 rounded-lg border border-dashed border-slate-300 bg-slate-50/50 text-center text-xs text-slate-500 font-medium">
+                <div className="p-4 rounded-lg border border-dashed border-slate-300 bg-white text-center text-xs text-slate-500 font-medium">
                   Click a point on the scatter map or a school below to see details here.
                 </div>
               )}
 
-              {/* Top Matches Shortlist */}
               <div className="p-4 rounded-lg bg-white border border-slate-200 shadow-sm">
                 <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-slate-700 mb-3 border-b border-slate-200 pb-2">
                   Top matches{q ? " for your search" : ""}
@@ -365,11 +359,6 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
               Include “not started” ({filtered.length - started})
             </label>
           )}
-          {started === 0 && (
-            <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded border border-slate-200">
-              No applications started yet — showing where every school currently sits. Move a school to “researching” to see it progress.
-            </p>
-          )}
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={pipelineData} margin={{ top: 12, right: 16, bottom: 12, left: 0 }}>
               <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
@@ -389,9 +378,6 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
               ))}
             </BarChart>
           </ResponsiveContainer>
-          <p className="text-xs text-slate-500 pt-2 border-t border-slate-200">
-            Click a bar segment to open that country and stage in the schools list.
-          </p>
         </div>
       )}
 
@@ -420,9 +406,6 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
               </BarChart>
             </ResponsiveContainer>
           )}
-          <p className="text-xs text-slate-500 pt-2 border-t border-slate-200">
-            How scores are distributed. A long low tail means only a few schools are strong fits — focus effort on the right-hand bars.
-          </p>
         </div>
       )}
 
@@ -430,7 +413,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
       {tab === "momentum" && (
         <div className="flex flex-col gap-4 p-4 rounded-lg bg-white border border-slate-200 shadow-sm">
           {momentumEmpty ? (
-            <Empty>Nothing completed in the last 8 weeks yet. Finish a task or move a school to “replied” and it will show up here.</Empty>
+            <Empty>Nothing completed in the last 8 weeks yet.</Empty>
           ) : (
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={weekly} margin={{ top: 12, right: 16, bottom: 12, left: 0 }}>
@@ -444,9 +427,6 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
               </BarChart>
             </ResponsiveContainer>
           )}
-          <p className="text-xs text-slate-500 pt-2 border-t border-slate-200">
-            Weeks start on Monday. Wins are replies, submissions, interviews and acceptances.
-          </p>
         </div>
       )}
     </section>
