@@ -317,19 +317,21 @@ export function DashboardAnalytics({
                   />
                   <Scatter
                     data={points}
-                    shape={(p: { cx: number; cy: number; payload: AnalyticsSchool }) => {
-                      const s = p.payload;
+                    shape={(p: any) => {
+                      const s: AnalyticsSchool = p.payload;
+                      const cx = p.cx ?? 0;
+                      const cy = p.cy ?? 0;
                       const dim = !matches(s);
                       const isSel = s.id === selectedId;
                       const color = colorOf(s, colorBy);
                       const isStarted = s.status !== "not_started";
                       return (
                         <g style={{ cursor: "pointer" }} onClick={() => setSelectedId(s.id)} opacity={dim ? 0.2 : 1}>
-                          <circle cx={p.cx} cy={p.cy} r={12} fill="transparent" />
+                          <circle cx={cx} cy={cy} r={12} fill="transparent" />
                           {(isStarted || isSel) && (
-                            <circle cx={p.cx} cy={p.cy} r={9} fill="none" stroke={isSel ? "#0F172A" : color} strokeWidth={isSel ? 2 : 1.5} />
+                            <circle cx={cx} cy={cy} r={9} fill="none" stroke={isSel ? "#0F172A" : color} strokeWidth={isSel ? 2 : 1.5} />
                           )}
-                          <circle cx={p.cx} cy={p.cy} r={isStarted || isSel ? 5 : 3.5} fill={color} fillOpacity={0.9} />
+                          <circle cx={cx} cy={cy} r={isStarted || isSel ? 5 : 3.5} fill={color} fillOpacity={0.9} />
                         </g>
                       );
                     }}
