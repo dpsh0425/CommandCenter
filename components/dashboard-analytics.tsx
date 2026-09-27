@@ -14,7 +14,6 @@ import {
   BarChart,
   Bar,
   Legend,
-  TooltipProps,
 } from "recharts";
 
 export type AnalyticsSchool = {
@@ -306,22 +305,26 @@ export function DashboardAnalytics({
                     }}
                   />
                   <Tooltip
-                    cursor={{ strokeDasharray: "3 3", stroke: "#94A3B8" }}
-                    content={(props: TooltipProps<number, string>) => {
-                      const { active, payload } = props;
-                      if (!active || !payload?.length) return null;
-                      const s = payload[0].payload as AnalyticsSchool;
-                      return (
-                        <div style={{ ...tipStyle, padding: "10px 12px", maxWidth: 250 }}>
-                          <div style={{ fontWeight: 700, fontSize: "12px", color: "#0F172A" }}>{s.name}</div>
-                          <div style={{ color: "#64748B", marginTop: 2 }}>{s.country} · {s.status.replace("_", " ")}</div>
-                          <div style={{ fontFamily: "monospace", marginTop: 6, fontSize: "11px", color: "#2563EB", fontWeight: 700 }}>
-                            score {s.composite_score?.toFixed(1)} · rank #{s.csranking_nlp_rank}
-                          </div>
-                        </div>
-                      );
-                    }}
-                  />
+                   cursor={{ strokeDasharray: "3 3", stroke: "#94A3B8" }}
+                    content={(props) => {
+                   const { active, payload } = props as unknown as {
+                   active?: boolean;
+                    payload?: ReadonlyArray<{ payload?: AnalyticsSchool }>;
+                    };
+                    if (!active || !payload?.length) return null;
+                   const s = payload[0].payload;
+                   if (!s) return null;
+                   return (
+                   <div style={{ ...tipStyle, padding: "10px 12px", maxWidth: 250 }}>
+                    <div style={{ fontWeight: 700, fontSize: "12px", color: "#0F172A" }}>{s.name}</div>
+                   <div style={{ color: "#64748B", marginTop: 2 }}>{s.country} · {s.status.replace("_", " ")}</div>
+                   <div style={{ fontFamily: "monospace", marginTop: 6, fontSize: "11px", color: "#2563EB", fontWeight: 700 }}>
+                   score {s.composite_score?.toFixed(1)} · rank #{s.csranking_nlp_rank}
+                      </div>
+                   </div>
+                   );
+                   }}
+                 />
                   <Scatter
                     data={points}
                     shape={(props: CustomScatterPointProps) => {
@@ -445,7 +448,7 @@ export function DashboardAnalytics({
                 onChange={(e) => setShowNotStarted(e.target.checked)}
                 className="rounded border-slate-300 text-blue-600 focus:ring-blue-500/20"
               />
-              Include “not started” ({filtered.length - started})
+              Include "not started" ({filtered.length - started})
             </label>
           )}
           <ResponsiveContainer width="100%" height={320}>
