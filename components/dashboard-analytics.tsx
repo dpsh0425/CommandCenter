@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -78,6 +78,10 @@ interface CustomScatterPointProps {
   cx?: number;
   cy?: number;
   payload?: AnalyticsSchool;
+  query: string;
+  selectedId: string | null;
+  colorBy: ColorBy;
+  onSelect: (id: string) => void;
 }
 
 const colorOf = (s: AnalyticsSchool, by: ColorBy) => {
@@ -88,6 +92,57 @@ const colorOf = (s: AnalyticsSchool, by: ColorBy) => {
     return STATUS_COLOR[s.status] ?? "#64748B";
   }
   return COUNTRY_COLOR[s.country] ?? "#64748B";
+};
+
+const CustomScatterPoint: React.FC<CustomScatterPointProps> = ({
+  cx = 0,
+  cy = 0,
+  payload: s,
+  query,
+  selectedId,
+  colorBy,
+  onSelect,
+}) => {
+  if (!s) return <g />;
+
+  const dim = Boolean(query) && !`${s.name} ${s.faculty ?? ""}`.toLowerCase().includes(query);
+  const isSel = s.id === selectedId;
+  const color = colorOf(s, colorBy);
+  const isStarted = s.status !== "not_started";
+
+  return (
+    <g
+      style={{ cursor: "pointer" }}
+      onClick={() => onSelect(s.id)}
+      opacity={dim ? 0.2 : 1}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          onSelect(s.id);
+        }
+      }}
+    >
+      <circle cx={cx} cy={cy} r={12} fill="transparent" />
+      {(isStarted || isSel) && (
+        <circle
+          cx={cx}
+          cy={cy}
+          r={9}
+          fill="none"
+          stroke={isSel ? "#0F172A" : color}
+          strokeWidth={isSel ? 2 : 1.5}
+        />
+      )}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={isStarted || isSel ? 5 : 3.5}
+        fill={color}
+        fillOpacity={0.9}
+      />
+    </g>
+  );
 };
 
 function Empty({ children }: { children: React.ReactNode }) {
@@ -202,6 +257,19 @@ export function DashboardAnalytics({
         <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
       )}
     </button>
+  );
+
+  const renderScatterPoint = useCallback(
+    (props: CustomScatterPointProps) => (
+      <CustomScatterPoint
+        {...props}
+        query={q}
+        selectedId={selectedId}
+        colorBy={colorBy}
+        onSelect={setSelectedId}
+      />
+    ),
+    [q, selectedId, colorBy]
   );
 
   return (
@@ -342,45 +410,7 @@ export function DashboardAnalytics({
                       );
                     }}
                   />
-                  <Scatter
-                    data={points}
-                    shape={(props: CustomScatterPointProps) => {
-                      const s = props.payload;
-                      if (!s) return <g />;
-                      const cx = props.cx ?? 0;
-                      const cy = props.cy ?? 0;
-                      const dim = Boolean(q) && !`${s.name} ${s.faculty ?? ""}`.toLowerCase().includes(q);
-                      const isSel = s.id === selectedId;
-                      const color = colorOf(s, colorBy);
-                      const isStarted = s.status !== "not_started";
-                      return (
-                        <g
-                          style={{ cursor: "pointer" }}
-                          onClick={() => setSelectedId(s.id)}
-                          opacity={dim ? 0.2 : 1}
-                        >
-                          <circle cx={cx} cy={cy} r={12} fill="transparent" />
-                          {(isStarted || isSel) && (
-                            <circle
-                              cx={cx}
-                              cy={cy}
-                              r={9}
-                              fill="none"
-                              stroke={isSel ? "#0F172A" : color}
-                              strokeWidth={isSel ? 2 : 1.5}
-                            />
-                          )}
-                          <circle
-                            cx={cx}
-                            cy={cy}
-                            r={isStarted || isSel ? 5 : 3.5}
-                            fill={color}
-                            fillOpacity={0.9}
-                          />
-                        </g>
-                      );
-                    }}
-                  />
+                  <Scatter data={points} shape={renderScatterPoint} />
                 </ScatterChart>
               </ResponsiveContainer>
 
@@ -534,10 +564,10 @@ export function DashboardAnalytics({
                   stackId="a"
                   fill={COUNTRY_COLOR[c]}
                   cursor="pointer"
-                  onClick={(entry) => {
-                    const data = entry as { key?: string };
-                    if (data?.key) {
-                      router.push(`/schools?status=${data.key}&country=${c}`);
+                  onClick={(entry: any) => {
+                    const statusKey = entry?.key ?? entry?.payload?.key;
+                    if (statusKey) {
+                      router.push(`/schools?status=${statusKey}&country=${c}`);
                     }
                   }}
                 />
