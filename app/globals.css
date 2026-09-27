@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --background: #12151c;
-  --foreground: #e9e7de;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  color-scheme: light;
 }
 
 body {
@@ -20,19 +21,20 @@ h1, h2, h3 {
 }
 
 input, textarea, select {
-  background: #212836;
-  color: #e9e7de;
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
 }
 
-/* Dropdown popups are drawn by the browser; give them a solid dark surface even when the select itself is transparent. */
-select { color-scheme: dark; }
+/* Dropdown popups */
+select { color-scheme: light; }
 select option, select optgroup {
-  background-color: #212836;
-  color: #e9e7de;
+  background-color: #ffffff;
+  color: #0f172a;
 }
 
 input::placeholder, textarea::placeholder {
-  color: #6f7686;
+  color: #94a3b8;
 }
 
 @layer utilities {
@@ -43,9 +45,9 @@ input::placeholder, textarea::placeholder {
 
 .hero-glow {
   background:
-    radial-gradient(90% 120% at 0% 0%, rgba(201, 138, 62, 0.13), transparent 60%),
-    radial-gradient(70% 90% at 100% 100%, rgba(92, 174, 151, 0.07), transparent 60%),
-    #1a1f29;
+    radial-gradient(90% 120% at 0% 0%, rgba(37, 99, 235, 0.08), transparent 60%),
+    radial-gradient(70% 90% at 100% 100%, rgba(2, 132, 199, 0.05), transparent 60%),
+    #ffffff;
 }
 
 @keyframes rise {
@@ -60,14 +62,14 @@ input::placeholder, textarea::placeholder {
 details > summary { list-style: none; }
 details > summary::-webkit-details-marker { display: none; }
 
-/* Resume builder: a light "paper" preview that is also what gets printed. */
+/* Resume builder */
 .resume-paper { background: #fff; color: #111; padding: 28px 32px; border-radius: 6px; font-family: Georgia, "Times New Roman", serif; font-size: 12.5px; line-height: 1.4; }
 .resume-paper h1 { font-family: inherit; font-size: 24px; text-align: center; font-weight: 700; margin: 0; color: #111; }
 .resume-paper .contact { text-align: center; font-size: 11.5px; margin: 2px 0 0; color: #333; }
 .resume-paper h2 { font-family: inherit; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #111; margin: 0 0 3px; color: #111; }
 .resume-paper ul { margin: 2px 0 0 16px; list-style: disc; padding: 0; }
 .resume-paper p { margin: 0; }
-/* Only pages that contain a resume switch to "print just the resume"; every other page prints normally. */
+
 @media print {
   body:has(.resume-print) * { visibility: hidden; }
   body:has(.resume-print) .resume-print, body:has(.resume-print) .resume-print * { visibility: visible; }
@@ -76,20 +78,20 @@ details > summary::-webkit-details-marker { display: none; }
   @page { margin: 16mm; }
 }
 
-/* The writing page: paper on the dark app. */
+/* The writing page: clean paper surface */
 .paper {
-  background: #f6f2e7;
-  color: #1d2027;
-  border: 1px solid #d8d2c2;
-  border-radius: 4px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25), 0 14px 30px -18px rgba(0, 0, 0, 0.7);
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 10px 25px -10px rgba(0, 0, 0, 0.08);
 }
 .paper-page { padding: 1.25rem 1.25rem 2rem; }
 @media (min-width: 640px) { .paper-page { padding: 2.25rem 2.75rem 3rem; } }
 textarea.paper { padding: 1.25rem; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.65; }
-textarea.paper::placeholder { color: #8c8674; }
+textarea.paper::placeholder { color: #94a3b8; }
 
-.paper-content { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; line-height: 1.7; color: #1d2027; overflow-wrap: anywhere; }
+.paper-content { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; line-height: 1.7; color: #0f172a; overflow-wrap: anywhere; }
 .paper-content:focus, .paper-content .ProseMirror:focus { outline: none; }
 .paper-content p { margin: 0 0 0.9em; }
 .paper-content h1, .paper-content h2, .paper-content h3 { font-family: Georgia, 'Times New Roman', serif; font-weight: 700; line-height: 1.25; margin: 1.1em 0 0.4em; letter-spacing: 0; }
@@ -100,13 +102,13 @@ textarea.paper::placeholder { color: #8c8674; }
 .paper-content ul { list-style: disc; }
 .paper-content ol { list-style: decimal; }
 .paper-content li > p { margin: 0 0 0.3em; }
-.paper-content blockquote { margin: 0 0 0.9em; padding-left: 1em; border-left: 3px solid #cbb98d; color: #4b4f5a; }
-.paper-content hr { border: 0; border-top: 1px solid #cfc8b4; margin: 1.2em 0; }
-.paper-content a { color: #8a5a1c; text-decoration: underline; }
-.paper-content .ProseMirror-selectednode { outline: 2px solid #c98a3e; }
-.paper-content p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; pointer-events: none; color: #8c8674; }
+.paper-content blockquote { margin: 0 0 0.9em; padding-left: 1em; border-left: 3px solid #2563eb; color: #475569; }
+.paper-content hr { border: 0; border-top: 1px solid #e2e8f0; margin: 1.2em 0; }
+.paper-content a { color: #2563eb; text-decoration: underline; }
+.paper-content .ProseMirror-selectednode { outline: 2px solid #2563eb; }
+.paper-content p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; pointer-events: none; color: #94a3b8; }
 
-/* Printing a statement: only the page text, in a plain document style. Other pages print normally. */
+/* Printing a statement */
 @media print {
   body:has(.statement-print) * { visibility: hidden; }
   body:has(.statement-print) .statement-print, body:has(.statement-print) .statement-print * { visibility: visible; }
@@ -115,25 +117,23 @@ textarea.paper::placeholder { color: #8c8674; }
   .statement-print .paper-content a { color: #000; text-decoration: none; }
 }
 
-/* Focus mode hides the fixed phone navigation so the writing overlay covers the whole screen. */
+/* Focus mode */
 body.writing-focus nav.fixed { display: none; }
 
-/* Saved rich text shown straight on the dark app surface (notes, journal details): light text in the app's own font. */
-.paper-content.on-dark { font-family: inherit; font-size: inherit; line-height: 1.55; color: #e9e7de; }
-.paper-content.on-dark h1, .paper-content.on-dark h2, .paper-content.on-dark h3 { font-family: inherit; font-size: 1em; color: #e9e7de; margin: 0.8em 0 0.3em; }
+/* Saved rich text on app surface */
+.paper-content.on-dark { font-family: inherit; font-size: inherit; line-height: 1.55; color: #0f172a; }
+.paper-content.on-dark h1, .paper-content.on-dark h2, .paper-content.on-dark h3 { font-family: inherit; font-size: 1em; color: #0f172a; margin: 0.8em 0 0.3em; }
 .paper-content.on-dark p { margin: 0 0 0.6em; }
 .paper-content.on-dark p:last-child { margin-bottom: 0; }
-.paper-content.on-dark blockquote { color: #9aa2b1; border-left-color: #4a5468; }
-.paper-content.on-dark hr { border-top-color: #313a4a; }
-.paper-content.on-dark a { color: #d99456; }
+.paper-content.on-dark blockquote { color: #475569; border-left-color: #cbd5e1; }
+.paper-content.on-dark hr { border-top-color: #e2e8f0; }
+.paper-content.on-dark a { color: #2563eb; }
 
-/* Touch: on phones every button and select is at least 40px tall. Toolbar controls keep their own size. */
+/* Mobile Touch Controls */
 @media (max-width: 640px) {
   main button:not([data-tb]), main select:not([data-tb]) { min-height: 2.5rem; }
-  main button[aria-label^="Remove"], main button[aria-label^="Delete"], main button[aria-label^="Delete"] { min-width: 2.5rem; }
+  main button[aria-label^="Remove"], main button[aria-label^="Delete"] { min-width: 2.5rem; }
 }
-/* Scrollbars follow the dark theme instead of showing as white strips. */
-:root { color-scheme: dark; }
 
-/* A clear focus ring for keyboard users on every control. */
-:where(a, button, select, input, textarea, summary):focus-visible { outline: 2px solid #c98a3e; outline-offset: 2px; }
+/* Clear focus ring with blue accent */
+:where(a, button, select, input, textarea, summary):focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
