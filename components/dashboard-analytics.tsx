@@ -300,9 +300,10 @@ export function DashboardAnalytics({
                   />
                   <Tooltip
                     cursor={{ strokeDasharray: "3 3", stroke: "#94A3B8" }}
-                    content={({ active, payload }: { active?: boolean; payload?: Array<{ payload: AnalyticsSchool }> }) => {
+                    content={(props: any) => {
+                      const { active, payload } = props;
                       if (!active || !payload?.length) return null;
-                      const s = payload[0].payload;
+                      const s: AnalyticsSchool = payload[0].payload;
                       return (
                         <div style={{ ...tipStyle, padding: "10px 12px", maxWidth: 250 }}>
                           <div style={{ fontWeight: 700, fontSize: "12px", color: "#0F172A" }}>{s.name}</div>
