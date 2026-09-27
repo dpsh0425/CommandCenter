@@ -126,8 +126,8 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
   const momentumEmpty = weekly.every((w) => w.tasks === 0 && w.wins === 0);
 
   return (
-    <section className="flex flex-col gap-6 font-sans text-slate-900 bg-slate-50 p-6 rounded-xl border border-slate-200/80 shadow-sm">
-      {/* SAP Style Navigation Header */}
+    <section className="flex flex-col gap-6 font-sans text-slate-900 bg-slate-100 p-6 rounded-xl border border-slate-200/80 shadow-sm">
+      {/* Header Tabs */}
       <div className="flex items-center justify-between border-b border-slate-200 pb-0 bg-white px-5 pt-3.5 rounded-t-lg border-t border-x border-slate-200">
         <div className="flex gap-8">
           {tabBtn("fit", "Fit map")}
@@ -137,7 +137,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
         </div>
       </div>
 
-      {/* Structured Filter Bar */}
+      {/* Filter Toolbar */}
       {tab !== "momentum" && (
         <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-white border border-slate-200 text-sm shadow-sm">
           <select
