@@ -4,20 +4,45 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  BarChart, Bar, Legend,
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  BarChart,
+  Bar,
+  Legend,
 } from "recharts";
 
 export type AnalyticsSchool = {
-  id: string; name: string; country: string; status: string;
-  csranking_nlp_rank: number | null; composite_score: number | null; verified_fit: boolean;
-  faculty: string | null; fit_note: string | null;
+  id: string;
+  name: string;
+  country: string;
+  status: string;
+  csranking_nlp_rank: number | null;
+  composite_score: number | null;
+  verified_fit: boolean;
+  faculty: string | null;
+  fit_note: string | null;
 };
+
 export type WeekPoint = { week: string; tasks: number; wins: number };
 
-const STATUSES = ["not_started", "researching", "contacted", "replied", "submitted", "interview", "accepted", "rejected"];
+const STATUSES = [
+  "not_started",
+  "researching",
+  "contacted",
+  "replied",
+  "submitted",
+  "interview",
+  "accepted",
+  "rejected",
+];
+
 const STATUS_COLOR: Record<string, string> = {
-  not_started: "#64748B",
+  not_started: "#94A3B8",
   researching: "#0284C7",
   contacted: "#2563EB",
   replied: "#1D4ED8",
@@ -26,19 +51,22 @@ const STATUS_COLOR: Record<string, string> = {
   accepted: "#059669",
   rejected: "#DC2626",
 };
+
 const COUNTRY_COLOR: Record<string, string> = {
   USA: "#2563EB",
   Canada: "#0284C7",
   Australia: "#1E3A8A",
 };
+
 const COUNTRIES = ["USA", "Canada", "Australia"];
-const AXIS = { fill: "#475569" };
+const AXIS = { fill: "#64748B" };
 const GRID = "#E2E8F0";
+
 const tipStyle = {
   background: "#FFFFFF",
-  border: "1px solid #CBD5E1",
+  border: "1px solid #E2E8F0",
   color: "#0F172A",
-  borderRadius: "6px",
+  borderRadius: "8px",
   fontSize: "12px",
   boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
 };
@@ -47,17 +75,29 @@ type Tab = "fit" | "pipeline" | "scores" | "momentum";
 type ColorBy = "fit" | "status" | "country";
 
 const colorOf = (s: AnalyticsSchool, by: ColorBy) =>
-  by === "fit" ? (s.verified_fit ? "#2563EB" : "#D97706") : by === "status" ? STATUS_COLOR[s.status] : COUNTRY_COLOR[s.country] ?? "#64748B";
+  by === "fit"
+    ? s.verified_fit
+      ? "#2563EB"
+      : "#D97706"
+    : by === "status"
+    ? STATUS_COLOR[s.status]
+    : COUNTRY_COLOR[s.country] ?? "#64748B";
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 rounded-lg border border-slate-200 bg-white text-center shadow-sm">
-      <p className="text-sm text-slate-500 font-sans">{children}</p>
+    <div className="flex flex-col items-center justify-center py-16 px-4 rounded-xl border border-slate-200 bg-white text-center shadow-sm">
+      <p className="text-xs text-slate-500 font-sans font-medium">{children}</p>
     </div>
   );
 }
 
-export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsSchool[]; weekly: WeekPoint[] }) {
+export function DashboardAnalytics({
+  schools,
+  weekly,
+}: {
+  schools: AnalyticsSchool[];
+  weekly: WeekPoint[];
+}) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("fit");
   const [country, setCountry] = useState<string>("all");
@@ -68,29 +108,50 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
   const [showNotStarted, setShowNotStarted] = useState(false);
 
   const filtered = useMemo(
-    () => schools.filter((s) => (country === "all" || s.country === country) && (!verifiedOnly || s.verified_fit)),
+    () =>
+      schools.filter(
+        (s) =>
+          (country === "all" || s.country === country) &&
+          (!verifiedOnly || s.verified_fit)
+      ),
     [schools, country, verifiedOnly]
   );
+
   const q = query.trim().toLowerCase();
-  const matches = (s: AnalyticsSchool) => !q || `${s.name} ${s.faculty ?? ""}`.toLowerCase().includes(q);
+  const matches = (s: AnalyticsSchool) =>
+    !q || `${s.name} ${s.faculty ?? ""}`.toLowerCase().includes(q);
+
   const selected = filtered.find((s) => s.id === selectedId) ?? null;
 
   const points = useMemo(
-    () => filtered.filter((s) => s.csranking_nlp_rank != null && s.composite_score != null),
+    () =>
+      filtered.filter(
+        (s) => s.csranking_nlp_rank != null && s.composite_score != null
+      ),
     [filtered]
   );
+
   const shortlist = useMemo(
-    () => [...filtered].filter(matches).sort((a, b) => (b.composite_score ?? -1) - (a.composite_score ?? -1)).slice(0, 8),
+    () =>
+      [...filtered]
+        .filter(matches)
+        .sort((a, b) => (b.composite_score ?? -1) - (a.composite_score ?? -1))
+        .slice(0, 8),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [filtered, q]
   );
 
   const started = filtered.filter((s) => s.status !== "not_started").length;
+
   const pipelineData = useMemo(() => {
     const stages = showNotStarted || started === 0 ? STATUSES : STATUSES.slice(1);
     return stages.map((st) => {
-      const row: Record<string, any> = { status: st.replace("_", " "), key: st };
-      for (const c of COUNTRIES) row[c] = filtered.filter((s) => s.status === st && s.country === c).length;
+      const row: Record<string, unknown> = { status: st.replace("_", " "), key: st };
+      for (const c of COUNTRIES) {
+        row[c] = filtered.filter(
+          (s) => s.status === st && s.country === c
+        ).length;
+      }
       return row;
     });
   }, [filtered, showNotStarted, started]);
@@ -98,7 +159,12 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
   const histogram = useMemo(() => {
     return Array.from({ length: 10 }, (_, i) => {
       const lo = i * 10;
-      const inBucket = filtered.filter((s) => s.composite_score != null && s.composite_score >= lo && (i === 9 ? s.composite_score <= 100 : s.composite_score < lo + 10));
+      const inBucket = filtered.filter(
+        (s) =>
+          s.composite_score != null &&
+          s.composite_score >= lo &&
+          (i === 9 ? s.composite_score <= 100 : s.composite_score < lo + 10)
+      );
       return {
         bucket: `${lo}-${lo + 10}`,
         verified: inBucket.filter((s) => s.verified_fit).length,
@@ -107,28 +173,28 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
     });
   }, [filtered]);
 
+  const momentumEmpty = weekly.every((w) => w.tasks === 0 && w.wins === 0);
+
   const tabBtn = (t: Tab, label: string) => (
     <button
       key={t}
       type="button"
       onClick={() => setTab(t)}
-      className={`relative pb-3 text-sm font-semibold transition-colors ${
-        tab === t ? "text-blue-700" : "text-slate-600 hover:text-blue-600"
+      className={`relative pb-3 text-xs font-bold transition-colors ${
+        tab === t ? "text-blue-600" : "text-slate-500 hover:text-slate-900"
       }`}
     >
       {label}
       {tab === t && (
-        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
       )}
     </button>
   );
 
-  const momentumEmpty = weekly.every((w) => w.tasks === 0 && w.wins === 0);
-
   return (
-    <section className="flex flex-col gap-6 font-sans text-slate-900 bg-slate-100 p-6 rounded-xl border border-slate-200/80 shadow-sm">
-      {/* Header Tabs */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-0 bg-white px-5 pt-3.5 rounded-t-lg border-t border-x border-slate-200">
+    <section className="flex flex-col gap-5 font-sans text-slate-900">
+      {/* Navigation Tabs Header */}
+      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 pt-3.5 rounded-xl border shadow-sm">
         <div className="flex gap-8">
           {tabBtn("fit", "Fit map")}
           {tabBtn("pipeline", "Pipeline")}
@@ -139,11 +205,11 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
 
       {/* Filter Toolbar */}
       {tab !== "momentum" && (
-        <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-white border border-slate-200 text-sm shadow-sm">
+        <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-white border border-slate-200 text-xs shadow-sm">
           <select
             value={country}
             onChange={(e) => setCountry(e.target.value)}
-            className="rounded px-3 py-1.5 bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 cursor-pointer text-xs font-medium"
+            className="rounded-lg px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 cursor-pointer font-medium"
             aria-label="Country"
           >
             <option value="all">All countries</option>
@@ -152,7 +218,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
             ))}
           </select>
 
-          <label className="flex items-center gap-2 text-xs font-medium text-slate-700 hover:text-slate-900 cursor-pointer select-none px-2.5 py-1.5 rounded hover:bg-slate-100 transition-colors">
+          <label className="flex items-center gap-2 font-medium text-slate-700 hover:text-slate-900 cursor-pointer select-none px-2 py-1 rounded-md hover:bg-slate-50 transition-colors">
             <input
               type="checkbox"
               checked={verifiedOnly}
@@ -168,13 +234,13 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Highlight a school or professor..."
-                className="rounded px-3 py-1.5 bg-slate-50 border border-slate-300 text-slate-800 text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 w-56 max-w-full"
+                placeholder="Highlight school or professor..."
+                className="rounded-lg px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 w-56"
               />
               <select
                 value={colorBy}
                 onChange={(e) => setColorBy(e.target.value as ColorBy)}
-                className="rounded px-3 py-1.5 bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 cursor-pointer text-xs font-medium"
+                className="rounded-lg px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 cursor-pointer font-medium"
                 aria-label="Colour by"
               >
                 <option value="fit">Colour by fit</option>
@@ -184,7 +250,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
             </>
           )}
 
-          <span className="ml-auto text-xs text-slate-500 font-mono font-medium">
+          <span className="ml-auto text-slate-500 font-mono font-medium">
             {filtered.length} of {schools.length}
           </span>
         </div>
@@ -195,8 +261,8 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
         points.length === 0 ? (
           <Empty>No schools match these filters.</Empty>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start">
-            <div className="flex flex-col gap-3 min-w-0 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start">
+            <div className="flex flex-col gap-3 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
               <ResponsiveContainer width="100%" height={360}>
                 <ScatterChart margin={{ top: 12, right: 16, bottom: 28, left: 8 }}>
                   <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
@@ -207,7 +273,13 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
                     fontSize={11}
                     tick={AXIS}
                     stroke={GRID}
-                    label={{ value: "CSRankings NLP rank (lower = stronger)", position: "insideBottom", offset: -18, fill: "#475569", fontSize: 11 }}
+                    label={{
+                      value: "CSRankings NLP rank (lower = stronger)",
+                      position: "insideBottom",
+                      offset: -18,
+                      fill: "#64748B",
+                      fontSize: 11,
+                    }}
                   />
                   <YAxis
                     type="number"
@@ -218,18 +290,24 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
                     tick={AXIS}
                     stroke={GRID}
                     width={44}
-                    label={{ value: "Composite score", angle: -90, position: "insideLeft", fill: "#475569", fontSize: 11 }}
+                    label={{
+                      value: "Composite score",
+                      angle: -90,
+                      position: "insideLeft",
+                      fill: "#64748B",
+                      fontSize: 11,
+                    }}
                   />
                   <Tooltip
                     cursor={{ strokeDasharray: "3 3", stroke: "#94A3B8" }}
-                    content={({ active, payload }: any) => {
+                    content={({ active, payload }: { active?: boolean; payload?: Array<{ payload: AnalyticsSchool }> }) => {
                       if (!active || !payload?.length) return null;
-                      const s: AnalyticsSchool = payload[0].payload;
+                      const s = payload[0].payload;
                       return (
                         <div style={{ ...tipStyle, padding: "10px 12px", maxWidth: 250 }}>
-                          <div style={{ fontWeight: 600, fontSize: "13px", color: "#0F172A" }}>{s.name}</div>
-                          <div style={{ color: "#475569", marginTop: 2 }}>{s.country} · {s.status.replace("_", " ")}</div>
-                          <div style={{ fontFamily: "monospace", marginTop: 6, fontSize: "11px", color: "#1E3A8A", fontWeight: 600 }}>
+                          <div style={{ fontWeight: 700, fontSize: "12px", color: "#0F172A" }}>{s.name}</div>
+                          <div style={{ color: "#64748B", marginTop: 2 }}>{s.country} · {s.status.replace("_", " ")}</div>
+                          <div style={{ fontFamily: "monospace", marginTop: 6, fontSize: "11px", color: "#2563EB", fontWeight: 700 }}>
                             score {s.composite_score?.toFixed(1)} · rank #{s.csranking_nlp_rank}
                           </div>
                         </div>
@@ -238,19 +316,19 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
                   />
                   <Scatter
                     data={points}
-                    shape={(p: any) => {
-                      const s: AnalyticsSchool = p.payload;
+                    shape={(p: { cx: number; cy: number; payload: AnalyticsSchool }) => {
+                      const s = p.payload;
                       const dim = !matches(s);
                       const isSel = s.id === selectedId;
                       const color = colorOf(s, colorBy);
-                      const started = s.status !== "not_started";
+                      const isStarted = s.status !== "not_started";
                       return (
                         <g style={{ cursor: "pointer" }} onClick={() => setSelectedId(s.id)} opacity={dim ? 0.2 : 1}>
                           <circle cx={p.cx} cy={p.cy} r={12} fill="transparent" />
-                          {(started || isSel) && (
+                          {(isStarted || isSel) && (
                             <circle cx={p.cx} cy={p.cy} r={9} fill="none" stroke={isSel ? "#0F172A" : color} strokeWidth={isSel ? 2 : 1.5} />
                           )}
-                          <circle cx={p.cx} cy={p.cy} r={started || isSel ? 5 : 3.5} fill={color} fillOpacity={0.9} />
+                          <circle cx={p.cx} cy={p.cy} r={isStarted || isSel ? 5 : 3.5} fill={color} fillOpacity={0.9} />
                         </g>
                       );
                     }}
@@ -258,7 +336,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
                 </ScatterChart>
               </ResponsiveContainer>
 
-              <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-600 pt-3 border-t border-slate-200">
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-600 pt-3 border-t border-slate-100">
                 {colorBy === "fit" && (
                   <>
                     <span className="flex items-center gap-1.5 font-medium"><i className="w-2.5 h-2.5 rounded-full" style={{ background: "#2563EB" }} />verified fit</span>
@@ -271,15 +349,15 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
                 {colorBy === "country" && COUNTRIES.map((c) => (
                   <span key={c} className="flex items-center gap-1.5 font-medium"><i className="w-2.5 h-2.5 rounded-full" style={{ background: COUNTRY_COLOR[c] }} />{c}</span>
                 ))}
-                <span className="ml-auto text-slate-500 font-normal">ringed = in progress · top right = strongest</span>
+                <span className="ml-auto text-slate-400 font-normal">ringed = in progress</span>
               </div>
             </div>
 
-            <div className="flex flex-col gap-5 min-w-0">
+            <div className="flex flex-col gap-4 min-w-0">
               {selected ? (
-                <div className="flex flex-col gap-3 p-4 rounded-lg bg-white border-l-4 border-l-blue-600 border border-slate-200 shadow-sm">
+                <div className="flex flex-col gap-3 p-5 rounded-xl bg-white border-l-4 border-l-blue-600 border border-slate-200 shadow-sm">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-lg text-slate-900 leading-tight">{selected.name}</h3>
+                    <h3 className="font-bold text-sm text-slate-900 leading-snug">{selected.name}</h3>
                     <button
                       onClick={() => setSelectedId(null)}
                       className="text-xs text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100"
@@ -288,35 +366,35 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
                     </button>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                    <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold border border-slate-200">{selected.country}</span>
+                    <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold border border-slate-200 text-[10px]">{selected.country}</span>
                     <span>·</span>
                     <span className="capitalize font-medium">{selected.status.replace("_", " ")}</span>
                     <span>·</span>
-                    <span className={`font-semibold ${selected.verified_fit ? "text-blue-700" : "text-amber-700"}`}>
+                    <span className={`font-semibold ${selected.verified_fit ? "text-blue-600" : "text-amber-600"}`}>
                       {selected.verified_fit ? "Verified Fit" : "Heuristic"}
                     </span>
                   </div>
-                  <p className="text-xs font-mono text-slate-800 bg-slate-50 p-2.5 rounded border border-slate-200 font-medium">
+                  <p className="text-xs font-mono text-slate-800 bg-slate-50 p-2.5 rounded-lg border border-slate-200 font-semibold">
                     score {selected.composite_score?.toFixed(1) ?? "—"} · NLP rank #{selected.csranking_nlp_rank ?? "?"}
                   </p>
                   {selected.faculty && <p className="text-xs font-medium text-slate-800">{selected.faculty}</p>}
                   {selected.fit_note && <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{selected.fit_note}</p>}
                   <Link
                     href={`/schools/${selected.id}`}
-                    className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-800 hover:underline"
+                    className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800"
                   >
                     Open school →
                   </Link>
                 </div>
               ) : (
-                <div className="p-4 rounded-lg border border-dashed border-slate-300 bg-white text-center text-xs text-slate-500 font-medium">
-                  Click a point on the scatter map or a school below to see details here.
+                <div className="p-5 rounded-xl border border-dashed border-slate-300 bg-white text-center text-xs text-slate-500 font-medium">
+                  Click a point on the map to inspect details.
                 </div>
               )}
 
-              <div className="p-4 rounded-lg bg-white border border-slate-200 shadow-sm">
-                <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-slate-700 mb-3 border-b border-slate-200 pb-2">
-                  Top matches{q ? " for your search" : ""}
+              <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 pb-2 border-b border-slate-100">
+                  Top matches{q ? " for search" : ""}
                 </h3>
                 {shortlist.length === 0 ? (
                   <p className="text-xs text-slate-500 py-2">Nothing matches.</p>
@@ -326,13 +404,13 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
                       <li key={s.id}>
                         <button
                           onClick={() => setSelectedId(s.id)}
-                          className={`w-full flex items-center gap-3 py-2 px-2 rounded-md text-left text-xs transition-colors hover:bg-slate-50 ${
-                            s.id === selectedId ? "bg-blue-50/80 text-blue-900 font-semibold" : "text-slate-700"
+                          className={`w-full flex items-center gap-2.5 py-2 px-2 rounded-lg text-left text-xs transition-colors hover:bg-slate-50 ${
+                            s.id === selectedId ? "bg-blue-50 text-blue-900 font-bold" : "text-slate-700"
                           }`}
                         >
                           <span className="font-mono text-slate-400 font-medium w-4">{i + 1}</span>
                           <i className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: colorOf(s, colorBy) }} />
-                          <span className="flex-1 truncate font-sans">{s.name}</span>
+                          <span className="flex-1 truncate">{s.name}</span>
                           <span className="font-mono text-slate-500 font-medium">{s.composite_score?.toFixed(1) ?? "—"}</span>
                         </button>
                       </li>
@@ -347,7 +425,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
 
       {/* Tab: Pipeline */}
       {tab === "pipeline" && (
-        <div className="flex flex-col gap-4 p-4 rounded-lg bg-white border border-slate-200 shadow-sm">
+        <div className="flex flex-col gap-4 p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
           {started > 0 && (
             <label className="text-xs font-medium text-slate-600 flex items-center gap-2 select-none cursor-pointer">
               <input
@@ -364,7 +442,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
               <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="status" fontSize={11} tick={AXIS} stroke={GRID} interval={0} />
               <YAxis allowDecimals={false} fontSize={11} tick={AXIS} stroke={GRID} width={32} />
-              <Tooltip contentStyle={tipStyle} cursor={{ fill: "#F1F5F9" }} />
+              <Tooltip contentStyle={tipStyle} cursor={{ fill: "#F8FAFC" }} />
               <Legend wrapperStyle={{ fontSize: 11, paddingTop: "8px" }} />
               {COUNTRIES.map((c) => (
                 <Bar
@@ -373,7 +451,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
                   stackId="a"
                   fill={COUNTRY_COLOR[c]}
                   cursor="pointer"
-                  onClick={(d: any) => router.push(`/schools?status=${d.key}&country=${c}`)}
+                  onClick={(d: { key?: string }) => d?.key && router.push(`/schools?status=${d.key}&country=${c}`)}
                 />
               ))}
             </BarChart>
@@ -383,7 +461,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
 
       {/* Tab: Scores */}
       {tab === "scores" && (
-        <div className="flex flex-col gap-4 p-4 rounded-lg bg-white border border-slate-200 shadow-sm">
+        <div className="flex flex-col gap-4 p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
           {filtered.length === 0 ? (
             <Empty>No schools match these filters.</Empty>
           ) : (
@@ -395,11 +473,11 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
                   fontSize={11}
                   tick={AXIS}
                   stroke={GRID}
-                  label={{ value: "Composite score range", position: "insideBottom", offset: -4, fill: "#475569", fontSize: 11 }}
+                  label={{ value: "Composite score range", position: "insideBottom", offset: -4, fill: "#64748B", fontSize: 11 }}
                   height={40}
                 />
                 <YAxis allowDecimals={false} fontSize={11} tick={AXIS} stroke={GRID} width={32} />
-                <Tooltip contentStyle={tipStyle} cursor={{ fill: "#F1F5F9" }} />
+                <Tooltip contentStyle={tipStyle} cursor={{ fill: "#F8FAFC" }} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: "8px" }} />
                 <Bar dataKey="verified" name="verified fit" stackId="s" fill="#2563EB" />
                 <Bar dataKey="heuristic" name="heuristic" stackId="s" fill="#D97706" />
@@ -411,7 +489,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
 
       {/* Tab: Momentum */}
       {tab === "momentum" && (
-        <div className="flex flex-col gap-4 p-4 rounded-lg bg-white border border-slate-200 shadow-sm">
+        <div className="flex flex-col gap-4 p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
           {momentumEmpty ? (
             <Empty>Nothing completed in the last 8 weeks yet.</Empty>
           ) : (
@@ -420,7 +498,7 @@ export function DashboardAnalytics({ schools, weekly }: { schools: AnalyticsScho
                 <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="week" fontSize={11} tick={AXIS} stroke={GRID} />
                 <YAxis allowDecimals={false} fontSize={11} tick={AXIS} stroke={GRID} width={32} />
-                <Tooltip contentStyle={tipStyle} cursor={{ fill: "#F1F5F9" }} />
+                <Tooltip contentStyle={tipStyle} cursor={{ fill: "#F8FAFC" }} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: "8px" }} />
                 <Bar dataKey="tasks" name="tasks completed" fill="#D97706" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="wins" name="application wins" fill="#2563EB" radius={[4, 4, 0, 0]} />
