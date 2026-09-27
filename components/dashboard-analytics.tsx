@@ -14,6 +14,7 @@ import {
   BarChart,
   Bar,
   Legend,
+  TooltipProps,
 } from "recharts";
 
 export type AnalyticsSchool = {
@@ -73,6 +74,12 @@ const tipStyle = {
 
 type Tab = "fit" | "pipeline" | "scores" | "momentum";
 type ColorBy = "fit" | "status" | "country";
+
+interface CustomScatterPointProps {
+  cx?: number;
+  cy?: number;
+  payload?: AnalyticsSchool;
+}
 
 const colorOf = (s: AnalyticsSchool, by: ColorBy) =>
   by === "fit"
@@ -300,10 +307,10 @@ export function DashboardAnalytics({
                   />
                   <Tooltip
                     cursor={{ strokeDasharray: "3 3", stroke: "#94A3B8" }}
-                    content={(props: any) => {
+                    content={(props: TooltipProps<number, string>) => {
                       const { active, payload } = props;
                       if (!active || !payload?.length) return null;
-                      const s: AnalyticsSchool = payload[0].payload;
+                      const s = payload[0].payload as AnalyticsSchool;
                       return (
                         <div style={{ ...tipStyle, padding: "10px 12px", maxWidth: 250 }}>
                           <div style={{ fontWeight: 700, fontSize: "12px", color: "#0F172A" }}>{s.name}</div>
@@ -317,10 +324,11 @@ export function DashboardAnalytics({
                   />
                   <Scatter
                     data={points}
-                    shape={(p: any) => {
-                      const s: AnalyticsSchool = p.payload;
-                      const cx = p.cx ?? 0;
-                      const cy = p.cy ?? 0;
+                    shape={(props: CustomScatterPointProps) => {
+                      const s = props.payload;
+                      if (!s) return null;
+                      const cx = props.cx ?? 0;
+                      const cy = props.cy ?? 0;
                       const dim = !matches(s);
                       const isSel = s.id === selectedId;
                       const color = colorOf(s, colorBy);
@@ -454,7 +462,12 @@ export function DashboardAnalytics({
                   stackId="a"
                   fill={COUNTRY_COLOR[c]}
                   cursor="pointer"
-                  onClick={(d: { key?: string }) => d?.key && router.push(`/schools?status=${d.key}&country=${c}`)}
+                  onClick={(entry) => {
+                    const data = entry as unknown as { key?: string };
+                    if (data?.key) {
+                      router.push(`/schools?status=${data.key}&country=${c}`);
+                    }
+                  }}
                 />
               ))}
             </BarChart>
