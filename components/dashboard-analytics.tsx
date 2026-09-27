@@ -43,7 +43,7 @@ const STATUSES = [
 
 const STATUS_COLOR: Record<string, string> = {
   not_started: "#94A3B8",
-  researching: "#0284C7",
+  researching: "#38BDF8",
   contacted: "#2563EB",
   replied: "#1D4ED8",
   submitted: "#1E3A8A",
@@ -55,12 +55,12 @@ const STATUS_COLOR: Record<string, string> = {
 const COUNTRY_COLOR: Record<string, string> = {
   USA: "#2563EB",
   Canada: "#0284C7",
-  Australia: "#1E3A8A",
+  Australia: "#4F46E5",
 };
 
 const COUNTRIES = ["USA", "Canada", "Australia"];
-const AXIS = { fill: "#64748B" };
-const GRID = "#E2E8F0";
+const AXIS_COLOR = "#64748B";
+const GRID_COLOR = "#E2E8F0";
 
 const tipStyle: React.CSSProperties = {
   background: "#FFFFFF",
@@ -68,7 +68,8 @@ const tipStyle: React.CSSProperties = {
   color: "#0F172A",
   borderRadius: "8px",
   fontSize: "12px",
-  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+  boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+  padding: "10px 12px",
 };
 
 type Tab = "fit" | "pipeline" | "scores" | "momentum";
@@ -78,10 +79,11 @@ interface CustomScatterPointProps {
   cx?: number;
   cy?: number;
   payload?: AnalyticsSchool;
-  query: string;
-  selectedId: string | null;
-  colorBy: ColorBy;
-  onSelect: (id: string) => void;
+  query?: string;
+  selectedId?: string | null;
+  colorBy?: ColorBy;
+  onSelect?: (id: string) => void;
+  [key: string]: any;
 }
 
 const colorOf = (s: AnalyticsSchool, by: ColorBy) => {
@@ -98,9 +100,9 @@ const CustomScatterPoint: React.FC<CustomScatterPointProps> = ({
   cx = 0,
   cy = 0,
   payload: s,
-  query,
-  selectedId,
-  colorBy,
+  query = "",
+  selectedId = null,
+  colorBy = "fit",
   onSelect,
 }) => {
   if (!s) return <g />;
@@ -113,13 +115,13 @@ const CustomScatterPoint: React.FC<CustomScatterPointProps> = ({
   return (
     <g
       style={{ cursor: "pointer" }}
-      onClick={() => onSelect(s.id)}
+      onClick={() => onSelect?.(s.id)}
       opacity={dim ? 0.2 : 1}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
-          onSelect(s.id);
+          onSelect?.(s.id);
         }
       }}
     >
@@ -130,7 +132,7 @@ const CustomScatterPoint: React.FC<CustomScatterPointProps> = ({
           cy={cy}
           r={9}
           fill="none"
-          stroke={isSel ? "#0F172A" : color}
+          stroke={isSel ? "#1E40AF" : color}
           strokeWidth={isSel ? 2 : 1.5}
         />
       )}
@@ -248,7 +250,7 @@ export function DashboardAnalytics({
       key={t}
       type="button"
       onClick={() => setTab(t)}
-      className={`relative pb-3 text-xs font-bold transition-colors ${
+      className={`relative pb-3 text-xs font-semibold transition-colors ${
         tab === t ? "text-blue-600" : "text-slate-500 hover:text-slate-900"
       }`}
     >
@@ -260,7 +262,7 @@ export function DashboardAnalytics({
   );
 
   const renderScatterPoint = useCallback(
-    (props: CustomScatterPointProps) => (
+    (props: any) => (
       <CustomScatterPoint
         {...props}
         query={q}
@@ -273,7 +275,7 @@ export function DashboardAnalytics({
   );
 
   return (
-    <section className="flex flex-col gap-5 font-sans text-slate-900">
+    <section className="flex flex-col gap-4 font-sans text-slate-900">
       {/* Navigation Tabs Header */}
       <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 pt-3.5 rounded-xl border shadow-sm">
         <div className="flex gap-8">
@@ -333,7 +335,7 @@ export function DashboardAnalytics({
             </>
           )}
 
-          <span className="ml-auto text-slate-500 font-mono font-medium">
+          <span className="ml-auto text-slate-500 font-mono text-xs font-medium">
             {filtered.length} of {schools.length}
           </span>
         </div>
@@ -344,23 +346,23 @@ export function DashboardAnalytics({
         points.length === 0 ? (
           <Empty>No schools match these filters.</Empty>
         ) : (
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start">
             <div className="flex flex-col gap-3 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
               <ResponsiveContainer width="100%" height={360}>
                 <ScatterChart margin={{ top: 12, right: 16, bottom: 28, left: 8 }}>
-                  <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
+                  <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" />
                   <XAxis
                     type="number"
                     dataKey="csranking_nlp_rank"
                     reversed
                     fontSize={11}
-                    tick={AXIS}
-                    stroke={GRID}
+                    tick={{ fill: AXIS_COLOR }}
+                    stroke={GRID_COLOR}
                     label={{
                       value: "CSRankings NLP rank (lower = stronger)",
                       position: "insideBottom",
                       offset: -18,
-                      fill: "#64748B",
+                      fill: AXIS_COLOR,
                       fontSize: 11,
                     }}
                   />
@@ -370,14 +372,14 @@ export function DashboardAnalytics({
                     domain={[0, 105]}
                     ticks={[0, 25, 50, 75, 100]}
                     fontSize={11}
-                    tick={AXIS}
-                    stroke={GRID}
-                    width={44}
+                    tick={{ fill: AXIS_COLOR }}
+                    stroke={GRID_COLOR}
+                    width={40}
                     label={{
                       value: "Composite score",
                       angle: -90,
                       position: "insideLeft",
-                      fill: "#64748B",
+                      fill: AXIS_COLOR,
                       fontSize: 11,
                     }}
                   />
@@ -388,22 +390,12 @@ export function DashboardAnalytics({
                       const s = payload[0]?.payload as AnalyticsSchool | undefined;
                       if (!s) return null;
                       return (
-                        <div style={{ ...tipStyle, padding: "10px 12px", maxWidth: 250 }}>
-                          <div style={{ fontWeight: 700, fontSize: "12px", color: "#0F172A" }}>
-                            {s.name}
-                          </div>
-                          <div style={{ color: "#64748B", marginTop: 2 }}>
+                        <div style={tipStyle}>
+                          <div className="font-bold text-slate-900">{s.name}</div>
+                          <div className="text-slate-500 text-[11px] mt-0.5 capitalize">
                             {s.country} · {s.status.replace("_", " ")}
                           </div>
-                          <div
-                            style={{
-                              fontFamily: "monospace",
-                              marginTop: 6,
-                              fontSize: "11px",
-                              color: "#2563EB",
-                              fontWeight: 700,
-                            }}
-                          >
+                          <div className="font-mono text-blue-600 font-bold text-[11px] mt-1.5">
                             score {s.composite_score?.toFixed(1)} · rank #{s.csranking_nlp_rank}
                           </div>
                         </div>
@@ -418,11 +410,11 @@ export function DashboardAnalytics({
                 {colorBy === "fit" && (
                   <>
                     <span className="flex items-center gap-1.5 font-medium">
-                      <i className="w-2.5 h-2.5 rounded-full" style={{ background: "#2563EB" }} />
+                      <i className="w-2.5 h-2.5 rounded-full bg-blue-600" />
                       verified fit
                     </span>
                     <span className="flex items-center gap-1.5 font-medium">
-                      <i className="w-2.5 h-2.5 rounded-full" style={{ background: "#D97706" }} />
+                      <i className="w-2.5 h-2.5 rounded-full bg-amber-600" />
                       heuristic
                     </span>
                   </>
@@ -459,17 +451,13 @@ export function DashboardAnalytics({
                     </button>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                    <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold border border-slate-200 text-[10px]">
+                    <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold border border-blue-200 text-[10px]">
                       {selected.country}
                     </span>
                     <span>·</span>
                     <span className="capitalize font-medium">{selected.status.replace("_", " ")}</span>
                     <span>·</span>
-                    <span
-                      className={`font-semibold ${
-                        selected.verified_fit ? "text-blue-600" : "text-amber-600"
-                      }`}
-                    >
+                    <span className={`font-semibold ${selected.verified_fit ? "text-blue-600" : "text-amber-600"}`}>
                       {selected.verified_fit ? "Verified Fit" : "Heuristic"}
                     </span>
                   </div>
@@ -552,9 +540,9 @@ export function DashboardAnalytics({
           )}
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={pipelineData} margin={{ top: 12, right: 16, bottom: 12, left: 0 }}>
-              <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="status" fontSize={11} tick={AXIS} stroke={GRID} interval={0} />
-              <YAxis allowDecimals={false} fontSize={11} tick={AXIS} stroke={GRID} width={32} />
+              <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="status" fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} interval={0} />
+              <YAxis allowDecimals={false} fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} width={32} />
               <Tooltip contentStyle={tipStyle} cursor={{ fill: "#F8FAFC" }} />
               <Legend wrapperStyle={{ fontSize: 11, paddingTop: "8px" }} />
               {COUNTRIES.map((c) => (
@@ -585,22 +573,22 @@ export function DashboardAnalytics({
           ) : (
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={histogram} margin={{ top: 12, right: 16, bottom: 12, left: 0 }}>
-                <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="bucket"
                   fontSize={11}
-                  tick={AXIS}
-                  stroke={GRID}
+                  tick={{ fill: AXIS_COLOR }}
+                  stroke={GRID_COLOR}
                   label={{
                     value: "Composite score range",
                     position: "insideBottom",
                     offset: -4,
-                    fill: "#64748B",
+                    fill: AXIS_COLOR,
                     fontSize: 11,
                   }}
                   height={40}
                 />
-                <YAxis allowDecimals={false} fontSize={11} tick={AXIS} stroke={GRID} width={32} />
+                <YAxis allowDecimals={false} fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} width={32} />
                 <Tooltip contentStyle={tipStyle} cursor={{ fill: "#F8FAFC" }} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: "8px" }} />
                 <Bar dataKey="verified" name="verified fit" stackId="s" fill="#2563EB" />
@@ -619,9 +607,9 @@ export function DashboardAnalytics({
           ) : (
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={weekly} margin={{ top: 12, right: 16, bottom: 12, left: 0 }}>
-                <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="week" fontSize={11} tick={AXIS} stroke={GRID} />
-                <YAxis allowDecimals={false} fontSize={11} tick={AXIS} stroke={GRID} width={32} />
+                <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="week" fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} />
+                <YAxis allowDecimals={false} fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} width={32} />
                 <Tooltip contentStyle={tipStyle} cursor={{ fill: "#F8FAFC" }} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: "8px" }} />
                 <Bar dataKey="tasks" name="tasks completed" fill="#D97706" radius={[4, 4, 0, 0]} />
