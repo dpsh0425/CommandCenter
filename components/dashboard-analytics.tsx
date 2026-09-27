@@ -42,30 +42,30 @@ const STATUSES = [
 ];
 
 const STATUS_COLOR: Record<string, string> = {
-  not_started: "#94A3B8",
-  researching: "#38BDF8",
-  contacted: "#2563EB",
-  replied: "#1D4ED8",
-  submitted: "#1E3A8A",
-  interview: "#D97706",
+  not_started: "#94a3b8",
+  researching: "#38bdf8",
+  contacted: "#2563eb",
+  replied: "#1d4ed8",
+  submitted: "#1e3a8a",
+  interview: "#d97706",
   accepted: "#059669",
-  rejected: "#DC2626",
+  rejected: "#dc2626",
 };
 
 const COUNTRY_COLOR: Record<string, string> = {
-  USA: "#2563EB",
-  Canada: "#0284C7",
-  Australia: "#4F46E5",
+  USA: "#2563eb",
+  Canada: "#0284c7",
+  Australia: "#4f46e5",
 };
 
 const COUNTRIES = ["USA", "Canada", "Australia"];
-const AXIS_COLOR = "#64748B";
-const GRID_COLOR = "#E2E8F0";
+const AXIS_COLOR = "#64748b";
+const GRID_COLOR = "#f1f5f9";
 
 const tipStyle: React.CSSProperties = {
-  background: "#FFFFFF",
-  border: "1px solid #E2E8F0",
-  color: "#0F172A",
+  background: "#ffffff",
+  border: "1px solid #e2e8f0",
+  color: "#0f172a",
   borderRadius: "8px",
   fontSize: "12px",
   boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
@@ -88,12 +88,12 @@ interface CustomScatterPointProps {
 
 const colorOf = (s: AnalyticsSchool, by: ColorBy) => {
   if (by === "fit") {
-    return s.verified_fit ? "#2563EB" : "#D97706";
+    return s.verified_fit ? "#2563eb" : "#d97706";
   }
   if (by === "status") {
-    return STATUS_COLOR[s.status] ?? "#64748B";
+    return STATUS_COLOR[s.status] ?? "#64748b";
   }
-  return COUNTRY_COLOR[s.country] ?? "#64748B";
+  return COUNTRY_COLOR[s.country] ?? "#64748b";
 };
 
 const CustomScatterPoint: React.FC<CustomScatterPointProps> = ({
@@ -132,7 +132,7 @@ const CustomScatterPoint: React.FC<CustomScatterPointProps> = ({
           cy={cy}
           r={9}
           fill="none"
-          stroke={isSel ? "#1E40AF" : color}
+          stroke={isSel ? "#1d4ed8" : color}
           strokeWidth={isSel ? 2 : 1.5}
         />
       )}
@@ -149,7 +149,7 @@ const CustomScatterPoint: React.FC<CustomScatterPointProps> = ({
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 rounded-xl border border-slate-200 bg-white text-center shadow-sm">
+    <div className="flex flex-col items-center justify-center py-16 px-4 rounded-2xl border border-slate-200 bg-white text-center shadow-sm">
       <p className="text-xs text-slate-500 font-sans font-medium">{children}</p>
     </div>
   );
@@ -277,7 +277,7 @@ export function DashboardAnalytics({
   return (
     <section className="flex flex-col gap-4 font-sans text-slate-900">
       {/* Navigation Tabs Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 pt-3.5 rounded-xl border shadow-sm">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 pt-4 rounded-2xl border shadow-sm">
         <div className="flex gap-8">
           {renderTabBtn("fit", "Fit map")}
           {renderTabBtn("pipeline", "Pipeline")}
@@ -288,11 +288,11 @@ export function DashboardAnalytics({
 
       {/* Filter Toolbar */}
       {tab !== "momentum" && (
-        <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-white border border-slate-200 text-xs shadow-sm">
+        <div className="flex flex-wrap items-center gap-3 p-3.5 rounded-2xl bg-white border border-slate-200 text-xs shadow-sm">
           <select
             value={country}
             onChange={(e) => setCountry(e.target.value)}
-            className="rounded-lg px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 cursor-pointer font-medium"
+            className="rounded-xl px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 cursor-pointer font-medium"
             aria-label="Country"
           >
             <option value="all">All countries</option>
@@ -303,7 +303,7 @@ export function DashboardAnalytics({
             ))}
           </select>
 
-          <label className="flex items-center gap-2 font-medium text-slate-700 hover:text-slate-900 cursor-pointer select-none px-2 py-1 rounded-md hover:bg-slate-50 transition-colors">
+          <label className="flex items-center gap-2 font-medium text-slate-700 hover:text-slate-900 cursor-pointer select-none px-2 py-1 rounded-lg hover:bg-slate-50 transition-colors">
             <input
               type="checkbox"
               checked={verifiedOnly}
@@ -320,12 +320,12 @@ export function DashboardAnalytics({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Highlight school or professor..."
-                className="rounded-lg px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 w-56"
+                className="rounded-xl px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 w-56"
               />
               <select
                 value={colorBy}
                 onChange={(e) => setColorBy(e.target.value as ColorBy)}
-                className="rounded-lg px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 cursor-pointer font-medium"
+                className="rounded-xl px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 cursor-pointer font-medium"
                 aria-label="Colour by"
               >
                 <option value="fit">Colour by fit</option>
@@ -347,7 +347,7 @@ export function DashboardAnalytics({
           <Empty>No schools match these filters.</Empty>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start">
-            <div className="flex flex-col gap-3 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <div className="flex flex-col gap-3 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
               <ResponsiveContainer width="100%" height={360}>
                 <ScatterChart margin={{ top: 12, right: 16, bottom: 28, left: 8 }}>
                   <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" />
@@ -384,7 +384,7 @@ export function DashboardAnalytics({
                     }}
                   />
                   <Tooltip
-                    cursor={{ strokeDasharray: "3 3", stroke: "#94A3B8" }}
+                    cursor={{ strokeDasharray: "3 3", stroke: "#cbd5e1" }}
                     content={({ active, payload }) => {
                       if (!active || !payload || !payload.length) return null;
                       const s = payload[0]?.payload as AnalyticsSchool | undefined;
@@ -439,13 +439,13 @@ export function DashboardAnalytics({
 
             <div className="flex flex-col gap-4 min-w-0">
               {selected ? (
-                <div className="flex flex-col gap-3 p-5 rounded-xl bg-white border-l-4 border-l-blue-600 border border-slate-200 shadow-sm">
+                <div className="flex flex-col gap-3 p-6 rounded-2xl bg-white border-l-4 border-l-blue-600 border border-slate-200 shadow-sm">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-bold text-sm text-slate-900 leading-snug">{selected.name}</h3>
                     <button
                       type="button"
                       onClick={() => setSelectedId(null)}
-                      className="text-xs text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100"
+                      className="text-xs text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
                     >
                       ✕
                     </button>
@@ -461,7 +461,7 @@ export function DashboardAnalytics({
                       {selected.verified_fit ? "Verified Fit" : "Heuristic"}
                     </span>
                   </div>
-                  <p className="text-xs font-mono text-slate-800 bg-slate-50 p-2.5 rounded-lg border border-slate-200 font-semibold">
+                  <p className="text-xs font-mono text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-200 font-semibold">
                     score {selected.composite_score?.toFixed(1) ?? "—"} · NLP rank #{selected.csranking_nlp_rank ?? "?"}
                   </p>
                   {selected.faculty && (
@@ -474,18 +474,18 @@ export function DashboardAnalytics({
                   )}
                   <Link
                     href={`/schools/${selected.id}`}
-                    className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800"
+                    className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700"
                   >
                     Open school →
                   </Link>
                 </div>
               ) : (
-                <div className="p-5 rounded-xl border border-dashed border-slate-300 bg-white text-center text-xs text-slate-500 font-medium">
+                <div className="p-6 rounded-2xl border border-dashed border-slate-300 bg-white text-center text-xs text-slate-500 font-medium">
                   Click a point on the map to inspect details.
                 </div>
               )}
 
-              <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
+              <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 pb-2 border-b border-slate-100">
                   Top matches{q ? " for search" : ""}
                 </h3>
@@ -498,7 +498,7 @@ export function DashboardAnalytics({
                         <button
                           type="button"
                           onClick={() => setSelectedId(s.id)}
-                          className={`w-full flex items-center gap-2.5 py-2 px-2 rounded-lg text-left text-xs transition-colors hover:bg-slate-50 ${
+                          className={`w-full flex items-center gap-2.5 py-2.5 px-2 rounded-xl text-left text-xs transition-colors hover:bg-slate-50 ${
                             s.id === selectedId
                               ? "bg-blue-50 text-blue-900 font-bold"
                               : "text-slate-700"
@@ -526,7 +526,7 @@ export function DashboardAnalytics({
 
       {/* Tab: Pipeline */}
       {tab === "pipeline" && (
-        <div className="flex flex-col gap-4 p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
+        <div className="flex flex-col gap-4 p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
           {started > 0 && (
             <label className="text-xs font-medium text-slate-600 flex items-center gap-2 select-none cursor-pointer">
               <input
@@ -543,7 +543,7 @@ export function DashboardAnalytics({
               <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="status" fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} interval={0} />
               <YAxis allowDecimals={false} fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} width={32} />
-              <Tooltip contentStyle={tipStyle} cursor={{ fill: "#F8FAFC" }} />
+              <Tooltip contentStyle={tipStyle} cursor={{ fill: "#f8fafc" }} />
               <Legend wrapperStyle={{ fontSize: 11, paddingTop: "8px" }} />
               {COUNTRIES.map((c) => (
                 <Bar
@@ -567,7 +567,7 @@ export function DashboardAnalytics({
 
       {/* Tab: Scores */}
       {tab === "scores" && (
-        <div className="flex flex-col gap-4 p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
+        <div className="flex flex-col gap-4 p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
           {filtered.length === 0 ? (
             <Empty>No schools match these filters.</Empty>
           ) : (
@@ -589,10 +589,10 @@ export function DashboardAnalytics({
                   height={40}
                 />
                 <YAxis allowDecimals={false} fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} width={32} />
-                <Tooltip contentStyle={tipStyle} cursor={{ fill: "#F8FAFC" }} />
+                <Tooltip contentStyle={tipStyle} cursor={{ fill: "#f8fafc" }} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: "8px" }} />
-                <Bar dataKey="verified" name="verified fit" stackId="s" fill="#2563EB" />
-                <Bar dataKey="heuristic" name="heuristic" stackId="s" fill="#D97706" />
+                <Bar dataKey="verified" name="verified fit" stackId="s" fill="#2563eb" />
+                <Bar dataKey="heuristic" name="heuristic" stackId="s" fill="#d97706" />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -601,7 +601,7 @@ export function DashboardAnalytics({
 
       {/* Tab: Momentum */}
       {tab === "momentum" && (
-        <div className="flex flex-col gap-4 p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
+        <div className="flex flex-col gap-4 p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
           {momentumEmpty ? (
             <Empty>Nothing completed in the last 8 weeks yet.</Empty>
           ) : (
@@ -610,10 +610,10 @@ export function DashboardAnalytics({
                 <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="week" fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} />
                 <YAxis allowDecimals={false} fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} width={32} />
-                <Tooltip contentStyle={tipStyle} cursor={{ fill: "#F8FAFC" }} />
+                <Tooltip contentStyle={tipStyle} cursor={{ fill: "#f8fafc" }} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: "8px" }} />
-                <Bar dataKey="tasks" name="tasks completed" fill="#D97706" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="wins" name="application wins" fill="#2563EB" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="tasks" name="tasks completed" fill="#d97706" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="wins" name="application wins" fill="#2563eb" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
