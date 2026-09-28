@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardAnalytics } from "@/components/dashboard-analytics";
-import { Fold, Section } from "@/components/ui";
+import { Section } from "@/components/ui";
 import { Runway } from "@/components/runway";
 import { loadReadiness } from "@/lib/readiness-data";
 import { RISK_LABEL, RISK_TONE } from "@/lib/readiness";
 import { WeekRhythm } from "@/components/week-rhythm";
 
-export const metadata = { title: "Dashboard" };
+export const metadata = { title: "Dashboard · Command Center" };
 
 const localDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -140,7 +140,7 @@ export default async function DashboardPage() {
         </h1>
       </header>
 
-      {/* HERO HERO DEADLINE BANNER */}
+      {/* HERO DEADLINE BANNER */}
       <section className="relative z-10 backdrop-blur-2xl bg-slate-900/50 border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
         
@@ -361,15 +361,18 @@ export default async function DashboardPage() {
         </div>
       </Section>
 
-      {/* EXPLORE ANALYTICS FOLD */}
-      <Fold title="Explore your schools" summary="fit map, pipeline, scores, momentum">
-        <div className="backdrop-blur-xl bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-2 mt-2">
+      {/* VISIBLE ANALYTICS SECTION */}
+      <Section
+        title="Telemetry & Analytics"
+        hint="fit map, pipeline, composite scores, execution momentum"
+      >
+        <div className="backdrop-blur-xl bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-2">
           <DashboardAnalytics schools={list as any} weekly={weekly.map(({ week, tasks, wins }) => ({ week, tasks, wins }))} />
           <p className="text-[11px] font-mono text-slate-500 pt-2 border-t border-slate-800/60">
             Scores are a heuristic, not a validated ranking.
           </p>
         </div>
-      </Fold>
+      </Section>
     </main>
   );
 }
