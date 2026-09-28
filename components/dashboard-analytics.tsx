@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 
 export type AnalyticsSchool = {
   id: string;
@@ -46,11 +46,13 @@ const DEFAULT_WEEKLY = [
 ];
 
 const STATUS_COLORS: Record<string, { fill: string; stroke: string; badge: string }> = {
-  Shortlisted: { fill: "bg-blue-600", stroke: "stroke-blue-600", badge: "bg-blue-50 text-blue-700 border-blue-200" },
-  "In Progress": { fill: "bg-sky-500", stroke: "stroke-sky-500", badge: "bg-sky-50 text-sky-700 border-sky-200" },
-  Submitted: { fill: "bg-emerald-600", stroke: "stroke-emerald-600", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  Interview: { fill: "bg-amber-500", stroke: "stroke-amber-500", badge: "bg-amber-50 text-amber-700 border-amber-200" },
+  Shortlisted: { fill: "bg-blue-600", stroke: "stroke-blue-600 border-blue-600", badge: "bg-blue-50 text-blue-700 border-blue-200" },
+  "In Progress": { fill: "bg-sky-500", stroke: "stroke-sky-500 border-sky-500", badge: "bg-sky-50 text-sky-700 border-sky-200" },
+  Submitted: { fill: "bg-emerald-600", stroke: "stroke-emerald-600 border-emerald-600", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  Interview: { fill: "bg-amber-500", stroke: "stroke-amber-500 border-amber-500", badge: "bg-amber-50 text-amber-700 border-amber-200" },
 };
+
+const DEFAULT_COLOR = { fill: "bg-slate-600", stroke: "stroke-slate-600 border-slate-600", badge: "bg-slate-100 text-slate-700 border-slate-200" };
 
 export function DashboardAnalytics({
   schools,
@@ -66,35 +68,41 @@ export function DashboardAnalytics({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [hoveredSchool, setHoveredSchool] = useState<AnalyticsSchool | null>(null);
 
-  const filteredSchools = activeSchools.filter((s) => {
-    if (selectedCountry !== "All" && s.country !== selectedCountry) return false;
-    if (verifiedOnly && !s.verifiedFit) return false;
-    if (searchQuery.trim() !== "") {
-      const q = searchQuery.toLowerCase();
-      return (
-        s.name?.toLowerCase().includes(q) ||
-        s.professor?.toLowerCase().includes(q) ||
-        s.program?.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  // Filter logic
+  const filteredSchools = useMemo(() => {
+    return activeSchools.filter((s) => {
+      if (selectedCountry !== "All" && s.country !== selectedCountry) return false;
+      if (verifiedOnly && !s.verifiedFit) return false;
+      if (searchQuery.trim() !== "") {
+        const q = searchQuery.toLowerCase();
+        return (
+          s.name?.toLowerCase().includes(q) ||
+          s.professor?.toLowerCase().includes(q) ||
+          s.program?.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [activeSchools, selectedCountry, verifiedOnly, searchQuery]);
 
+  // Metric counts
   const shortlistedCount = activeSchools.filter((s) => s.status === "Shortlisted").length;
   const inProgressCount = activeSchools.filter((s) => s.status === "In Progress").length;
   const interviewCount = activeSchools.filter((s) => s.status === "Interview").length;
-  const avgFit = (
-    activeSchools.reduce((acc, curr) => acc + (curr.fitScore || 0), 0) / (activeSchools.length || 1)
-  ).toFixed(1);
+  const avgFit = useMemo(() => {
+    if (!activeSchools.length) return "0.0";
+    const sum = activeSchools.reduce((acc, curr) => acc + (curr.fitScore || 0), 0);
+    return (sum / activeSchools.length).toFixed(1);
+  }, [activeSchools]);
 
   return (
     <div className="space-y-6 font-sans antialiased text-slate-900 bg-white p-2">
       {/* Metrics Row */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "SHORTLISTED", value: shortlistedCount || "14", sub: "schools tracked", accent: "border-blue-600 text-blue-600" },
-          { label: "IN PROGRESS", value: inProgressCount || "8", sub: "active applications", accent: "border-sky-500 text-sky-600" },
-          { label: "INTERVIEWS", value: interviewCount || "1", sub: "scheduled invites", accent: "border-amber-500 text-amber-600" },
+          { label: "SHORTLISTED", value: shortlistedCount, sub: "schools tracked", accent: "border-blue-600 text-blue-600" },
+          { label: "IN PROGRESS", value: inProgressCount, sub: "active applications", accent: "border-sky-500 text-sky-600" },
+          { label: "INTERVIEWS", value: interviewCount, sub: "scheduled invites", accent: "border-amber-500 text-amber-600" },
           { label: "AVG SCORE", value: `${avgFit}%`, sub: "composite alignment", accent: "border-emerald-600 text-emerald-600" },
         ].map((m) => (
           <div key={m.label} className={`bg-white rounded-xl p-5 border border-slate-200 shadow-sm border-l-4 ${m.accent}`}>
@@ -110,6 +118,7 @@ export function DashboardAnalytics({
         {(["Fit map", "Pipeline", "Scores", "Momentum"] as const).map((tab) => (
           <button
             key={tab}
+            type="button"
             onClick={() => setSelectedTab(tab)}
             className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all duration-200 ${
               selectedTab === tab
@@ -179,7 +188,7 @@ export function DashboardAnalytics({
             </div>
           </div>
 
-          <div className="relative h-80 w-full bg-slate-50/80 rounded-lg border border-slate-200 p-4 pt-6">
+          <div className="relative h-80 w-full bg-slate-50/80 rounded-lg border border-slate-200 p-4 pt-6 overflow-hidden">
             <div className="absolute inset-x-12 top-6 bottom-10 flex flex-col justify-between pointer-events-none">
               {[100, 75, 50, 25, 0].map((val) => (
                 <div key={val} className="w-full border-b border-slate-200 relative">
@@ -192,19 +201,20 @@ export function DashboardAnalytics({
               {filteredSchools.map((school) => {
                 const leftPercent = Math.min(Math.max(school.deadlineDays ?? 50, 0), 100);
                 const bottomPercent = Math.min(Math.max(school.fitScore ?? 50, 0), 100);
-                const colors = STATUS_COLORS[school.status || "Shortlisted"] || STATUS_COLORS["Shortlisted"];
+                const colors = STATUS_COLORS[school.status || ""] || DEFAULT_COLOR;
 
                 return (
                   <button
                     key={school.id}
+                    type="button"
                     onClick={() => onSelectSchool?.(school)}
                     onMouseEnter={() => setHoveredSchool(school)}
                     onMouseLeave={() => setHoveredSchool(null)}
                     style={{ left: `${leftPercent}%`, bottom: `${bottomPercent}%` }}
-                    className="absolute -translate-x-1/2 translate-y-1/2 p-1.5 group transition-transform duration-150 hover:scale-125 focus:outline-none"
+                    className="absolute -translate-x-1/2 translate-y-1/2 p-1.5 group transition-transform duration-150 hover:scale-125 focus:outline-none z-10"
                   >
                     <span className={`relative block h-4 w-4 rounded-full border-2 bg-white shadow-sm transition-all ${colors.stroke}`}>
-                      <span className={`absolute inset-1 rounded-full ${colors.fill}`} />
+                      <span className={`absolute inset-0.5 rounded-full ${colors.fill}`} />
                     </span>
                   </button>
                 );
@@ -217,7 +227,7 @@ export function DashboardAnalytics({
                   left: `${Math.min(Math.max(hoveredSchool.deadlineDays ?? 50, 0), 100)}%`,
                   bottom: `${Math.min(Math.max(hoveredSchool.fitScore ?? 50, 0), 100)}%`,
                 }}
-                className="absolute -translate-x-1/2 -translate-y-12 z-20 pointer-events-none transition-all duration-150"
+                className="absolute -translate-x-1/2 -translate-y-14 z-20 pointer-events-none transition-all duration-150"
               >
                 <div className="bg-slate-900 text-white rounded-xl px-3.5 py-2.5 text-xs shadow-xl min-w-[160px] border border-slate-800">
                   <div className="font-bold flex items-center justify-between gap-2">
@@ -244,39 +254,41 @@ export function DashboardAnalytics({
 
       {/* PIPELINE TAB */}
       {selectedTab === "Pipeline" && (
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {(["Shortlisted", "In Progress", "Submitted", "Interview"] as const).map((stage) => {
             const stageSchools = filteredSchools.filter((s) => s.status === stage);
-            const style = STATUS_COLORS[stage];
+            const style = STATUS_COLORS[stage] || DEFAULT_COLOR;
             return (
-              <div key={stage} className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <div className="flex items-center gap-2">
-                    <span className={`h-2.5 w-2.5 rounded-full ${style.fill}`} />
-                    <span className="text-xs font-extrabold text-slate-900 tracking-tight">{stage}</span>
-                  </div>
-                  <span className="text-[11px] font-mono bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-md border border-slate-200">
-                    {stageSchools.length}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {stageSchools.map((s) => (
-                    <div
-                      key={s.id}
-                      onClick={() => onSelectSchool?.(s)}
-                      className="p-3 bg-slate-50 hover:bg-blue-50/50 rounded-lg border border-slate-200 cursor-pointer transition-all shadow-sm"
-                    >
-                      <div className="font-bold text-xs text-slate-900">{s.name}</div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">{s.program}</div>
-                      <div className="flex justify-between items-center mt-2 text-[10px] font-mono text-slate-400">
-                        <span>{s.country}</span>
-                        <span className="text-emerald-600 font-bold">{s.fitScore}% Fit</span>
-                      </div>
+              <div key={stage} className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-3 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2.5 w-2.5 rounded-full ${style.fill}`} />
+                      <span className="text-xs font-extrabold text-slate-900 tracking-tight">{stage}</span>
                     </div>
-                  ))}
-                  {stageSchools.length === 0 && (
-                    <div className="text-center py-6 text-xs text-slate-400 italic">No schools in stage</div>
-                  )}
+                    <span className="text-[11px] font-mono bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-md border border-slate-200">
+                      {stageSchools.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {stageSchools.map((s) => (
+                      <div
+                        key={s.id}
+                        onClick={() => onSelectSchool?.(s)}
+                        className="p-3 bg-slate-50 hover:bg-blue-50/50 rounded-lg border border-slate-200 cursor-pointer transition-all shadow-sm"
+                      >
+                        <div className="font-bold text-xs text-slate-900">{s.name}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">{s.program}</div>
+                        <div className="flex justify-between items-center mt-2 text-[10px] font-mono text-slate-400">
+                          <span>{s.country}</span>
+                          <span className="text-emerald-600 font-bold">{s.fitScore}% Fit</span>
+                        </div>
+                      </div>
+                    ))}
+                    {stageSchools.length === 0 && (
+                      <div className="text-center py-6 text-xs text-slate-400 italic">No schools in stage</div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -286,8 +298,8 @@ export function DashboardAnalytics({
 
       {/* SCORES TAB */}
       {selectedTab === "Scores" && (
-        <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <table className="w-full text-left text-xs text-slate-700">
+        <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+          <table className="w-full text-left text-xs text-slate-700 min-w-[600px]">
             <thead className="bg-slate-50/80 border-b border-slate-200 font-bold text-slate-700 uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="p-4">School</th>
@@ -300,22 +312,33 @@ export function DashboardAnalytics({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredSchools.map((s) => {
-                const badge = STATUS_COLORS[s.status || "Shortlisted"]?.badge || "bg-slate-100 text-slate-700";
+                const badge = STATUS_COLORS[s.status || ""]?.badge || DEFAULT_COLOR.badge;
                 return (
-                  <tr key={s.id} onClick={() => onSelectSchool?.(s)} className="hover:bg-slate-50/80 cursor-pointer transition-colors">
+                  <tr
+                    key={s.id}
+                    onClick={() => onSelectSchool?.(s)}
+                    className="hover:bg-slate-50/80 cursor-pointer transition-colors"
+                  >
                     <td className="p-4 font-bold text-slate-900">{s.name}</td>
-                    <td className="p-4 text-slate-600">{s.program}</td>
-                    <td className="p-4 font-mono text-slate-500">{s.country}</td>
+                    <td className="p-4 text-slate-600">{s.program || "N/A"}</td>
+                    <td className="p-4 font-mono text-slate-500">{s.country || "N/A"}</td>
                     <td className="p-4">
                       <span className={`px-2.5 py-1 rounded-md text-[10px] font-semibold border ${badge}`}>
-                        {s.status}
+                        {s.status || "Unknown"}
                       </span>
                     </td>
                     <td className="p-4 text-slate-600">{s.professor || "N/A"}</td>
-                    <td className="p-4 text-right font-mono font-bold text-emerald-600">{s.fitScore}%</td>
+                    <td className="p-4 text-right font-mono font-bold text-emerald-600">{s.fitScore ?? 0}%</td>
                   </tr>
                 );
               })}
+              {filteredSchools.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-xs text-slate-400 italic">
+                    No schools match the filter criteria.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </section>
@@ -331,12 +354,12 @@ export function DashboardAnalytics({
               <div key={item.week} className="flex flex-col items-center gap-2 h-full justify-end">
                 <div className="w-full flex items-end justify-center gap-1.5 h-full">
                   <div
-                    style={{ height: `${(item.tasks / 30) * 100}%` }}
+                    style={{ height: `${Math.min(100, (item.tasks / 30) * 100)}%` }}
                     className="w-1/3 bg-blue-600 rounded-t-sm transition-all hover:bg-blue-700"
                     title={`Tasks: ${item.tasks}`}
                   />
                   <div
-                    style={{ height: `${(item.wins / 30) * 100}%` }}
+                    style={{ height: `${Math.min(100, (item.wins / 30) * 100)}%` }}
                     className="w-1/3 bg-emerald-600 rounded-t-sm transition-all hover:bg-emerald-700"
                     title={`Wins: ${item.wins}`}
                   />
