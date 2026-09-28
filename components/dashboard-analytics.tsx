@@ -1,624 +1,271 @@
 "use client";
 
-import React, { useMemo, useState, useCallback } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  BarChart,
-  Bar,
-  Legend,
-} from "recharts";
+import { useState } from "react";
 
-export type AnalyticsSchool = {
+interface SchoolData {
   id: string;
   name: string;
-  country: string;
-  status: string;
-  csranking_nlp_rank: number | null;
-  composite_score: number | null;
-  verified_fit: boolean;
-  faculty: string | null;
-  fit_note: string | null;
-};
+  program: string;
+  country: "US" | "UK" | "Canada" | "EU";
+  status: "Shortlisted" | "In Progress" | "Submitted" | "Interview";
+  fitScore: number; // Y-axis (0-100)
+  deadlineDays: number; // X-axis (0-100)
+  verifiedFit: boolean;
+  professor: string;
+}
 
-export type WeekPoint = { week: string; tasks: number; wins: number };
-
-const STATUSES = [
-  "not_started",
-  "researching",
-  "contacted",
-  "replied",
-  "submitted",
-  "interview",
-  "accepted",
-  "rejected",
+const MOCK_SCHOOLS: SchoolData[] = [
+  { id: "1", name: "MIT", program: "Ph.D. CS", country: "US", status: "In Progress", fitScore: 92, deadlineDays: 85, verifiedFit: true, professor: "Dr. Leiserson" },
+  { id: "2", name: "Stanford", program: "Ph.D. AI", country: "US", status: "Shortlisted", fitScore: 88, deadlineDays: 70, verifiedFit: true, professor: "Dr. Ng" },
+  { id: "3", name: "CMU", program: "M.S. Robotics", country: "US", status: "Submitted", fitScore: 84, deadlineDays: 90, verifiedFit: false, professor: "Dr. Hebert" },
+  { id: "4", name: "Oxford", program: "DPhil CS", country: "UK", status: "Interview", fitScore: 95, deadlineDays: 95, verifiedFit: true, professor: "Dr. Wooldridge" },
+  { id: "5", name: "Cambridge", program: "MPhil ACS", country: "UK", status: "Shortlisted", fitScore: 78, deadlineDays: 40, verifiedFit: false, professor: "Dr. Jamnik" },
+  { id: "6", name: "ETH Zurich", program: "M.Sc. CS", country: "EU", status: "In Progress", fitScore: 81, deadlineDays: 60, verifiedFit: true, professor: "Dr. Vechev" },
+  { id: "7", name: "UToronto", program: "Ph.D. ML", country: "Canada", status: "Submitted", fitScore: 86, deadlineDays: 75, verifiedFit: true, professor: "Dr. Hinton" },
+  { id: "8", name: "UC Berkeley", program: "Ph.D. EECS", country: "US", status: "Shortlisted", fitScore: 90, deadlineDays: 80, verifiedFit: true, professor: "Dr. Jordan" },
+  { id: "9", name: "Imperial", program: "MSc AI", country: "UK", status: "In Progress", fitScore: 72, deadlineDays: 50, verifiedFit: false, professor: "Dr. Shanahan" },
+  { id: "10", name: "UBC", program: "M.Sc. CS", country: "Canada", status: "Shortlisted", fitScore: 68, deadlineDays: 35, verifiedFit: false, professor: "Dr. Carenini" },
+  { id: "11", name: "Harvard", program: "Ph.D. CS", country: "US", status: "Shortlisted", fitScore: 83, deadlineDays: 65, verifiedFit: true, professor: "Dr. Waldo" },
+  { id: "12", name: "EPFL", program: "M.Sc. CS", country: "EU", status: "In Progress", fitScore: 76, deadlineDays: 55, verifiedFit: true, professor: "Dr. Odersky" },
+  { id: "13", name: "UW Seattle", program: "Ph.D. CS", country: "US", status: "Submitted", fitScore: 89, deadlineDays: 82, verifiedFit: true, professor: "Dr. Fox" },
+  { id: "14", name: "NYU", program: "M.S. Data Science", country: "US", status: "Shortlisted", fitScore: 75, deadlineDays: 45, verifiedFit: false, professor: "Dr. LeCun" },
 ];
 
-const STATUS_COLOR: Record<string, string> = {
-  not_started: "#94a3b8",
-  researching: "#38bdf8",
-  contacted: "#2563eb",
-  replied: "#1d4ed8",
-  submitted: "#1e3a8a",
-  interview: "#d97706",
-  accepted: "#059669",
-  rejected: "#dc2626",
+const STATUS_COLORS: Record<string, { fill: string; stroke: string; badge: string }> = {
+  Shortlisted: { fill: "bg-blue-500", stroke: "stroke-blue-500", badge: "bg-blue-50 text-blue-700 border-blue-200" },
+  "In Progress": { fill: "bg-sky-400", stroke: "stroke-sky-400", badge: "bg-sky-50 text-sky-700 border-sky-200" },
+  Submitted: { fill: "bg-emerald-500", stroke: "stroke-emerald-500", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  Interview: { fill: "bg-amber-500", stroke: "stroke-amber-500", badge: "bg-amber-50 text-amber-700 border-amber-200" },
 };
 
-const COUNTRY_COLOR: Record<string, string> = {
-  USA: "#2563eb",
-  Canada: "#0284c7",
-  Australia: "#4f46e5",
-};
+export default function DashboardPage() {
+  const [selectedTab, setSelectedTab] = useState<"Fit map" | "Pipeline" | "Scores" | "Momentum">("Fit map");
+  const [selectedCountry, setSelectedCountry] = useState<string>("All");
+  const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [hoveredSchool, setHoveredSchool] = useState<SchoolData | null>(null);
 
-const COUNTRIES = ["USA", "Canada", "Australia"];
-const AXIS_COLOR = "#64748b";
-const GRID_COLOR = "#f1f5f9";
-
-const tipStyle: React.CSSProperties = {
-  background: "#ffffff",
-  border: "1px solid #e2e8f0",
-  color: "#0f172a",
-  borderRadius: "8px",
-  fontSize: "12px",
-  boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-  padding: "10px 12px",
-};
-
-type Tab = "fit" | "pipeline" | "scores" | "momentum";
-type ColorBy = "fit" | "status" | "country";
-
-interface CustomScatterPointProps {
-  cx?: number;
-  cy?: number;
-  payload?: AnalyticsSchool;
-  query?: string;
-  selectedId?: string | null;
-  colorBy?: ColorBy;
-  onSelect?: (id: string) => void;
-  [key: string]: any;
-}
-
-const colorOf = (s: AnalyticsSchool, by: ColorBy) => {
-  if (by === "fit") {
-    return s.verified_fit ? "#2563eb" : "#d97706";
-  }
-  if (by === "status") {
-    return STATUS_COLOR[s.status] ?? "#64748b";
-  }
-  return COUNTRY_COLOR[s.country] ?? "#64748b";
-};
-
-const CustomScatterPoint: React.FC<CustomScatterPointProps> = ({
-  cx = 0,
-  cy = 0,
-  payload: s,
-  query = "",
-  selectedId = null,
-  colorBy = "fit",
-  onSelect,
-}) => {
-  if (!s) return <g />;
-
-  const dim = Boolean(query) && !`${s.name} ${s.faculty ?? ""}`.toLowerCase().includes(query);
-  const isSel = s.id === selectedId;
-  const color = colorOf(s, colorBy);
-  const isStarted = s.status !== "not_started";
+  // Filter logic
+  const filteredSchools = MOCK_SCHOOLS.filter((s) => {
+    if (selectedCountry !== "All" && s.country !== selectedCountry) return false;
+    if (verifiedOnly && !s.verifiedFit) return false;
+    if (searchQuery.trim() !== "") {
+      const q = searchQuery.toLowerCase();
+      return s.name.toLowerCase().includes(q) || s.professor.toLowerCase().includes(q) || s.program.toLowerCase().includes(q);
+    }
+    return true;
+  });
 
   return (
-    <g
-      style={{ cursor: "pointer" }}
-      onClick={() => onSelect?.(s.id)}
-      opacity={dim ? 0.2 : 1}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          onSelect?.(s.id);
-        }
-      }}
-    >
-      <circle cx={cx} cy={cy} r={12} fill="transparent" />
-      {(isStarted || isSel) && (
-        <circle
-          cx={cx}
-          cy={cy}
-          r={9}
-          fill="none"
-          stroke={isSel ? "#1d4ed8" : color}
-          strokeWidth={isSel ? 2 : 1.5}
-        />
-      )}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={isStarted || isSel ? 5 : 3.5}
-        fill={color}
-        fillOpacity={0.9}
-      />
-    </g>
-  );
-};
-
-function Empty({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 rounded-2xl border border-slate-200 bg-white text-center shadow-sm">
-      <p className="text-xs text-slate-500 font-sans font-medium">{children}</p>
-    </div>
-  );
-}
-
-export function DashboardAnalytics({
-  schools,
-  weekly,
-}: {
-  schools: AnalyticsSchool[];
-  weekly: WeekPoint[];
-}) {
-  const router = useRouter();
-  const [tab, setTab] = useState<Tab>("fit");
-  const [country, setCountry] = useState<string>("all");
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [colorBy, setColorBy] = useState<ColorBy>("fit");
-  const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showNotStarted, setShowNotStarted] = useState(false);
-
-  const filtered = useMemo(
-    () =>
-      schools.filter(
-        (s) =>
-          (country === "all" || s.country === country) &&
-          (!verifiedOnly || s.verified_fit)
-      ),
-    [schools, country, verifiedOnly]
-  );
-
-  const q = query.trim().toLowerCase();
-
-  const selected = useMemo(
-    () => filtered.find((s) => s.id === selectedId) ?? null,
-    [filtered, selectedId]
-  );
-
-  const points = useMemo(
-    () =>
-      filtered.filter(
-        (s) => s.csranking_nlp_rank != null && s.composite_score != null
-      ),
-    [filtered]
-  );
-
-  const shortlist = useMemo(
-    () =>
-      filtered
-        .filter((s) => !q || `${s.name} ${s.faculty ?? ""}`.toLowerCase().includes(q))
-        .sort((a, b) => (b.composite_score ?? -1) - (a.composite_score ?? -1))
-        .slice(0, 8),
-    [filtered, q]
-  );
-
-  const started = useMemo(
-    () => filtered.filter((s) => s.status !== "not_started").length,
-    [filtered]
-  );
-
-  const pipelineData = useMemo(() => {
-    const stages = showNotStarted || started === 0 ? STATUSES : STATUSES.slice(1);
-    return stages.map((st) => {
-      const row: Record<string, unknown> = { status: st.replace("_", " "), key: st };
-      for (const c of COUNTRIES) {
-        row[c] = filtered.filter(
-          (s) => s.status === st && s.country === c
-        ).length;
-      }
-      return row;
-    });
-  }, [filtered, showNotStarted, started]);
-
-  const histogram = useMemo(() => {
-    return Array.from({ length: 10 }, (_, i) => {
-      const lo = i * 10;
-      const inBucket = filtered.filter(
-        (s) =>
-          s.composite_score != null &&
-          s.composite_score >= lo &&
-          (i === 9 ? s.composite_score <= 100 : s.composite_score < lo + 10)
-      );
-      return {
-        bucket: `${lo}-${lo + 10}`,
-        verified: inBucket.filter((s) => s.verified_fit).length,
-        heuristic: inBucket.filter((s) => !s.verified_fit).length,
-      };
-    });
-  }, [filtered]);
-
-  const momentumEmpty = useMemo(
-    () => weekly.every((w) => w.tasks === 0 && w.wins === 0),
-    [weekly]
-  );
-
-  const renderTabBtn = (t: Tab, label: string) => (
-    <button
-      key={t}
-      type="button"
-      onClick={() => setTab(t)}
-      className={`relative pb-3 text-xs font-semibold transition-colors ${
-        tab === t ? "text-blue-600" : "text-slate-500 hover:text-slate-900"
-      }`}
-    >
-      {label}
-      {tab === t && (
-        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
-      )}
-    </button>
-  );
-
-  const renderScatterPoint = useCallback(
-    (props: any) => (
-      <CustomScatterPoint
-        {...props}
-        query={q}
-        selectedId={selectedId}
-        colorBy={colorBy}
-        onSelect={setSelectedId}
-      />
-    ),
-    [q, selectedId, colorBy]
-  );
-
-  return (
-    <section className="flex flex-col gap-4 font-sans text-slate-900">
-      {/* Navigation Tabs Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 pt-4 rounded-2xl border shadow-sm">
-        <div className="flex gap-8">
-          {renderTabBtn("fit", "Fit map")}
-          {renderTabBtn("pipeline", "Pipeline")}
-          {renderTabBtn("scores", "Scores")}
-          {renderTabBtn("momentum", "Momentum")}
-        </div>
-      </div>
-
-      {/* Filter Toolbar */}
-      {tab !== "momentum" && (
-        <div className="flex flex-wrap items-center gap-3 p-3.5 rounded-2xl bg-white border border-slate-200 text-xs shadow-sm">
-          <select
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            className="rounded-xl px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 cursor-pointer font-medium"
-            aria-label="Country"
-          >
-            <option value="all">All countries</option>
-            {COUNTRIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-
-          <label className="flex items-center gap-2 font-medium text-slate-700 hover:text-slate-900 cursor-pointer select-none px-2 py-1 rounded-lg hover:bg-slate-50 transition-colors">
-            <input
-              type="checkbox"
-              checked={verifiedOnly}
-              onChange={(e) => setVerifiedOnly(e.target.checked)}
-              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500/20"
-            />
-            Verified fit only
-          </label>
-
-          {tab === "fit" && (
-            <>
-              <div className="h-4 w-px bg-slate-200 hidden sm:block" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Highlight school or professor..."
-                className="rounded-xl px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 w-56"
-              />
-              <select
-                value={colorBy}
-                onChange={(e) => setColorBy(e.target.value as ColorBy)}
-                className="rounded-xl px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 cursor-pointer font-medium"
-                aria-label="Colour by"
-              >
-                <option value="fit">Colour by fit</option>
-                <option value="status">Colour by status</option>
-                <option value="country">Colour by country</option>
-              </select>
-            </>
-          )}
-
-          <span className="ml-auto text-slate-500 font-mono text-xs font-medium">
-            {filtered.length} of {schools.length}
-          </span>
-        </div>
-      )}
-
-      {/* Tab: Fit Map */}
-      {tab === "fit" && (
-        points.length === 0 ? (
-          <Empty>No schools match these filters.</Empty>
-        ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start">
-            <div className="flex flex-col gap-3 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <ResponsiveContainer width="100%" height={360}>
-                <ScatterChart margin={{ top: 12, right: 16, bottom: 28, left: 8 }}>
-                  <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" />
-                  <XAxis
-                    type="number"
-                    dataKey="csranking_nlp_rank"
-                    reversed
-                    fontSize={11}
-                    tick={{ fill: AXIS_COLOR }}
-                    stroke={GRID_COLOR}
-                    label={{
-                      value: "CSRankings NLP rank (lower = stronger)",
-                      position: "insideBottom",
-                      offset: -18,
-                      fill: AXIS_COLOR,
-                      fontSize: 11,
-                    }}
-                  />
-                  <YAxis
-                    type="number"
-                    dataKey="composite_score"
-                    domain={[0, 105]}
-                    ticks={[0, 25, 50, 75, 100]}
-                    fontSize={11}
-                    tick={{ fill: AXIS_COLOR }}
-                    stroke={GRID_COLOR}
-                    width={40}
-                    label={{
-                      value: "Composite score",
-                      angle: -90,
-                      position: "insideLeft",
-                      fill: AXIS_COLOR,
-                      fontSize: 11,
-                    }}
-                  />
-                  <Tooltip
-                    cursor={{ strokeDasharray: "3 3", stroke: "#cbd5e1" }}
-                    content={({ active, payload }) => {
-                      if (!active || !payload || !payload.length) return null;
-                      const s = payload[0]?.payload as AnalyticsSchool | undefined;
-                      if (!s) return null;
-                      return (
-                        <div style={tipStyle}>
-                          <div className="font-bold text-slate-900">{s.name}</div>
-                          <div className="text-slate-500 text-[11px] mt-0.5 capitalize">
-                            {s.country} · {s.status.replace("_", " ")}
-                          </div>
-                          <div className="font-mono text-blue-600 font-bold text-[11px] mt-1.5">
-                            score {s.composite_score?.toFixed(1)} · rank #{s.csranking_nlp_rank}
-                          </div>
-                        </div>
-                      );
-                    }}
-                  />
-                  <Scatter data={points} shape={renderScatterPoint} />
-                </ScatterChart>
-              </ResponsiveContainer>
-
-              <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-600 pt-3 border-t border-slate-100">
-                {colorBy === "fit" && (
-                  <>
-                    <span className="flex items-center gap-1.5 font-medium">
-                      <i className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-                      verified fit
-                    </span>
-                    <span className="flex items-center gap-1.5 font-medium">
-                      <i className="w-2.5 h-2.5 rounded-full bg-amber-600" />
-                      heuristic
-                    </span>
-                  </>
-                )}
-                {colorBy === "status" &&
-                  STATUSES.map((s) => (
-                    <span key={s} className="flex items-center gap-1.5 font-medium">
-                      <i className="w-2.5 h-2.5 rounded-full" style={{ background: STATUS_COLOR[s] }} />
-                      {s.replace("_", " ")}
-                    </span>
-                  ))}
-                {colorBy === "country" &&
-                  COUNTRIES.map((c) => (
-                    <span key={c} className="flex items-center gap-1.5 font-medium">
-                      <i className="w-2.5 h-2.5 rounded-full" style={{ background: COUNTRY_COLOR[c] }} />
-                      {c}
-                    </span>
-                  ))}
-                <span className="ml-auto text-slate-400 font-normal">ringed = in progress</span>
-              </div>
+    <div className="min-h-screen bg-slate-50/60 font-sans text-slate-900 pb-16">
+      {/* Top Header */}
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-2.5">
+              <span className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </span>
+              <span className="font-semibold tracking-tight text-slate-900 text-sm">
+                Command<span className="text-blue-600">Center</span>
+              </span>
             </div>
 
-            <div className="flex flex-col gap-4 min-w-0">
-              {selected ? (
-                <div className="flex flex-col gap-3 p-6 rounded-2xl bg-white border-l-4 border-l-blue-600 border border-slate-200 shadow-sm">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-bold text-sm text-slate-900 leading-snug">{selected.name}</h3>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(null)}
-                      className="text-xs text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                    <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold border border-blue-200 text-[10px]">
-                      {selected.country}
-                    </span>
-                    <span>·</span>
-                    <span className="capitalize font-medium">{selected.status.replace("_", " ")}</span>
-                    <span>·</span>
-                    <span className={`font-semibold ${selected.verified_fit ? "text-blue-600" : "text-amber-600"}`}>
-                      {selected.verified_fit ? "Verified Fit" : "Heuristic"}
-                    </span>
-                  </div>
-                  <p className="text-xs font-mono text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-200 font-semibold">
-                    score {selected.composite_score?.toFixed(1) ?? "—"} · NLP rank #{selected.csranking_nlp_rank ?? "?"}
-                  </p>
-                  {selected.faculty && (
-                    <p className="text-xs font-medium text-slate-800">{selected.faculty}</p>
-                  )}
-                  {selected.fit_note && (
-                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
-                      {selected.fit_note}
-                    </p>
-                  )}
-                  <Link
-                    href={`/schools/${selected.id}`}
-                    className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700"
-                  >
-                    Open school →
-                  </Link>
-                </div>
-              ) : (
-                <div className="p-6 rounded-2xl border border-dashed border-slate-300 bg-white text-center text-xs text-slate-500 font-medium">
-                  Click a point on the map to inspect details.
-                </div>
-              )}
+            <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 text-xs font-semibold">
+              {(["Dashboard", "Schools", "Tasks", "Writing", "Account"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  className={`px-3.5 py-1.5 rounded-lg transition-all ${
+                    tab === "Dashboard"
+                      ? "bg-white text-blue-700 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </nav>
+          </div>
 
-              <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 pb-2 border-b border-slate-100">
-                  Top matches{q ? " for search" : ""}
-                </h3>
-                {shortlist.length === 0 ? (
-                  <p className="text-xs text-slate-500 py-2">Nothing matches.</p>
-                ) : (
-                  <ol className="flex flex-col divide-y divide-slate-100">
-                    {shortlist.map((s, i) => (
-                      <li key={s.id}>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedId(s.id)}
-                          className={`w-full flex items-center gap-2.5 py-2.5 px-2 rounded-xl text-left text-xs transition-colors hover:bg-slate-50 ${
-                            s.id === selectedId
-                              ? "bg-blue-50 text-blue-900 font-bold"
-                              : "text-slate-700"
-                          }`}
-                        >
-                          <span className="font-mono text-slate-400 font-medium w-4">{i + 1}</span>
-                          <i
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{ background: colorOf(s, colorBy) }}
-                          />
-                          <span className="flex-1 truncate">{s.name}</span>
-                          <span className="font-mono text-slate-500 font-medium">
-                            {s.composite_score?.toFixed(1) ?? "—"}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </div>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Online
+            </span>
+            <div className="h-8 w-8 rounded-full bg-slate-900 text-white font-mono text-xs font-semibold flex items-center justify-center shadow-sm">
+              CC
             </div>
           </div>
-        )
-      )}
+        </div>
+      </header>
 
-      {/* Tab: Pipeline */}
-      {tab === "pipeline" && (
-        <div className="flex flex-col gap-4 p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
-          {started > 0 && (
-            <label className="text-xs font-medium text-slate-600 flex items-center gap-2 select-none cursor-pointer">
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 mt-8 space-y-6">
+        {/* Banner */}
+        <section className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-sm">
+          <p className="font-mono text-xs uppercase tracking-widest text-blue-600 font-semibold mb-2">
+            Grad Application Cycle · Fall 2027
+          </p>
+          <h1 className="font-serif text-3xl sm:text-4xl text-slate-900">Good to see you.</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Applications, research, and tasks in one system. Here is where your shortlist stands today.
+          </p>
+        </section>
+
+        {/* Metric Cards Grid */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: "SHORTLISTED", value: "14", sub: "schools tracked", color: "border-blue-500" },
+            { label: "IN PROGRESS", value: "8", sub: "active applications", color: "border-sky-400" },
+            { label: "INTERVIEWS", value: "1", sub: "scheduled invite", color: "border-amber-500" },
+            { label: "AVG SCORE", value: "77.9", sub: "composite alignment", color: "border-emerald-500" },
+          ].map((m) => (
+            <div key={m.label} className={`bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm border-l-4 ${m.color}`}>
+              <span className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">{m.label}</span>
+              <div className="font-mono text-3xl font-semibold text-slate-900 mt-2 mb-1">{m.value}</div>
+              <p className="text-xs text-slate-400">{m.sub}</p>
+            </div>
+          ))}
+        </section>
+
+        {/* Tab Selection */}
+        <div className="flex border-b border-slate-200 gap-8">
+          {(["Fit map", "Pipeline", "Scores", "Momentum"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setSelectedTab(tab)}
+              className={`pb-3 text-xs font-semibold transition-all border-b-2 ${
+                selectedTab === tab
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Filters & Control Bar */}
+        <section className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={selectedCountry}
+              onChange={(e) => setSelectedCountry(e.target.value)}
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="All">All countries</option>
+              <option value="US">United States</option>
+              <option value="UK">United Kingdom</option>
+              <option value="Canada">Canada</option>
+              <option value="EU">Europe</option>
+            </select>
+
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 select-none px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl hover:border-slate-300">
               <input
                 type="checkbox"
-                checked={showNotStarted}
-                onChange={(e) => setShowNotStarted(e.target.checked)}
-                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500/20"
+                checked={verifiedOnly}
+                onChange={(e) => setVerifiedOnly(e.target.checked)}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
               />
-              Include "not started" ({filtered.length - started})
+              Verified fit only
             </label>
-          )}
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={pipelineData} margin={{ top: 12, right: 16, bottom: 12, left: 0 }}>
-              <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="status" fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} interval={0} />
-              <YAxis allowDecimals={false} fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} width={32} />
-              <Tooltip contentStyle={tipStyle} cursor={{ fill: "#f8fafc" }} />
-              <Legend wrapperStyle={{ fontSize: 11, paddingTop: "8px" }} />
-              {COUNTRIES.map((c) => (
-                <Bar
-                  key={c}
-                  dataKey={c}
-                  stackId="a"
-                  fill={COUNTRY_COLOR[c]}
-                  cursor="pointer"
-                  onClick={(entry: any) => {
-                    const statusKey = entry?.key ?? entry?.payload?.key;
-                    if (statusKey) {
-                      router.push(`/schools?status=${statusKey}&country=${c}`);
-                    }
-                  }}
-                />
+
+            <input
+              type="text"
+              placeholder="Highlight school or professor..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-60"
+            />
+          </div>
+
+          <div className="font-mono text-xs text-slate-500">
+            Showing <span className="font-semibold text-slate-900">{filteredSchools.length}</span> of {MOCK_SCHOOLS.length}
+          </div>
+        </section>
+
+        {/* Interactive Fit Map Scatter Chart */}
+        <section className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm relative">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">Program Fit vs. Timeline Readiness</h3>
+              <p className="text-xs text-slate-500">Hover over any data point to inspect details</p>
+            </div>
+            {/* Color Legend */}
+            <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-600">
+              {Object.entries(STATUS_COLORS).map(([status, style]) => (
+                <div key={status} className="flex items-center gap-1.5">
+                  <span className={`h-2.5 w-2.5 rounded-full ${style.fill}`} />
+                  <span>{status}</span>
+                </div>
               ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+            </div>
+          </div>
 
-      {/* Tab: Scores */}
-      {tab === "scores" && (
-        <div className="flex flex-col gap-4 p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
-          {filtered.length === 0 ? (
-            <Empty>No schools match these filters.</Empty>
-          ) : (
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={histogram} margin={{ top: 12, right: 16, bottom: 12, left: 0 }}>
-                <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="bucket"
-                  fontSize={11}
-                  tick={{ fill: AXIS_COLOR }}
-                  stroke={GRID_COLOR}
-                  label={{
-                    value: "Composite score range",
-                    position: "insideBottom",
-                    offset: -4,
-                    fill: AXIS_COLOR,
-                    fontSize: 11,
-                  }}
-                  height={40}
-                />
-                <YAxis allowDecimals={false} fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} width={32} />
-                <Tooltip contentStyle={tipStyle} cursor={{ fill: "#f8fafc" }} />
-                <Legend wrapperStyle={{ fontSize: 11, paddingTop: "8px" }} />
-                <Bar dataKey="verified" name="verified fit" stackId="s" fill="#2563eb" />
-                <Bar dataKey="heuristic" name="heuristic" stackId="s" fill="#d97706" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      )}
+          {/* Scatter Canvas */}
+          <div className="relative h-80 w-full bg-slate-50/50 rounded-xl border border-slate-100 p-4 pt-6">
+            {/* Gridlines */}
+            <div className="absolute inset-x-12 top-6 bottom-10 flex flex-col justify-between pointer-events-none">
+              {[100, 75, 50, 25, 0].map((val) => (
+                <div key={val} className="w-full border-b border-slate-200/60 relative">
+                  <span className="absolute -left-10 -top-2.5 font-mono text-[10px] text-slate-400">{val}%</span>
+                </div>
+              ))}
+            </div>
 
-      {/* Tab: Momentum */}
-      {tab === "momentum" && (
-        <div className="flex flex-col gap-4 p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
-          {momentumEmpty ? (
-            <Empty>Nothing completed in the last 8 weeks yet.</Empty>
-          ) : (
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={weekly} margin={{ top: 12, right: 16, bottom: 12, left: 0 }}>
-                <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="week" fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} />
-                <YAxis allowDecimals={false} fontSize={11} tick={{ fill: AXIS_COLOR }} stroke={GRID_COLOR} width={32} />
-                <Tooltip contentStyle={tipStyle} cursor={{ fill: "#f8fafc" }} />
-                <Legend wrapperStyle={{ fontSize: 11, paddingTop: "8px" }} />
-                <Bar dataKey="tasks" name="tasks completed" fill="#d97706" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="wins" name="application wins" fill="#2563eb" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      )}
-    </section>
+            {/* Scatter Plot Points */}
+            <div className="absolute inset-x-12 top-6 bottom-10">
+              {filteredSchools.map((school) => {
+                const leftPercent = school.deadlineDays; // X axis mapping
+                const bottomPercent = school.fitScore; // Y axis mapping
+                const colors = STATUS_COLORS[school.status];
+
+                return (
+                  <button
+                    key={school.id}
+                    onMouseEnter={() => setHoveredSchool(school)}
+                    onMouseLeave={() => setHoveredSchool(null)}
+                    style={{ left: `${leftPercent}%`, bottom: `${bottomPercent}%` }}
+                    className="absolute -translate-x-1/2 translate-y-1/2 p-1.5 group transition-transform duration-150 hover:scale-125 focus:outline-none"
+                  >
+                    <span className={`relative block h-4 w-4 rounded-full border-2 bg-white shadow-sm transition-all ${colors.stroke}`}>
+                      <span className={`absolute inset-1 rounded-full ${colors.fill}`} />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Hover Tooltip */}
+            {hoveredSchool && (
+              <div
+                style={{ left: `${hoveredSchool.deadlineDays}%`, bottom: `${hoveredSchool.fitScore}%` }}
+                className="absolute -translate-x-1/2 -translate-y-12 z-20 pointer-events-none transition-all duration-150"
+              >
+                <div className="bg-slate-900 text-white rounded-xl px-3 py-2 text-xs shadow-xl min-w-[160px] border border-slate-700">
+                  <div className="font-semibold flex items-center justify-between gap-2">
+                    <span>{hoveredSchool.name}</span>
+                    <span className="font-mono text-[10px] text-slate-400">{hoveredSchool.country}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 mt-0.5">{hoveredSchool.program}</div>
+                  <div className="text-[10px] text-slate-400 mt-1 flex justify-between border-t border-slate-800 pt-1">
+                    <span>Prof. {hoveredSchool.professor}</span>
+                    <span className="font-mono text-emerald-400">{hoveredSchool.fitScore}% Fit</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* X Axis Label */}
+            <div className="absolute inset-x-12 bottom-2 flex justify-between text-[10px] font-mono text-slate-400 pointer-events-none">
+              <span>0 Days Left (Urgent)</span>
+              <span>Timeline Readiness / Days Remaining</span>
+              <span>100+ Days Left</span>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
   );
 }
