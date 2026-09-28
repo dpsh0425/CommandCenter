@@ -17,12 +17,12 @@ const when = (delta: number) =>
   delta === 0 ? "today" : delta === 1 ? "tomorrow" : delta < 0 ? `${-delta}d overdue` : `in ${delta}d`;
 
 const PIPELINE: Array<{ key: string; label: string; color: string }> = [
-  { key: "not_started", label: "Not started", color: "#334155" },
+  { key: "not_started", label: "Not started", color: "#94a3b8" },
   { key: "researching", label: "Researching", color: "#64748b" },
-  { key: "contacted", label: "Contacted", color: "#d97706" },
-  { key: "replied", label: "Replied", color: "#f59e0b" },
-  { key: "submitted", label: "Submitted", color: "#818cf8" },
-  { key: "interview", label: "Interview", color: "#2dd4bf" },
+  { key: "contacted", label: "Contacted", color: "#f59e0b" },
+  { key: "replied", label: "Replied", color: "#d97706" },
+  { key: "submitted", label: "Submitted", color: "#6366f1" },
+  { key: "interview", label: "Interview", color: "#0d9488" },
   { key: "accepted", label: "Accepted", color: "#10b981" },
   { key: "rejected", label: "Rejected", color: "#f43f5e" },
 ];
@@ -125,68 +125,62 @@ export default async function DashboardPage() {
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 max-w-5xl mx-auto flex flex-col gap-8 relative overflow-hidden font-sans antialiased">
-      {/* Background Ambient Glows */}
-      <div className="fixed -top-32 -left-32 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="fixed top-1/2 -right-32 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
-
+    <main className="min-h-screen bg-slate-50/50 text-slate-900 p-4 md:p-8 max-w-5xl mx-auto flex flex-col gap-8 font-sans antialiased">
       {/* Header Greeting */}
-      <header className="relative z-10 space-y-1">
-        <p className="text-xs font-mono uppercase tracking-widest text-slate-400">
+      <header className="space-y-1">
+        <p className="text-xs font-mono uppercase tracking-widest text-slate-500">
           {now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
         </p>
-        <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">
+        <h1 className="text-4xl md:text-5xl font-serif text-slate-900 tracking-tight leading-tight">
           {greeting}.
         </h1>
       </header>
 
       {/* HERO DEADLINE BANNER */}
-      <section className="relative z-10 backdrop-blur-2xl bg-slate-900/50 border border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-        
+      <section className="bg-white border border-slate-200/80 rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden">
         {first ? (
           <div className="flex flex-col gap-6">
             <div className="flex items-end justify-between gap-6 flex-wrap">
               <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Your first application deadline is in
                 </p>
                 <p className="flex items-baseline gap-2 leading-none">
-                  <span className="font-extrabold text-6xl md:text-7xl text-white tracking-tighter drop-shadow-md">
+                  <span className="font-mono font-bold text-6xl md:text-7xl text-slate-900 tracking-tighter">
                     {firstDays}
                   </span>
-                  <span className="text-xl font-light text-slate-400">days</span>
+                  <span className="text-lg font-normal text-slate-500">days</span>
                 </p>
               </div>
               <div className="md:text-right space-y-1">
                 <Link
                   href={`/schools/${first.id}?tab=application`}
-                  className="text-xl md:text-2xl font-bold text-white hover:text-blue-400 transition-colors tracking-tight block"
+                  className="text-xl md:text-2xl font-serif font-semibold text-slate-900 hover:text-blue-600 transition-colors tracking-tight block"
                 >
                   {first.name}
                 </Link>
-                <p className="text-xs font-mono text-slate-400">
+                <p className="text-xs font-mono text-slate-500">
                   {new Date(first.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
                 </p>
                 <Link
                   href="/week"
-                  className="inline-flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 font-semibold pt-1 transition-colors"
+                  className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline font-semibold pt-1 transition-colors"
                 >
                   Plan the week →
                 </Link>
               </div>
             </div>
-            <div className="pt-2 border-t border-slate-800/60">
+            <div className="pt-4 border-t border-slate-100">
               <Runway deadlines={deadlines} today={today} />
             </div>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            <p className="text-2xl font-bold text-white">No deadlines set yet.</p>
-            <p className="text-xs text-slate-400">
+            <p className="text-2xl font-serif font-semibold text-slate-900">No deadlines set yet.</p>
+            <p className="text-xs text-slate-500">
               Open a school and add its deadline in the Admissions tab, and your runway appears here.
             </p>
-            <Link href="/schools?sort=deadline" className="text-xs text-amber-400 hover:text-amber-300 font-semibold mt-2">
+            <Link href="/schools?sort=deadline" className="text-xs text-blue-600 hover:underline font-semibold mt-2">
               Go to schools →
             </Link>
           </div>
@@ -195,30 +189,30 @@ export default async function DashboardPage() {
 
       {/* NEEDS ATTENTION SECTION */}
       {atRisk.length > 0 && (
-        <section className="relative z-10 backdrop-blur-xl bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
-            <h2 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Needs attention</h2>
-            <Link href="/readiness" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+        <section className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Needs attention</h2>
+            <Link href="/readiness" className="text-xs text-blue-600 hover:underline transition-colors font-medium">
               All applications →
             </Link>
           </div>
-          <ul className="divide-y divide-slate-800/60">
+          <ul className="divide-y divide-slate-100">
             {atRisk.slice(0, 4).map((r) => (
               <li key={r.school.id}>
                 <Link
                   href={`/schools/${r.school.id}?tab=application`}
-                  className="flex items-center justify-between gap-4 py-2.5 px-2 rounded-xl hover:bg-slate-800/50 transition-all"
+                  className="flex items-center justify-between gap-4 py-2.5 px-2 rounded-xl hover:bg-slate-50 transition-all"
                 >
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-white">{r.school.name}</span>
-                    <span className="block text-xs text-slate-400 truncate">
+                    <span className="block truncate text-sm font-semibold text-slate-900">{r.school.name}</span>
+                    <span className="block text-xs text-slate-500 truncate">
                       Still to do: {r.pending.map((p) => p.label.replace(/ \(.*\)$/, "").toLowerCase()).join(", ")}
                     </span>
                   </span>
-                  <span className={`text-xs font-mono font-semibold whitespace-nowrap px-2.5 py-1 rounded-lg bg-slate-950/60 border border-slate-800 ${RISK_TONE[r.risk]}`}>
+                  <span className={`text-xs font-mono font-semibold whitespace-nowrap px-2.5 py-1 rounded-lg border border-slate-200 ${RISK_TONE[r.risk]}`}>
                     {RISK_LABEL[r.risk]}
                     {r.days != null && (
-                      <span className="text-slate-400 font-normal"> · {r.days < 0 ? `${-r.days}d ago` : `${r.days}d`}</span>
+                      <span className="text-slate-500 font-normal"> · {r.days < 0 ? `${-r.days}d ago` : `${r.days}d`}</span>
                     )}
                   </span>
                 </Link>
@@ -229,52 +223,52 @@ export default async function DashboardPage() {
       )}
 
       {/* 2-COLUMN GRID SECTION */}
-      <div className="relative z-10 grid gap-6 md:grid-cols-2 items-start">
+      <div className="grid gap-6 md:grid-cols-2 items-start">
         {/* LEFT COLUMN: Next up */}
         <section className="space-y-3">
-          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">Next up</h2>
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-1">Next up</h2>
           {focus ? (
             <Link
               href={focus.href}
-              className="group backdrop-blur-xl bg-slate-900/40 border border-slate-800/80 hover:border-blue-500/50 rounded-2xl p-5 transition-all shadow-lg block relative overflow-hidden"
+              className="group bg-white border border-slate-200/80 hover:border-blue-600/50 rounded-2xl p-5 transition-all shadow-sm hover:shadow-md block relative overflow-hidden"
             >
               <div className="flex justify-between items-start mb-2">
-                <span className={`text-xs font-mono font-semibold px-2 py-0.5 rounded-md ${focus.date < today ? "bg-rose-500/15 border border-rose-500/30 text-rose-300" : "bg-amber-500/15 border border-amber-500/30 text-amber-300"}`}>
+                <span className={`text-xs font-mono font-semibold px-2 py-0.5 rounded-md ${focus.date < today ? "bg-rose-50 text-rose-700 border border-rose-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
                   {when(daysFrom(today, focus.date))}
                 </span>
               </div>
-              <span className="text-xl font-bold text-white block tracking-tight group-hover:text-blue-300 transition-colors">
+              <span className="text-xl font-serif font-bold text-slate-900 block tracking-tight group-hover:text-blue-600 transition-colors">
                 {focus.label}
               </span>
-              <span className="text-xs text-slate-400 block mt-1">{focus.sub}</span>
-              <span className="inline-flex items-center gap-1 text-xs text-blue-400 font-semibold mt-4 group-hover:translate-x-1 transition-transform">
+              <span className="text-xs text-slate-500 block mt-1">{focus.sub}</span>
+              <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-semibold mt-4 group-hover:translate-x-1 transition-transform">
                 Open →
               </span>
             </Link>
           ) : (
-            <div className="backdrop-blur-xl bg-slate-900/30 border border-dashed border-slate-800/80 rounded-2xl p-5 text-xs text-slate-400">
+            <div className="bg-white border border-dashed border-slate-200/80 rounded-2xl p-5 text-xs text-slate-500">
               Nothing urgent. A good moment to{" "}
-              <Link href="/outreach" className="text-blue-400 hover:text-blue-300 underline">
+              <Link href="/outreach" className="text-blue-600 hover:underline">
                 email a professor
               </Link>{" "}
               or{" "}
-              <Link href="/schools?sort=researched" className="text-blue-400 hover:text-blue-300 underline">
+              <Link href="/schools?sort=researched" className="text-blue-600 hover:underline">
                 research a school
               </Link>.
             </div>
           )}
 
           {attention.length > 1 && (
-            <div className="backdrop-blur-xl bg-slate-900/30 border border-slate-800/80 rounded-2xl p-3 shadow-lg">
-              <ul className="divide-y divide-slate-800/60">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-3 shadow-sm">
+              <ul className="divide-y divide-slate-100">
                 {attention.slice(1, 5).map((r, i) => (
                   <li key={i}>
                     <Link
                       href={r.href}
-                      className="flex justify-between items-center gap-4 py-2 px-2 rounded-xl text-xs hover:bg-slate-800/40 transition-colors"
+                      className="flex justify-between items-center gap-4 py-2 px-2 rounded-xl text-xs hover:bg-slate-50 transition-colors"
                     >
-                      <span className="truncate text-slate-300 font-medium">{r.label}</span>
-                      <span className={`font-mono text-[11px] whitespace-nowrap ${r.date < today ? "text-rose-400" : "text-slate-400"}`}>
+                      <span className="truncate text-slate-700 font-medium">{r.label}</span>
+                      <span className={`font-mono text-[11px] whitespace-nowrap ${r.date < today ? "text-rose-600" : "text-slate-500"}`}>
                         {when(daysFrom(today, r.date))}
                       </span>
                     </Link>
@@ -287,18 +281,18 @@ export default async function DashboardPage() {
 
         {/* RIGHT COLUMN: This week */}
         <section className="space-y-3">
-          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">This week</h2>
-          <div className="backdrop-blur-xl bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-4">
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-1">This week</h2>
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
             <WeekRhythm days={rhythmDays} />
-            <div className="pt-3 border-t border-slate-800/60 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-400">
-              <Link href="/schools" className="hover:text-white transition-colors">
-                <span className="font-mono font-bold text-white">{list.length}</span> schools ({active} in progress)
+            <div className="pt-3 border-t border-slate-100 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-500">
+              <Link href="/schools" className="hover:text-slate-900 transition-colors">
+                <span className="font-mono font-bold text-slate-900">{list.length}</span> schools ({active} in progress)
               </Link>
-              <Link href="/tasks" className="hover:text-white transition-colors">
-                <span className="font-mono font-bold text-white">{openTasks?.length ?? 0}</span> open tasks
+              <Link href="/tasks" className="hover:text-slate-900 transition-colors">
+                <span className="font-mono font-bold text-slate-900">{openTasks?.length ?? 0}</span> open tasks
               </Link>
-              <Link href="/wins" className="hover:text-white transition-colors">
-                <span className="font-mono font-bold text-emerald-400">{wins}</span> wins this month
+              <Link href="/wins" className="hover:text-slate-900 transition-colors">
+                <span className="font-mono font-bold text-emerald-600">{wins}</span> wins this month
               </Link>
             </div>
           </div>
@@ -310,18 +304,18 @@ export default async function DashboardPage() {
         <Section
           title="Coming up"
           hint="next 14 days"
-          action={<Link href="/week" className="text-xs text-slate-400 hover:text-white transition-colors">See the week →</Link>}
+          action={<Link href="/week" className="text-xs text-slate-500 hover:text-slate-900 transition-colors">See the week →</Link>}
         >
-          <div className="backdrop-blur-xl bg-slate-900/40 border border-slate-800/80 rounded-2xl p-3 shadow-lg">
-            <ul className="divide-y divide-slate-800/60">
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-3 shadow-sm">
+            <ul className="divide-y divide-slate-100">
               {upcoming.slice(0, 6).map((r, i) => (
                 <li key={i}>
                   <Link
                     href={r.href}
-                    className="flex justify-between items-center gap-4 py-2.5 px-3 rounded-xl hover:bg-slate-800/40 transition-colors"
+                    className="flex justify-between items-center gap-4 py-2.5 px-3 rounded-xl hover:bg-slate-50 transition-colors"
                   >
-                    <span className="truncate text-xs font-medium text-slate-300">{r.label}</span>
-                    <span className="text-[11px] font-mono whitespace-nowrap text-slate-400">
+                    <span className="truncate text-xs font-medium text-slate-700">{r.label}</span>
+                    <span className="text-[11px] font-mono whitespace-nowrap text-slate-500">
                       {when(daysFrom(today, r.date))}
                     </span>
                   </Link>
@@ -335,10 +329,10 @@ export default async function DashboardPage() {
       {/* PIPELINE OVERVIEW SECTION */}
       <Section
         title="Your applications"
-        action={<Link href="/schools" className="text-xs text-slate-400 hover:text-white transition-colors">All schools →</Link>}
+        action={<Link href="/schools" className="text-xs text-slate-500 hover:text-slate-900 transition-colors">All schools →</Link>}
       >
-        <div className="backdrop-blur-xl bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-4">
-          <div className="flex h-2.5 rounded-full overflow-hidden bg-slate-950 border border-slate-800/60">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="flex h-2.5 rounded-full overflow-hidden bg-slate-100 border border-slate-200/60">
             {PIPELINE.filter((p) => counts[p.key]).map((p) => (
               <Link
                 key={p.key}
@@ -349,26 +343,26 @@ export default async function DashboardPage() {
               />
             ))}
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-400 pt-1">
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500 pt-1">
             {PIPELINE.filter((p) => counts[p.key]).map((p) => (
-              <Link key={p.key} href={`/schools?status=${p.key}`} className="hover:text-white flex items-center gap-1.5 transition-colors">
+              <Link key={p.key} href={`/schools?status=${p.key}`} className="hover:text-slate-900 flex items-center gap-1.5 transition-colors">
                 <i className="w-2 h-2 rounded-full" style={{ background: p.color }} />
                 <span>{p.label}</span>
-                <span className="font-mono text-white font-bold">{counts[p.key]}</span>
+                <span className="font-mono text-slate-900 font-bold">{counts[p.key]}</span>
               </Link>
             ))}
           </div>
         </div>
       </Section>
 
-      {/* VISIBLE ANALYTICS SECTION */}
+      {/* ANALYTICS SECTION */}
       <Section
         title="Telemetry & Analytics"
         hint="fit map, pipeline, composite scores, execution momentum"
       >
-        <div className="backdrop-blur-xl bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-2">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-2">
           <DashboardAnalytics schools={list as any} weekly={weekly.map(({ week, tasks, wins }) => ({ week, tasks, wins }))} />
-          <p className="text-[11px] font-mono text-slate-500 pt-2 border-t border-slate-800/60">
+          <p className="text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-100">
             Scores are a heuristic, not a validated ranking.
           </p>
         </div>
