@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-// Re-export type expected by parent components to fix CI build error
 export type AnalyticsSchool = {
   id: string;
   name: string;
@@ -16,8 +15,11 @@ export type AnalyticsSchool = {
   csranking_nlp_rank?: number | null;
 };
 
+// Updated props interface to accept both 'schools' and 'weekly'
 export interface DashboardAnalyticsProps {
+  schools?: AnalyticsSchool[];
   initialSchools?: AnalyticsSchool[];
+  weekly?: { week: string; tasks: number; wins: number }[];
   onSelectSchool?: (school: AnalyticsSchool) => void;
 }
 
@@ -45,15 +47,22 @@ const STATUS_COLORS: Record<string, { fill: string; stroke: string; badge: strin
   Interview: { fill: "bg-amber-500", stroke: "stroke-amber-500", badge: "bg-amber-50 text-amber-700 border-amber-200" },
 };
 
-export function DashboardAnalytics({ initialSchools = DEFAULT_MOCK_SCHOOLS, onSelectSchool }: DashboardAnalyticsProps) {
+export function DashboardAnalytics({
+  schools,
+  initialSchools,
+  weekly,
+  onSelectSchool,
+}: DashboardAnalyticsProps) {
+  // Use passed `schools` or fallback to `initialSchools` or default data
+  const schoolList = schools || initialSchools || DEFAULT_MOCK_SCHOOLS;
+
   const [selectedTab, setSelectedTab] = useState<"Fit map" | "Pipeline" | "Scores" | "Momentum">("Fit map");
   const [selectedCountry, setSelectedCountry] = useState<string>("All");
   const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [hoveredSchool, setHoveredSchool] = useState<AnalyticsSchool | null>(null);
 
-  // Filter logic
-  const filteredSchools = initialSchools.filter((s) => {
+  const filteredSchools = schoolList.filter((s) => {
     if (selectedCountry !== "All" && s.country !== selectedCountry) return false;
     if (verifiedOnly && !s.verifiedFit) return false;
     if (searchQuery.trim() !== "") {
@@ -137,18 +146,17 @@ export function DashboardAnalytics({ initialSchools = DEFAULT_MOCK_SCHOOLS, onSe
         </div>
 
         <div className="font-mono text-xs text-slate-500">
-          Showing <span className="font-semibold text-slate-900">{filteredSchools.length}</span> of {initialSchools.length}
+          Showing <span className="font-semibold text-slate-900">{filteredSchools.length}</span> of {schoolList.length}
         </div>
       </section>
 
-      {/* Interactive Fit Map Scatter Chart */}
+      {/* Scatter Chart */}
       <section className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm relative">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-sm font-semibold text-slate-900">Program Fit vs. Timeline Readiness</h3>
             <p className="text-xs text-slate-500">Hover over any data point to inspect details</p>
           </div>
-          {/* Color Legend */}
           <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-600">
             {Object.entries(STATUS_COLORS).map(([status, style]) => (
               <div key={status} className="flex items-center gap-1.5">
@@ -159,9 +167,7 @@ export function DashboardAnalytics({ initialSchools = DEFAULT_MOCK_SCHOOLS, onSe
           </div>
         </div>
 
-        {/* Scatter Canvas */}
         <div className="relative h-80 w-full bg-slate-50/50 rounded-xl border border-slate-100 p-4 pt-6">
-          {/* Gridlines */}
           <div className="absolute inset-x-12 top-6 bottom-10 flex flex-col justify-between pointer-events-none">
             {[100, 75, 50, 25, 0].map((val) => (
               <div key={val} className="w-full border-b border-slate-200/60 relative">
@@ -170,11 +176,10 @@ export function DashboardAnalytics({ initialSchools = DEFAULT_MOCK_SCHOOLS, onSe
             ))}
           </div>
 
-          {/* Scatter Plot Points */}
           <div className="absolute inset-x-12 top-6 bottom-10">
             {filteredSchools.map((school) => {
-              const leftPercent = Math.min(Math.max(school.deadlineDays, 0), 100);
-              const bottomPercent = Math.min(Math.max(school.fitScore, 0), 100);
+              const leftPercent = Math.min(Math.max(school.deadlineDays ?? 50, 0), 100);
+              const bottomPercent = Math.min(Math.max(school.fitScore ?? 50, 0), 100);
               const colors = STATUS_COLORS[school.status] || STATUS_COLORS["Shortlisted"];
 
               return (
@@ -194,12 +199,11 @@ export function DashboardAnalytics({ initialSchools = DEFAULT_MOCK_SCHOOLS, onSe
             })}
           </div>
 
-          {/* Hover Tooltip */}
           {hoveredSchool && (
             <div
               style={{
-                left: `${Math.min(Math.max(hoveredSchool.deadlineDays, 0), 100)}%`,
-                bottom: `${Math.min(Math.max(hoveredSchool.fitScore, 0), 100)}%`,
+                left: `${Math.min(Math.max(hoveredSchool.deadlineDays ?? 50, 0), 100)}%`,
+                bottom: `${Math.min(Math.max(hoveredSchool.fitScore ?? 50, 0), 100)}%`,
               }}
               className="absolute -translate-x-1/2 -translate-y-12 z-20 pointer-events-none transition-all duration-150"
             >
@@ -217,7 +221,6 @@ export function DashboardAnalytics({ initialSchools = DEFAULT_MOCK_SCHOOLS, onSe
             </div>
           )}
 
-          {/* X Axis Label */}
           <div className="absolute inset-x-12 bottom-2 flex justify-between text-[10px] font-mono text-slate-400 pointer-events-none">
             <span>0 Days Left (Urgent)</span>
             <span>Timeline Readiness / Days Remaining</span>
