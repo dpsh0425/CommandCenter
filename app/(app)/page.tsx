@@ -1,372 +1,484 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardAnalytics } from "@/components/dashboard-analytics";
-import { Section } from "@/components/ui";
-import { Runway } from "@/components/runway";
-import { loadReadiness } from "@/lib/readiness-data";
-import { RISK_LABEL, RISK_TONE } from "@/lib/readiness";
-import { WeekRhythm } from "@/components/week-rhythm";
+import { Runway } from "./runway";
+import { WeekRhythm } from "./week-rhythm";
+import { Fold } from "./fold";
 
-export const metadata = { title: "Dashboard · Command Center" };
-
-const localDate = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const daysFrom = (today: string, date: string) =>
-  Math.round((new Date(date + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime()) / 86400000);
-const when = (delta: number) =>
-  delta === 0 ? "today" : delta === 1 ? "tomorrow" : delta < 0 ? `${-delta}d overdue` : `in ${delta}d`;
-
-const PIPELINE: Array<{ key: string; label: string; color: string }> = [
-  { key: "not_started", label: "Not started", color: "#94a3b8" },
-  { key: "researching", label: "Researching", color: "#64748b" },
-  { key: "contacted", label: "Contacted", color: "#f59e0b" },
-  { key: "replied", label: "Replied", color: "#d97706" },
-  { key: "submitted", label: "Submitted", color: "#6366f1" },
-  { key: "interview", label: "Interview", color: "#0d9488" },
-  { key: "accepted", label: "Accepted", color: "#10b981" },
-  { key: "rejected", label: "Rejected", color: "#f43f5e" },
-];
-
-type Row = { label: string; sub: string; href: string; date: string; kind: string };
+function mondayOf(d: Date) {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setDate(diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const now = new Date();
-  const today = localDate(now);
-  const horizon = new Date(now);
-  horizon.setDate(horizon.getDate() + 14);
-  const cutoff = localDate(horizon);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const supabase = createClient();
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayObj = new Date();
+  todayObj.setHours(0, 0, 0, 0);
 
   const [
-    { data: schools }, { data: openTasks }, { data: dueTasks }, { data: schoolDeadlines }, { data: nextDeadlines },
-    { data: milestones }, { data: letters }, { count: winsA }, { count: winsB },
+    { data: profile },
+    { data: schools },
+    { data: tasks },
+    { data: milestones },
+    { data: letters },
+    { data: weeklyLogs },
   ] = await Promise.all([
-    supabase.from("schools").select("id, name, status, country, csranking_nlp_rank, composite_score, verified_fit, faculty, fit_note"),
-    supabase.from("tasks").select("id").not("status", "in", "(done,cancelled)"),
-    supabase.from("tasks").select("id, title, due_date, priority").not("due_date", "is", null).lte("due_date", cutoff).not("status", "in", "(done,cancelled)"),
-    supabase.from("schools").select("id, name, deadline_date").not("deadline_date", "is", null).lte("deadline_date", cutoff),
-    supabase.from("schools").select("id, name, deadline_date").not("deadline_date", "is", null).gte("deadline_date", localDate(now)).order("deadline_date").limit(12),
-    supabase.from("research_milestones").select("id, title, target_date").not("target_date", "is", null).lte("target_date", cutoff).neq("status", "done"),
-    supabase.from("letter_requests").select("id, school_id, status, letter_deadline, people(name), schools(name)").not("letter_deadline", "is", null).lte("letter_deadline", cutoff).neq("status", "submitted"),
-    supabase.from("activity_log").select("id", { count: "exact", head: true }).eq("is_win", true).gte("created_at", monthStart),
-    supabase.from("task_updates").select("id", { count: "exact", head: true }).eq("is_win", true).gte("created_at", monthStart),
+    supabase.from("profiles").select("display_name, target_term").single(),
+    supabase.from("schools").select("*").order("deadline", { ascending: true }),
+    supabase.from("tasks").select("*, schools(name)").order("due_date", { ascending: true }),
+    supabase.from("milestones").select("*, schools(name)").order("due_date", { ascending: true }),
+    supabase.from("recommenders").select("*, schools(name)"),
+    supabase.from("weekly_logs").select("*").order("week_start", { ascending: false }).limit(6),
   ]);
 
-  const mondayOf = (d: Date) => {
-    const m = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
-    return m;
-  };
-  const thisMonday = mondayOf(now);
-  const firstMonday = new Date(thisMonday);
-  firstMonday.setDate(firstMonday.getDate() - 7 * 7);
-  const weekStart = localDate(mondayOf(now));
-  const readiness = await loadReadiness(supabase, today);
-  const atRisk = readiness.filter((r) => r.risk === "overdue" || r.risk === "urgent" || r.risk === "watch");
-  const [{ data: doneUpdates }, { data: winActivity }, { data: contactedProfs }] = await Promise.all([
-    supabase.from("task_updates").select("created_at").eq("type", "status_change").eq("is_win", true).gte("created_at", firstMonday.toISOString()),
-    supabase.from("activity_log").select("created_at").eq("is_win", true).gte("created_at", firstMonday.toISOString()),
-    supabase.from("professors").select("last_contacted_on").gte("last_contacted_on", weekStart),
-  ]);
-  const weekly = Array.from({ length: 8 }, (_, i) => {
-    const start = new Date(firstMonday);
-    start.setDate(start.getDate() + i * 7);
-    return { start, week: start.toLocaleDateString(undefined, { month: "short", day: "numeric" }), tasks: 0, wins: 0 };
-  });
-  const bump = (iso: string, key: "tasks" | "wins") => {
-    const idx = Math.floor((mondayOf(new Date(iso)).getTime() - firstMonday.getTime()) / (7 * 86400000));
-    if (idx >= 0 && idx < 8) weekly[idx][key] += 1;
-  };
-  for (const u of doneUpdates ?? []) bump(u.created_at, "tasks");
-  for (const a of winActivity ?? []) bump(a.created_at, "wins");
+  const allSchools = schools || [];
+  const allTasks = tasks || [];
+  const allMilestones = milestones || [];
+  const allLetters = letters || [];
 
-  const list = schools ?? [];
-  const counts: Record<string, number> = {};
-  for (const s of list) counts[s.status] = (counts[s.status] ?? 0) + 1;
-  const active = list.filter((s) => s.status !== "not_started").length;
-  const wins = (winsA ?? 0) + (winsB ?? 0);
+  // 1. Next upcoming school deadline
+  const upcomingSchools = allSchools
+    .filter((s) => s.deadline && s.deadline >= todayStr)
+    .sort((a, b) => (a.deadline! > b.deadline! ? 1 : -1));
+  const nextSchool = upcomingSchools[0] || allSchools[0];
 
-  const rows: Row[] = [
-    ...(dueTasks ?? []).map((t) => ({ label: t.title, sub: `task · ${t.priority} priority`, href: `/tasks/${t.id}`, date: t.due_date as string, kind: "task" })),
-    ...(schoolDeadlines ?? []).map((s) => ({ label: s.name, sub: "school deadline", href: `/schools/${s.id}`, date: s.deadline_date as string, kind: "school" })),
-    ...(milestones ?? []).map((m) => ({ label: m.title, sub: "research milestone", href: `/research/${m.id}`, date: m.target_date as string, kind: "milestone" })),
-    ...((letters ?? []) as any[]).map((l) => ({
-      label: `${l.people?.name ?? "Recommender"} — letter for ${l.schools?.name ?? "school"}`,
-      sub: `recommendation letter · ${String(l.status).replace("_", " ")}`,
-      href: `/schools/${l.school_id}`, date: l.letter_deadline as string, kind: "letter",
-    })),
-  ].sort((a, b) => a.date.localeCompare(b.date));
+  let daysToNextSchool: number | null = null;
+  if (nextSchool?.deadline) {
+    const target = new Date(nextSchool.deadline);
+    target.setHours(0, 0, 0, 0);
+    daysToNextSchool = Math.ceil((target.getTime() - todayObj.getTime()) / (1000 * 60 * 60 * 24));
+  }
 
-  const overdue = rows.filter((r) => r.date < today);
-  const urgentCutoff = localDate(new Date(now.getTime() + 3 * 86400000));
-  const attention = rows.filter((r) => r.date <= urgentCutoff);
-  const upcoming = rows.filter((r) => r.date > urgentCutoff);
+  // 2. Rows normalization & merge
+  const rows: {
+    id: string;
+    title: string;
+    due_date: string | null;
+    school_name?: string;
+    type: "task" | "deadline" | "milestone" | "letter";
+    status?: string;
+    is_done?: boolean;
+  }[] = [];
 
-  const total = list.length || 1;
-
-  const activeDates = new Set<string>([
-    ...(doneUpdates ?? []).map((u) => localDate(new Date(u.created_at))),
-    ...(winActivity ?? []).map((a) => localDate(new Date(a.created_at))),
-    ...((contactedProfs ?? []) as any[]).map((p) => p.last_contacted_on as string),
-  ]);
-  const rhythmDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(thisMonday);
-    d.setDate(d.getDate() + i);
-    const key = localDate(d);
-    return { label: d.toLocaleDateString(undefined, { weekday: "narrow" }), date: key, active: activeDates.has(key), isToday: key === today, future: key > today };
+  allTasks.forEach((t) => {
+    rows.push({
+      id: `task-${t.id}`,
+      title: t.title,
+      due_date: t.due_date,
+      school_name: (t.schools as any)?.name,
+      type: "task",
+      status: t.status,
+      is_done: t.status === "Done" || t.status === "Completed",
+    });
   });
 
-  const deadlines = (nextDeadlines ?? []).map((d) => ({ id: d.id as string, name: d.name as string, date: d.deadline_date as string }));
-  const first = deadlines[0];
-  const firstDays = first ? daysFrom(today, first.date) : null;
-  const focus = rows[0];
-  const hour = now.getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  allSchools.forEach((s) => {
+    if (s.deadline) {
+      rows.push({
+        id: `school-${s.id}`,
+        title: `${s.name} Application Deadline`,
+        due_date: s.deadline,
+        school_name: s.name,
+        type: "deadline",
+        status: s.status,
+        is_done: s.status === "Submitted" || s.status === "Accepted",
+      });
+    }
+  });
+
+  allMilestones.forEach((m) => {
+    rows.push({
+      id: `milestone-${m.id}`,
+      title: m.title,
+      due_date: m.due_date,
+      school_name: (m.schools as any)?.name,
+      type: "milestone",
+      status: m.status,
+      is_done: m.status === "Completed" || m.status === "Done",
+    });
+  });
+
+  allLetters.forEach((l) => {
+    if (l.due_date) {
+      rows.push({
+        id: `letter-${l.id}`,
+        title: `LOR: ${l.name} (${(l.schools as any)?.name || "General"})`,
+        due_date: l.due_date,
+        school_name: (l.schools as any)?.name,
+        type: "letter",
+        status: l.status,
+        is_done: l.status === "Submitted" || l.status === "Received",
+      });
+    }
+  });
+
+  // Filter out completed items
+  const pendingRows = rows.filter((r) => !r.is_done);
+
+  // Overdue & At-risk filter
+  const overdueItems = pendingRows.filter((r) => r.due_date && r.due_date < todayStr);
+  const atRiskSchools = allSchools.filter(
+    (s) => s.status === "In Progress" && s.deadline && s.deadline <= todayStr
+  );
+
+  // Sorting pending rows chronologically
+  pendingRows.sort((a, b) => {
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    return a.due_date > b.due_date ? 1 : -1;
+  });
+
+  const focusItem = pendingRows[0];
+
+  // 3. Weekly Rhythm Bucketing
+  const currentMon = mondayOf(todayObj);
+  const currentMonStr = currentMon.toISOString().slice(0, 10);
+  const nextMon = new Date(currentMon);
+  nextMon.setDate(nextMon.getDate() + 7);
+  const nextMonStr = nextMon.toISOString().slice(0, 10);
+
+  const thisWeekItems = pendingRows.filter(
+    (r) => r.due_date && r.due_date >= currentMonStr && r.due_date < nextMonStr
+  );
+
+  const rhythmDays = [0, 1, 2, 3, 4, 5, 6].map((offset) => {
+    const d = new Date(currentMon);
+    d.setDate(d.getDate() + offset);
+    const dateStr = d.toISOString().slice(0, 10);
+    const count = thisWeekItems.filter((r) => r.due_date === dateStr).length;
+    return {
+      dayName: d.toLocaleDateString("en-US", { weekday: "narrow" }),
+      dateStr,
+      count,
+      isToday: dateStr === todayStr,
+    };
+  });
+
+  // 4. Pipeline Counts
+  const PIPELINE = {
+    shortlisted: allSchools.filter((s) => s.status === "Shortlisted").length,
+    inProgress: allSchools.filter((s) => s.status === "In Progress").length,
+    submitted: allSchools.filter((s) => s.status === "Submitted").length,
+    interview: allSchools.filter((s) => s.status === "Interview").length,
+  };
+  const totalSchools = allSchools.length || 1;
+
+  // Analytics mapping
+  const analyticsSchools = allSchools.map((s) => {
+    let days: number | undefined = undefined;
+    if (s.deadline) {
+      const target = new Date(s.deadline);
+      target.setHours(0, 0, 0, 0);
+      days = Math.max(0, Math.ceil((target.getTime() - todayObj.getTime()) / (1000 * 60 * 60 * 24)));
+    }
+    return {
+      id: s.id,
+      name: s.name,
+      program: s.program || "Graduate Program",
+      country: s.country || "US",
+      status: s.status || "Shortlisted",
+      fitScore: s.fit_score ?? 75,
+      deadlineDays: days,
+      verifiedFit: !!s.verified_fit,
+      professor: s.target_professor || undefined,
+    };
+  });
+
+  const weeklyData = (weeklyLogs || []).map((w, idx) => ({
+    week: `W${idx + 1}`,
+    tasks: w.tasks_completed || 0,
+    wins: w.milestones_reached || 0,
+  }));
+
+  const displayName = profile?.display_name || "Researcher";
 
   return (
-    <main className="min-h-screen bg-slate-50/50 text-slate-900 p-4 md:p-8 max-w-5xl mx-auto flex flex-col gap-8 font-sans antialiased">
-      {/* Header Greeting */}
-      <header className="space-y-1">
-        <p className="text-xs font-mono uppercase tracking-widest text-slate-500">
-          {now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
-        </p>
-        <h1 className="text-4xl md:text-5xl font-serif text-slate-900 tracking-tight leading-tight">
-          {greeting}.
-        </h1>
-      </header>
-
-      {/* HERO DEADLINE BANNER */}
-      <section className="bg-white border border-slate-200/80 rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden">
-        {first ? (
-          <div className="flex flex-col gap-6">
-            <div className="flex items-end justify-between gap-6 flex-wrap">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Your first application deadline is in
-                </p>
-                <p className="flex items-baseline gap-2 leading-none">
-                  <span className="font-mono font-bold text-6xl md:text-7xl text-slate-900 tracking-tighter">
-                    {firstDays}
-                  </span>
-                  <span className="text-lg font-normal text-slate-500">days</span>
-                </p>
-              </div>
-              <div className="md:text-right space-y-1">
-                <Link
-                  href={`/schools/${first.id}?tab=application`}
-                  className="text-xl md:text-2xl font-serif font-semibold text-slate-900 hover:text-blue-600 transition-colors tracking-tight block"
-                >
-                  {first.name}
-                </Link>
-                <p className="text-xs font-mono text-slate-500">
-                  {new Date(first.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
-                </p>
-                <Link
-                  href="/week"
-                  className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline font-semibold pt-1 transition-colors"
-                >
-                  Plan the week →
-                </Link>
-              </div>
-            </div>
-            <div className="pt-4 border-t border-slate-100">
-              <Runway deadlines={deadlines} today={today} />
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <p className="text-2xl font-serif font-semibold text-slate-900">No deadlines set yet.</p>
-            <p className="text-xs text-slate-500">
-              Open a school and add its deadline in the Admissions tab, and your runway appears here.
-            </p>
-            <Link href="/schools?sort=deadline" className="text-xs text-blue-600 hover:underline font-semibold mt-2">
-              Go to schools →
-            </Link>
-          </div>
-        )}
-      </section>
-
-      {/* NEEDS ATTENTION SECTION */}
-      {atRisk.length > 0 && (
-        <section className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Needs attention</h2>
-            <Link href="/readiness" className="text-xs text-blue-600 hover:underline transition-colors font-medium">
-              All applications →
-            </Link>
-          </div>
-          <ul className="divide-y divide-slate-100">
-            {atRisk.slice(0, 4).map((r) => (
-              <li key={r.school.id}>
-                <Link
-                  href={`/schools/${r.school.id}?tab=application`}
-                  className="flex items-center justify-between gap-4 py-2.5 px-2 rounded-xl hover:bg-slate-50 transition-all"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-slate-900">{r.school.name}</span>
-                    <span className="block text-xs text-slate-500 truncate">
-                      Still to do: {r.pending.map((p) => p.label.replace(/ \(.*\)$/, "").toLowerCase()).join(", ")}
-                    </span>
-                  </span>
-                  <span className={`text-xs font-mono font-semibold whitespace-nowrap px-2.5 py-1 rounded-lg border border-slate-200 ${RISK_TONE[r.risk]}`}>
-                    {RISK_LABEL[r.risk]}
-                    {r.days != null && (
-                      <span className="text-slate-500 font-normal"> · {r.days < 0 ? `${-r.days}d ago` : `${r.days}d`}</span>
-                    )}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* 2-COLUMN GRID SECTION */}
-      <div className="grid gap-6 md:grid-cols-2 items-start">
-        {/* LEFT COLUMN: Next up */}
-        <section className="space-y-3">
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-1">Next up</h2>
-          {focus ? (
-            <Link
-              href={focus.href}
-              className="group bg-white border border-slate-200/80 hover:border-blue-600/50 rounded-2xl p-5 transition-all shadow-sm hover:shadow-md block relative overflow-hidden"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <span className={`text-xs font-mono font-semibold px-2 py-0.5 rounded-md ${focus.date < today ? "bg-rose-50 text-rose-700 border border-rose-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-                  {when(daysFrom(today, focus.date))}
-                </span>
-              </div>
-              <span className="text-xl font-serif font-bold text-slate-900 block tracking-tight group-hover:text-blue-600 transition-colors">
-                {focus.label}
-              </span>
-              <span className="text-xs text-slate-500 block mt-1">{focus.sub}</span>
-              <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-semibold mt-4 group-hover:translate-x-1 transition-transform">
-                Open →
-              </span>
-            </Link>
-          ) : (
-            <div className="bg-white border border-dashed border-slate-200/80 rounded-2xl p-5 text-xs text-slate-500">
-              Nothing urgent. A good moment to{" "}
-              <Link href="/outreach" className="text-blue-600 hover:underline">
-                email a professor
-              </Link>{" "}
-              or{" "}
-              <Link href="/schools?sort=researched" className="text-blue-600 hover:underline">
-                research a school
-              </Link>.
-            </div>
-          )}
-
-          {attention.length > 1 && (
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-3 shadow-sm">
-              <ul className="divide-y divide-slate-100">
-                {attention.slice(1, 5).map((r, i) => (
-                  <li key={i}>
-                    <Link
-                      href={r.href}
-                      className="flex justify-between items-center gap-4 py-2 px-2 rounded-xl text-xs hover:bg-slate-50 transition-colors"
-                    >
-                      <span className="truncate text-slate-700 font-medium">{r.label}</span>
-                      <span className={`font-mono text-[11px] whitespace-nowrap ${r.date < today ? "text-rose-600" : "text-slate-500"}`}>
-                        {when(daysFrom(today, r.date))}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
-
-        {/* RIGHT COLUMN: This week */}
-        <section className="space-y-3">
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-1">This week</h2>
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
-            <WeekRhythm days={rhythmDays} />
-            <div className="pt-3 border-t border-slate-100 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-500">
-              <Link href="/schools" className="hover:text-slate-900 transition-colors">
-                <span className="font-mono font-bold text-slate-900">{list.length}</span> schools ({active} in progress)
-              </Link>
-              <Link href="/tasks" className="hover:text-slate-900 transition-colors">
-                <span className="font-mono font-bold text-slate-900">{openTasks?.length ?? 0}</span> open tasks
-              </Link>
-              <Link href="/wins" className="hover:text-slate-900 transition-colors">
-                <span className="font-mono font-bold text-emerald-600">{wins}</span> wins this month
-              </Link>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {/* COMING UP SECTION */}
-      {upcoming.length > 0 && (
-        <Section
-          title="Coming up"
-          hint="next 14 days"
-          action={<Link href="/week" className="text-xs text-slate-500 hover:text-slate-900 transition-colors">See the week →</Link>}
-        >
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-3 shadow-sm">
-            <ul className="divide-y divide-slate-100">
-              {upcoming.slice(0, 6).map((r, i) => (
-                <li key={i}>
-                  <Link
-                    href={r.href}
-                    className="flex justify-between items-center gap-4 py-2.5 px-3 rounded-xl hover:bg-slate-50 transition-colors"
-                  >
-                    <span className="truncate text-xs font-medium text-slate-700">{r.label}</span>
-                    <span className="text-[11px] font-mono whitespace-nowrap text-slate-500">
-                      {when(daysFrom(today, r.date))}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Section>
-      )}
-
-      {/* PIPELINE OVERVIEW SECTION */}
-      <Section
-        title="Your applications"
-        action={<Link href="/schools" className="text-xs text-slate-500 hover:text-slate-900 transition-colors">All schools →</Link>}
-      >
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
-          <div className="flex h-2.5 rounded-full overflow-hidden bg-slate-100 border border-slate-200/60">
-            {PIPELINE.filter((p) => counts[p.key]).map((p) => (
-              <Link
-                key={p.key}
-                href={`/schools?status=${p.key}`}
-                title={`${p.label}: ${counts[p.key]}`}
-                style={{ width: `${(counts[p.key] / total) * 100}%`, background: p.color }}
-                className="min-w-[4px] transition-opacity hover:opacity-80"
-              />
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500 pt-1">
-            {PIPELINE.filter((p) => counts[p.key]).map((p) => (
-              <Link key={p.key} href={`/schools?status=${p.key}`} className="hover:text-slate-900 flex items-center gap-1.5 transition-colors">
-                <i className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-                <span>{p.label}</span>
-                <span className="font-mono text-slate-900 font-bold">{counts[p.key]}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </Section>
-
-      {/* ANALYTICS SECTION */}
-      <Section
-        title="Telemetry & Analytics"
-        hint="fit map, pipeline, composite scores, execution momentum"
-      >
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-2">
-          <DashboardAnalytics schools={list as any} weekly={weekly.map(({ week, tasks, wins }) => ({ week, tasks, wins }))} />
-          <p className="text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-100">
-            Scores are a heuristic, not a validated ranking.
+    <main className="min-h-screen bg-slate-50 text-slate-900 p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto font-sans antialiased">
+      
+      {/* Top Welcome Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
+        <div>
+          <h1 className="font-serif text-3xl sm:text-4xl text-slate-900 tracking-tight">
+            Good afternoon, {displayName}.
+          </h1>
+          <p className="text-xs text-slate-500 mt-1.5 font-medium">
+            Command Center overview • Target Term: <span className="text-slate-900 font-semibold">{profile?.target_term || "Fall 2025"}</span>
           </p>
         </div>
-      </Section>
+
+        <div className="flex items-center gap-2">
+          <Link
+            href="/tasks"
+            className="px-3.5 py-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold text-xs rounded-lg transition-all shadow-sm"
+          >
+            Manage Tasks
+          </Link>
+          <Link
+            href="/schools"
+            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition-all shadow-sm"
+          >
+            + Add School
+          </Link>
+        </div>
+      </div>
+
+      {/* Hero Banner: Nearest Deadline */}
+      {nextSchool && (
+        <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+          <div className="space-y-2 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold rounded-md uppercase tracking-wider">
+              <span>Next Target Deadline</span>
+            </div>
+            <h2 className="font-serif text-2xl sm:text-3xl text-slate-900">
+              {nextSchool.name} <span className="font-sans text-lg font-normal text-slate-500">— {nextSchool.program || "Ph.D. Application"}</span>
+            </h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Target professor: <span className="text-slate-800 font-semibold">{nextSchool.target_professor || "Unassigned"}</span>. Ensure all statement revisions and recommendations are finalized.
+            </p>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 text-center min-w-[180px] w-full md:w-auto shrink-0 shadow-sm">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">
+              Days Remaining
+            </span>
+            <div className={`font-mono text-4xl font-extrabold tracking-tight ${daysToNextSchool !== null && daysToNextSchool <= 14 ? "text-amber-600" : "text-slate-900"}`}>
+              {daysToNextSchool !== null ? `${daysToNextSchool}d` : "N/A"}
+            </div>
+            <span className="text-[11px] font-mono text-slate-500 mt-1 block">
+              Due {nextSchool.deadline ? new Date(nextSchool.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "TBD"}
+            </span>
+          </div>
+        </section>
+      )}
+
+      {/* Needs Attention Alert (Overdue & At-Risk) */}
+      {(overdueItems.length > 0 || atRiskSchools.length > 0) && (
+        <section className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-sm space-y-3">
+          <div className="flex items-center gap-2 text-rose-700 font-bold text-xs uppercase tracking-wider">
+            <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+            <span>Action Required ({overdueItems.length + atRiskSchools.length})</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {overdueItems.slice(0, 4).map((item) => (
+              <div key={item.id} className="p-3 bg-rose-50/60 border border-rose-200/80 rounded-lg flex items-center justify-between gap-3">
+                <div className="truncate">
+                  <span className="text-xs font-semibold text-slate-900 block truncate">{item.title}</span>
+                  <span className="text-[10px] text-slate-500 font-mono">{item.school_name || "General"}</span>
+                </div>
+                <span className="text-[10px] font-mono font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded border border-rose-200 shrink-0">
+                  Overdue
+                </span>
+              </div>
+            ))}
+
+            {atRiskSchools.slice(0, 2).map((s) => (
+              <div key={s.id} className="p-3 bg-amber-50/60 border border-amber-200/80 rounded-lg flex items-center justify-between gap-3">
+                <div className="truncate">
+                  <span className="text-xs font-semibold text-slate-900 block truncate">{s.name} Deadline Reached</span>
+                  <span className="text-[10px] text-slate-500 font-mono">Status: In Progress</span>
+                </div>
+                <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-200 shrink-0">
+                  At Risk
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Main Grid: Focus Card & Weekly Rhythm */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Next Up Focus Card */}
+        <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm hover:border-blue-500 hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Primary Focus Item
+              </span>
+              {focusItem?.due_date && focusItem.due_date < todayStr ? (
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                  Overdue
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                  High Priority
+                </span>
+              )}
+            </div>
+
+            {focusItem ? (
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                  {focusItem.title}
+                </h3>
+                <p className="text-xs text-slate-500 flex items-center gap-2 font-mono">
+                  <span>Scope: {focusItem.school_name || "General Execution"}</span>
+                  <span>•</span>
+                  <span>Due: {focusItem.due_date || "No date"}</span>
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 italic py-4">No active pending tasks or milestones.</p>
+            )}
+          </div>
+
+          <div className="pt-6 mt-6 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-xs text-slate-500 font-medium">Ready to execute?</span>
+            <Link
+              href="/today"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg transition-all shadow-sm"
+            >
+              Open Daily Plan →
+            </Link>
+          </div>
+        </div>
+
+        {/* This Week Rhythm Card */}
+        <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">
+              This Week's Pace
+            </h3>
+            <WeekRhythm days={rhythmDays} />
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between font-mono text-xs text-slate-500">
+            <span>Scheduled this week:</span>
+            <span className="font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+              {thisWeekItems.length} items
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Runway Component */}
+      <Runway />
+
+      {/* Coming Up List & Application Pipeline */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Pending Chronological List */}
+        <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">
+              Upcoming Action Items
+            </h3>
+            <Link href="/tasks" className="text-xs text-blue-600 font-semibold hover:underline">
+              View all ({pendingRows.length})
+            </Link>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {pendingRows.slice(1, 6).map((item) => (
+              <div key={item.id} className="py-3 flex items-center justify-between gap-4">
+                <div className="truncate">
+                  <span className="text-xs font-semibold text-slate-900 block truncate">{item.title}</span>
+                  <span className="text-[10px] text-slate-400 font-mono">{item.school_name || "General"}</span>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-[11px] font-mono font-medium text-slate-600 block">
+                    {item.due_date || "TBD"}
+                  </span>
+                  <span className="text-[9px] uppercase font-bold text-slate-400">
+                    {item.type}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {pendingRows.length <= 1 && (
+              <p className="text-xs text-slate-400 italic py-4 text-center">No upcoming scheduled items.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Pipeline Segment Bar */}
+        <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm space-y-4 flex flex-col justify-between">
+          <div>
+            <h3 className="text-sm font-extrabold text-slate-900 tracking-tight mb-1">
+              Application Pipeline
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">Stage distribution across {totalSchools} target institutions</p>
+
+            {/* Visual Bar */}
+            <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex border border-slate-200/80 mb-6">
+              <div style={{ width: `${(PIPELINE.shortlisted / totalSchools) * 100}%` }} className="bg-blue-600" title="Shortlisted" />
+              <div style={{ width: `${(PIPELINE.inProgress / totalSchools) * 100}%` }} className="bg-sky-500" title="In Progress" />
+              <div style={{ width: `${(PIPELINE.submitted / totalSchools) * 100}%` }} className="bg-emerald-600" title="Submitted" />
+              <div style={{ width: `${(PIPELINE.interview / totalSchools) * 100}%` }} className="bg-amber-500" title="Interview" />
+            </div>
+
+            {/* Segment Breakdown */}
+            <div className="space-y-2.5 text-xs font-medium">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />
+                  <span className="text-slate-700">Shortlisted</span>
+                </div>
+                <span className="font-mono text-slate-900 font-bold">{PIPELINE.shortlisted}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-sky-500" />
+                  <span className="text-slate-700">In Progress</span>
+                </div>
+                <span className="font-mono text-slate-900 font-bold">{PIPELINE.inProgress}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
+                  <span className="text-slate-700">Submitted</span>
+                </div>
+                <span className="font-mono text-slate-900 font-bold">{PIPELINE.submitted}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                  <span className="text-slate-700">Interview</span>
+                </div>
+                <span className="font-mono text-slate-900 font-bold">{PIPELINE.interview}</span>
+              </div>
+            </div>
+          </div>
+
+          <Link
+            href="/schools"
+            className="block text-center w-full py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition-all mt-4"
+          >
+            Manage Pipeline →
+          </Link>
+        </div>
+
+      </div>
+
+      {/* Analytics Fold Section */}
+      <section className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="border-b border-slate-100 pb-3">
+          <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
+            Institutional Telemetry & Analytics
+          </h2>
+          <p className="text-xs text-slate-500">
+            Real-time alignment maps and execution velocity models
+          </p>
+        </div>
+
+        <DashboardAnalytics schools={analyticsSchools} weekly={weeklyData} />
+
+        <div className="text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-100 text-right">
+          Heuristic Model: Fit score derived from research alignment, target faculty presence, and historical acceptance benchmarks.
+        </div>
+      </section>
+
+      {/* Fold Component */}
+      <Fold />
+
     </main>
   );
 }
