@@ -46,10 +46,10 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
   return (
     <Link
       href={href}
-      className={`block px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+      className={`block px-3 py-2 rounded-lg text-xs transition-all ${
         active
           ? "bg-slate-100/80 text-blue-600 font-semibold border-l-2 border-blue-600 pl-2.5"
-          : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+          : "text-slate-500 font-medium hover:text-slate-900 hover:bg-slate-50"
       }`}
     >
       {label}
@@ -57,7 +57,7 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
   );
 }
 
-export function Sidebar({ children, isOwner }: { children: React.ReactNode; isOwner: boolean }) {
+export function NavShell({ children, isOwner }: { children: React.ReactNode; isOwner: boolean }) {
   const pathname = usePathname();
   const isActive = (href: string, also: string[] = []) =>
     href === "/" ? pathname === "/" : [href, ...also].some((h) => pathname.startsWith(h));
@@ -65,56 +65,54 @@ export function Sidebar({ children, isOwner }: { children: React.ReactNode; isOw
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setMoreOpen(false);
-    setMobileMenuOpen(false);
   }, [pathname]);
 
   return (
     <div className="flex min-h-screen bg-slate-50">
       
       {/* Desktop Light Sidebar */}
-      <aside className="hidden md:flex w-64 flex-shrink-0 bg-white border-r border-slate-200/80 sticky top-0 h-screen flex-col justify-between p-4 z-30">
+      <aside className="hidden md:flex w-60 flex-shrink-0 bg-white border-r border-slate-200/80 sticky top-0 h-screen flex-col justify-between p-4 z-30">
         <div className="space-y-4">
           
-          {/* Brand Block matching Login Logo */}
+          {/* Logo Mark Matching Login */}
           <div className="flex items-center gap-2.5 px-2 py-1">
             <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-sm">
               C
             </div>
-            <span className="font-extrabold text-sm tracking-tight text-slate-900">
+            <span className="font-extrabold text-sm tracking-tight text-slate-900 font-sans">
               COMMAND<span className="text-blue-600">CENTER</span>
             </span>
           </div>
 
-          {/* Search Input Button */}
+          {/* Search trigger button */}
           <button
             onClick={() => setPaletteOpen(true)}
             className="w-full flex items-center justify-between text-left bg-slate-50 border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 rounded-lg px-3 py-2 text-xs text-slate-400 hover:border-slate-400 hover:bg-white transition-all shadow-sm"
           >
-            <span>Search or jump to…</span>
+            <span className="font-sans">Search or jump to…</span>
             <kbd className="text-[10px] font-mono bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-400">
-              ⌘K
+              Ctrl K
             </kbd>
           </button>
 
-          {/* Quick Add Button */}
+          {/* Quick Add CTA */}
           {isOwner && (
             <button
               onClick={() => setQuickOpen(true)}
-              className="w-full flex items-center justify-between bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-3 py-2 text-xs transition-all shadow-sm"
+              className="w-full flex items-center justify-between bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-3 py-2 text-xs transition-all shadow-sm font-sans"
             >
               <span>+ Quick add</span>
               <kbd className="text-[10px] font-mono bg-blue-700/60 border border-blue-500/40 rounded px-1.5 py-0.5 text-white">
-                ⌘J
+                Ctrl J
               </kbd>
             </button>
           )}
 
-          {/* Primary & Work Navigation */}
-          <nav className="space-y-1 pt-2">
+          {/* Navigation Items */}
+          <nav className="space-y-1 pt-2 font-sans">
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-3 block mb-1">
               Main
             </span>
@@ -141,8 +139,8 @@ export function Sidebar({ children, isOwner }: { children: React.ReactNode; isOw
           </nav>
         </div>
 
-        {/* Footer Account & Sign Out */}
-        <div className="border-t border-slate-100 pt-3 space-y-1">
+        {/* Account Settings & Sign Out */}
+        <div className="border-t border-slate-100 pt-3 space-y-1 font-sans">
           <NavLink href="/account" label="Account Settings" active={isActive("/account")} />
           <button
             onClick={async () => {
@@ -156,36 +154,18 @@ export function Sidebar({ children, isOwner }: { children: React.ReactNode; isOw
         </div>
       </aside>
 
-      {/* Mobile Header Bar (< md) */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-blue-600 rounded-md flex items-center justify-center text-white font-bold text-xs">
-            C
-          </div>
-          <span className="font-extrabold text-xs tracking-tight text-slate-900">
-            COMMAND<span className="text-blue-600">CENTER</span>
-          </span>
-        </div>
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 text-xs font-semibold"
-        >
-          {mobileMenuOpen ? "Close" : "Menu"}
-        </button>
-      </div>
+      {/* Main Content Area */}
+      <div className="flex-1 min-w-0 pb-16 md:pb-0">{children}</div>
 
-      {/* Main Content Area Wrapper */}
-      <div className="flex-1 min-w-0 pt-14 md:pt-0 pb-16 md:pb-0">{children}</div>
-
-      {/* Command Palette & Quick Add Modals */}
+      {/* Modals */}
       <CommandPalette open={paletteOpen} setOpen={setPaletteOpen} />
       {isOwner && <QuickAdd open={quickOpen} setOpen={setQuickOpen} />}
 
-      {/* Mobile Expanded Drawer */}
+      {/* Mobile Drawer */}
       {moreOpen && (
         <div className="md:hidden fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-xs" onClick={() => setMoreOpen(false)}>
           <div
-            className="absolute bottom-16 left-3 right-3 bg-white border border-slate-200 rounded-xl p-3 flex flex-col shadow-xl space-y-1"
+            className="absolute bottom-16 left-3 right-3 bg-white border border-slate-200 rounded-xl p-3 flex flex-col shadow-xl space-y-1 font-sans"
             onClick={(e) => e.stopPropagation()}
           >
             {isOwner && (
@@ -220,8 +200,8 @@ export function Sidebar({ children, isOwner }: { children: React.ReactNode; isOw
         </div>
       )}
 
-      {/* Mobile Bottom Nav Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 flex justify-around items-stretch shadow-lg">
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 flex justify-around items-stretch shadow-lg font-sans">
         {MOBILE.map((item) => (
           <Link
             key={item.href}
@@ -248,4 +228,4 @@ export function Sidebar({ children, isOwner }: { children: React.ReactNode; isOw
   );
 }
 
-export default Sidebar;
+export default NavShell;
