@@ -137,3 +137,12 @@ body.writing-focus nav.fixed { display: none; }
 
 /* Clear focus ring with blue accent */
 :where(a, button, select, input, textarea, summary):focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+
+/* Fix Chrome/Safari autofill blue background tint on inputs */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+  -webkit-text-fill-color: #0f172a !important;
+}

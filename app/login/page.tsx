@@ -106,7 +106,10 @@ export default function LoginPage() {
         <div className="w-full md:w-[48%] bg-white p-8 sm:p-12 flex flex-col justify-between">
           <div>
             <div className="mb-6">
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              <h1 
+                style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+                className="text-2xl font-bold text-slate-900 tracking-tight"
+              >
                 Sign in to your account
               </h1>
               <p className="text-xs text-slate-500 mt-1.5 leading-relaxed line-clamp-3">
@@ -204,7 +207,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={pending}
-                  className="w-full h-11 bg-[#6D28D9] hover:bg-[#5B21B6] text-white rounded-lg text-xs font-semibold transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/20 disabled:opacity-50"
+                  className="w-full h-11 bg-[#6D28D9] hover:bg-[#5B21B6] text-white rounded-lg text-xs font-semibold transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/20 disabled:opacity-70"
                 >
                   {pending ? "Signing in…" : "Sign in to Command Center"}
                 </button>
@@ -239,7 +242,7 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={pending}
-                    className="w-full h-11 bg-[#6D28D9] hover:bg-[#5B21B6] text-white rounded-lg text-xs font-semibold transition-all shadow-sm disabled:opacity-50"
+                    className="w-full h-11 bg-[#6D28D9] hover:bg-[#5B21B6] text-white rounded-lg text-xs font-semibold transition-all shadow-sm disabled:opacity-70"
                   >
                     {pending ? "Sending Link…" : "Send Recovery Link"}
                   </button>
@@ -287,7 +290,7 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={pending}
-                    className="w-full h-11 bg-[#6D28D9] hover:bg-[#5B21B6] text-white rounded-lg text-xs font-semibold transition-all shadow-sm disabled:opacity-50"
+                    className="w-full h-11 bg-[#6D28D9] hover:bg-[#5B21B6] text-white rounded-lg text-xs font-semibold transition-all shadow-sm disabled:opacity-70"
                   >
                     {pending ? "Sending Link…" : "Send code"}
                   </button>
@@ -305,7 +308,10 @@ export default function LoginPage() {
         <div className="hidden md:flex w-[52%] bg-gradient-to-br from-[#171B36] to-[#2B2F5C] p-10 flex-col justify-center text-white relative">
           <div className="max-w-[380px] mx-auto space-y-6">
             <div>
-              <h2 className="text-2xl font-bold leading-tight tracking-tight text-white">
+              <h2 
+                style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+                className="text-2xl font-bold leading-tight tracking-tight text-white"
+              >
                 Your grad school pipeline, on one timeline
               </h2>
               <p className="text-xs text-white/70 mt-2 leading-relaxed">
