@@ -40,18 +40,41 @@ export function StatementsList({
     });
   };
 
+  const handleCreate = (fromStatement?: StatementRow) => {
+    run(async () => {
+      const res = await createStatement({
+        kind: fromStatement ? fromStatement.kind : "sop",
+        schoolId: fromStatement ? fromStatement.school_id : null,
+        fromId: fromStatement ? fromStatement.id : null,
+      });
+
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+
+      router.push(`/materials/statements/${res.data}`);
+    });
+  };
+
+  const handleDelete = (s: StatementRow) => {
+    if (!confirm(`Delete "${s.title}"?`)) return;
+    run(async () => {
+      const res = await deleteStatement(s.id);
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      router.refresh();
+    });
+  };
+
   return (
     <div className={`flex flex-col gap-6 font-sans ${pending ? "opacity-70" : ""}`}>
       {/* Action Header */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() =>
-            run(async () => {
-              // Pass empty object payload {} instead of no arguments
-              const id = await createStatement({});
-              if (id) router.push(`/materials/statements/${id}`);
-            })
-          }
+          onClick={() => handleCreate()}
           className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold rounded-lg px-4 py-2 text-xs transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
         >
           <span>New statement</span>
@@ -105,25 +128,13 @@ export function StatementsList({
                   )}
                   <div className="flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
                     <button
-                      onClick={() =>
-                        run(async () => {
-                          // Pass object payload with duplicateFrom property
-                          const id = await createStatement({ duplicateFrom: s.id });
-                          if (id) router.push(`/materials/statements/${id}`);
-                        })
-                      }
+                      onClick={() => handleCreate(s)}
                       className="hover:text-slate-900 font-medium transition-colors px-2 py-1 rounded-md hover:bg-slate-200/60 cursor-pointer"
                     >
                       Duplicate
                     </button>
                     <button
-                      onClick={() => {
-                        if (confirm(`Delete "${s.title}"?`))
-                          run(async () => {
-                            await deleteStatement(s.id);
-                            router.refresh();
-                          });
-                      }}
+                      onClick={() => handleDelete(s)}
                       className="hover:text-rose-600 font-bold transition-colors p-1 rounded-md hover:bg-rose-50 cursor-pointer"
                       aria-label="Delete statement"
                     >
