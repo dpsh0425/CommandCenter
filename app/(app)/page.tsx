@@ -2,7 +2,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardAnalytics } from "@/components/dashboard-analytics";
 import { Runway } from "./runway";
-import { WeekRhythm } from "./week-rhythm";
 import { Fold } from "./fold";
 
 interface DatabaseTask {
@@ -51,7 +50,7 @@ function mondayOf(d: Date) {
 }
 
 export default async function DashboardPage() {
-  // FIXED: Await the Supabase server client initialization
+  // Backend / Server fetch - Intact
   const supabase = await createClient();
 
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -184,19 +183,6 @@ export default async function DashboardPage() {
     (r) => r.due_date && r.due_date >= currentMonStr && r.due_date < nextMonStr
   );
 
-  const rhythmDays = [0, 1, 2, 3, 4, 5, 6].map((offset) => {
-    const d = new Date(currentMon);
-    d.setDate(d.getDate() + offset);
-    const dateStr = d.toISOString().slice(0, 10);
-    const count = thisWeekItems.filter((r) => r.due_date === dateStr).length;
-    return {
-      dayName: d.toLocaleDateString("en-US", { weekday: "narrow" }),
-      dateStr,
-      count,
-      isToday: dateStr === todayStr,
-    };
-  });
-
   // 4. Pipeline Counts
   const PIPELINE = {
     shortlisted: allSchools.filter((s) => s.status === "Shortlisted").length,
@@ -244,20 +230,21 @@ export default async function DashboardPage() {
             Good afternoon, {displayName}.
           </h1>
           <p className="text-xs text-slate-500 mt-1.5 font-medium">
-            Command Center overview • Target Term: <span className="text-slate-900 font-semibold">{profile?.target_term || "Fall 2025"}</span>
+            Command Center overview • Target Term:{" "}
+            <span className="text-slate-900 font-semibold">{profile?.target_term || "Fall 2025"}</span>
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Link
             href="/tasks"
-            className="px-3.5 py-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold text-xs rounded-lg transition-all shadow-sm"
+            className="px-3.5 py-2 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg transition-all shadow-sm active:scale-[0.98]"
           >
             Manage Tasks
           </Link>
           <Link
             href="/schools"
-            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition-all shadow-sm"
+            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-lg transition-all shadow-sm active:scale-[0.98]"
           >
             + Add School
           </Link>
@@ -266,13 +253,14 @@ export default async function DashboardPage() {
 
       {/* Hero Banner: Nearest Deadline */}
       {nextSchool && (
-        <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+        <section className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden transition-all hover:shadow-md">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold rounded-md uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-blue-50 border border-blue-200/80 text-blue-700 text-[11px] font-bold rounded-md uppercase tracking-wider">
               <span>Next Target Deadline</span>
             </div>
             <h2 className="font-serif text-2xl sm:text-3xl text-slate-900">
-              {nextSchool.name} <span className="font-sans text-lg font-normal text-slate-500">— {nextSchool.program || "Ph.D. Application"}</span>
+              {nextSchool.name}{" "}
+              <span className="font-sans text-lg font-normal text-slate-500">— {nextSchool.program || "Ph.D. Application"}</span>
             </h2>
             <p className="text-xs text-slate-500 leading-relaxed">
               Target professor: <span className="text-slate-800 font-semibold">{nextSchool.target_professor || "Unassigned"}</span>. Ensure all statement revisions and recommendations are finalized.
@@ -283,7 +271,11 @@ export default async function DashboardPage() {
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">
               Days Remaining
             </span>
-            <div className={`font-mono text-4xl font-extrabold tracking-tight ${daysToNextSchool !== null && daysToNextSchool <= 14 ? "text-amber-600" : "text-slate-900"}`}>
+            <div
+              className={`font-mono text-4xl font-extrabold tracking-tight ${
+                daysToNextSchool !== null && daysToNextSchool <= 14 ? "text-amber-600" : "text-slate-900"
+              }`}
+            >
               {daysToNextSchool !== null ? `${daysToNextSchool}d` : "N/A"}
             </div>
             <span className="text-[11px] font-mono text-slate-500 mt-1 block">
@@ -295,7 +287,7 @@ export default async function DashboardPage() {
 
       {/* Needs Attention Alert (Overdue & At-Risk) */}
       {(overdueItems.length > 0 || atRiskSchools.length > 0) && (
-        <section className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-sm space-y-3">
+        <section className="bg-white border border-rose-200/80 rounded-xl p-5 shadow-sm space-y-3">
           <div className="flex items-center gap-2 text-rose-700 font-bold text-xs uppercase tracking-wider">
             <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
             <span>Action Required ({overdueItems.length + atRiskSchools.length})</span>
@@ -329,10 +321,10 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* Main Grid: Focus Card & Weekly Rhythm */}
+      {/* Main Grid: Focus Card & Weekly Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Next Up Focus Card */}
-        <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm hover:border-blue-500 hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm hover:border-blue-400 hover:shadow-md transition-all duration-200 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
@@ -369,20 +361,22 @@ export default async function DashboardPage() {
             <span className="text-xs text-slate-500 font-medium">Ready to execute?</span>
             <Link
               href="/today"
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg transition-all shadow-sm"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 active:bg-black text-white text-xs font-semibold rounded-lg transition-all shadow-sm"
             >
               Open Daily Plan →
             </Link>
           </div>
         </div>
 
-        {/* This Week Rhythm Card */}
+        {/* Weekly Summary Card */}
         <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm flex flex-col justify-between">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
               This Week's Pace
             </h3>
-            <WeekRhythm days={rhythmDays} />
+            <p className="text-xs text-slate-500">
+              Active workload scheduled for the current week interval.
+            </p>
           </div>
 
           <div className="pt-4 border-t border-slate-100 flex items-center justify-between font-mono text-xs text-slate-500">
@@ -412,7 +406,7 @@ export default async function DashboardPage() {
 
           <div className="divide-y divide-slate-100">
             {pendingRows.slice(1, 6).map((item) => (
-              <div key={item.id} className="py-3 flex items-center justify-between gap-4">
+              <div key={item.id} className="py-3 flex items-center justify-between gap-4 hover:bg-slate-50/60 px-1 rounded transition-colors">
                 <div className="truncate">
                   <span className="text-xs font-semibold text-slate-900 block truncate">{item.title}</span>
                   <span className="text-[10px] text-slate-400 font-mono">{item.school_name || "General"}</span>
@@ -484,7 +478,7 @@ export default async function DashboardPage() {
 
           <Link
             href="/schools"
-            className="block text-center w-full py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition-all mt-4"
+            className="block text-center w-full py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition-all mt-4 active:scale-[0.98]"
           >
             Manage Pipeline →
           </Link>
