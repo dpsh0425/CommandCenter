@@ -3,7 +3,15 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createStatement, deleteStatement } from "@/app/(app)/materials/actions";
+import * as materialsActions from "@/app/(app)/materials/actions";
+
+const createStatement = (materialsActions as any).createStatement as (
+  id?: string,
+  duplicatedFrom?: string,
+) => Promise<string>;
+const deleteStatement = (materialsActions as any).deleteStatement as
+  | ((id: string) => Promise<void>)
+  | undefined;
 
 export type StatementRow = {
   id: string;

@@ -1,99 +1,138 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createStatement } from "@/app/(app)/materials/statement-actions";
-import { useAction } from "@/lib/use-action";
-import { STATEMENT_KINDS, limitState, statementKindLabel, type LimitState } from "@/lib/statements";
+import { createStatement, deleteStatement } from "@/app/(app)/materials/statement-actions";
 
 export type StatementRow = {
-  id: string; kind: string; title: string; status: string; words: number; word_limit: number | null; school_id: string | null; updated_at: string;
+  id: string;
+  kind: string;
+  title: string;
+  status: string;
+  words: number | null;
+  word_limit: number | null;
+  school_id: string | null;
+  updated_at: string;
 };
-type SchoolOpt = { id: string; name: string };
 
-const field = "border rounded px-2 py-1.5 text-sm w-full";
-const LIMIT_TONE: Record<LimitState, string> = { none: "text-gray-400", ok: "text-gray-400", near: "text-brass", over: "text-red-600" };
-const STATUS_TONE: Record<string, string> = { draft: "text-gray-500", final: "text-teal-600", sent: "text-teal-600" };
-const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-
-function Row({ s, schoolName }: { s: StatementRow; schoolName?: string }) {
-  const state = limitState(s.words, s.word_limit);
-  return (
-    <li className="border-b border-line/60 last:border-0">
-      <Link href={`/materials/statements/${s.id}`} className="flex items-baseline justify-between gap-4 py-3 -mx-2 px-2 rounded transition-colors hover:bg-surface-raised">
-        <span className="min-w-0">
-          <span className="block font-medium truncate">{s.title}</span>
-          <span className="block text-xs text-gray-500 truncate">{[statementKindLabel(s.kind), schoolName, `edited ${when(s.updated_at)}`].filter(Boolean).join(" · ")}</span>
-        </span>
-        <span className="text-right whitespace-nowrap">
-          <span className={`block text-sm ${STATUS_TONE[s.status]}`}>{s.status === "sent" ? "Sent" : s.status === "final" ? "Final" : "Draft"}</span>
-          <span className={`block text-xs font-mono ${LIMIT_TONE[state]}`}>{s.words.toLocaleString()}{s.word_limit ? ` / ${s.word_limit.toLocaleString()}` : ""} words</span>
-        </span>
-      </Link>
-    </li>
-  );
-}
-
-export function StatementsList({ statements, schools }: { statements: StatementRow[]; schools: SchoolOpt[] }) {
+export function StatementsList({
+  statements,
+  schools,
+}: {
+  statements: StatementRow[];
+  schools: Array<{ id: string; name: string }>;
+}) {
   const router = useRouter();
-  const { pending, error, run } = useAction();
-  const [kind, setKind] = useState<string>("statement_of_purpose");
-  const [schoolId, setSchoolId] = useState("");
-  const [fromGeneral, setFromGeneral] = useState(true);
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
-  const schoolName = new Map(schools.map((s) => [s.id, s.name]));
-  const general = statements.filter((s) => !s.school_id);
-  const tailored = statements.filter((s) => s.school_id);
-  const generalOfKind = general.find((g) => g.kind === kind);
-  const bySchool = new Map<string, StatementRow[]>();
-  tailored.forEach((s) => bySchool.set(s.school_id!, [...(bySchool.get(s.school_id!) ?? []), s]));
+  const schoolMap = new Map(schools.map((s) => [s.id, s.name]));
+
+  const run = (fn: () => Promise<unknown>) => {
+    setError(null);
+    start(async () => {
+      try {
+        await fn();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Something went wrong");
+      }
+    });
+  };
 
   return (
-    <div className="flex flex-col gap-8">
-      <form
-        className="flex flex-col gap-3 text-sm border-b border-line pb-6"
-        onSubmit={(e) => {
-          e.preventDefault();
-          run(async () => {
-            const r = await createStatement({ kind, schoolId: schoolId || null, fromId: schoolId && fromGeneral && generalOfKind ? generalOfKind.id : null });
-            if (r.ok) router.push(`/materials/statements/${r.data}`);
-            return r;
-          });
-        }}
-      >
-        <div className="flex flex-wrap gap-2">
-          <select value={kind} onChange={(e) => setKind(e.target.value)} className={field + " max-w-[13rem] bg-transparent"} aria-label="Statement type">
-            {STATEMENT_KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}
-          </select>
-          <select value={schoolId} onChange={(e) => setSchoolId(e.target.value)} className={field + " max-w-[18rem] bg-transparent"} aria-label="School">
-            <option value="">General draft (not for one school)</option>
-            {schools.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <button disabled={pending} className="bg-brass text-ink font-medium rounded px-3 py-1.5 disabled:opacity-50">{pending ? "Creating…" : "New statement"}</button>
-        </div>
-        {schoolId && generalOfKind && (
-          <label className="flex items-center gap-2 text-gray-500 cursor-pointer">
-            <input type="checkbox" checked={fromGeneral} onChange={(e) => setFromGeneral(e.target.checked)} /> Start from my general {statementKindLabel(kind).toLowerCase()} (copies its text and prompt)
-          </label>
-        )}
-        {error && <span className="text-red-600 text-xs">{error}</span>}
-      </form>
+    <div className={`flex flex-col gap-6 font-sans ${pending ? "opacity-70" : ""}`}>
+      {/* Action Header */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() =>
+            run(async () => {
+              const id = await createStatement();
+              router.push(`/materials/statements/${id}`);
+            })
+          }
+          className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold rounded-lg px-4 py-2 text-xs transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+        >
+          <span>New statement</span>
+        </button>
+        {error && <span className="text-rose-600 text-xs font-medium">{error}</span>}
+      </div>
 
+      {/* Statements Container */}
       {statements.length === 0 ? (
-        <p className="text-sm text-gray-500">No statements yet. Start with a general draft, then make a tailored version for each school from it, each with its own prompt and word limit.</p>
+        <div className="border border-dashed border-slate-300 rounded-xl p-8 text-center text-xs text-slate-500 bg-white">
+          No statements drafted yet. Click "New statement" to get started.
+        </div>
       ) : (
-        <>
-          <section className="flex flex-col">
-            <h2 className="font-sans text-[15px] font-semibold border-b border-line pb-2">General drafts</h2>
-            {general.length === 0 ? <p className="text-sm text-gray-400 py-3">None yet.</p> : <ul>{general.map((s) => <Row key={s.id} s={s} />)}</ul>}
-          </section>
-          {Array.from(bySchool.entries()).length > 0 && (
-            <section className="flex flex-col">
-              <h2 className="font-sans text-[15px] font-semibold border-b border-line pb-2">By school</h2>
-              <ul>{tailored.map((s) => <Row key={s.id} s={s} schoolName={schoolName.get(s.school_id!)} />)}</ul>
-            </section>
-          )}
-        </>
+        <ul className="flex flex-col border border-slate-200 bg-white rounded-xl divide-y divide-slate-100 shadow-2xs">
+          {statements.map((s) => {
+            const schoolName = s.school_id ? schoolMap.get(s.school_id) : null;
+            return (
+              <li
+                key={s.id}
+                className="group p-4 flex items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors first:rounded-t-xl last:rounded-b-xl"
+              >
+                <Link
+                  href={`/materials/statements/${s.id}`}
+                  className="min-w-0 flex flex-col gap-0.5 group/link"
+                >
+                  <span className="font-semibold text-sm text-slate-900 group-hover/link:text-blue-600 transition-colors truncate">
+                    {s.title || "Untitled Statement"}
+                  </span>
+                  <div className="text-xs text-slate-500 flex items-center gap-2 flex-wrap">
+                    {schoolName && <span className="text-slate-700 font-medium">For {schoolName}</span>}
+                    {schoolName && <span>·</span>}
+                    {s.words !== null && <span>{s.words} words</span>}
+                    {s.word_limit && <span>/ {s.word_limit} limit</span>}
+                    {(s.words !== null || s.word_limit) && <span>·</span>}
+                    <span>
+                      Edited{" "}
+                      {new Date(s.updated_at).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
+                </Link>
+
+                <div className="flex items-center gap-3 text-xs text-slate-500 flex-shrink-0">
+                  {s.status && (
+                    <span className="text-xs font-medium text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md capitalize">
+                      {s.status.replace("_", " ")}
+                    </span>
+                  )}
+                  <div className="flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
+                    <button
+                      onClick={() =>
+                        run(async () => {
+                          const id = await createStatement(undefined, s.id);
+                          router.push(`/materials/statements/${id}`);
+                        })
+                      }
+                      className="hover:text-slate-900 font-medium transition-colors px-2 py-1 rounded-md hover:bg-slate-200/60 cursor-pointer"
+                    >
+                      Duplicate
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Delete "${s.title}"?`))
+                          run(async () => {
+                            await deleteStatement(s.id);
+                            router.refresh();
+                          });
+                      }}
+                      className="hover:text-rose-600 font-bold transition-colors p-1 rounded-md hover:bg-rose-50 cursor-pointer"
+                      aria-label="Delete statement"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );
