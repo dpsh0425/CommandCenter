@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardAnalytics } from "@/components/dashboard-analytics";
-import { Runway } from "./runway";
-import { Fold } from "./fold";
 
 interface DatabaseTask {
   id: string;
@@ -388,9 +386,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Runway Component */}
-      <Runway />
-
       {/* Coming Up List & Application Pipeline */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Pending Chronological List */}
@@ -502,9 +497,6 @@ export default async function DashboardPage() {
           Heuristic Model: Fit score derived from research alignment, target faculty presence, and historical acceptance benchmarks.
         </div>
       </section>
-
-      {/* Fold Component */}
-      <Fold />
     </main>
   );
 }
