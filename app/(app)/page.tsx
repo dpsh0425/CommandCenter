@@ -5,6 +5,42 @@ import { Runway } from "./runway";
 import { WeekRhythm } from "./week-rhythm";
 import { Fold } from "./fold";
 
+interface DatabaseTask {
+  id: string;
+  title: string;
+  due_date: string | null;
+  status: string;
+  schools?: { name: string } | null;
+}
+
+interface DatabaseSchool {
+  id: string;
+  name: string;
+  program?: string;
+  country?: string;
+  status: string;
+  deadline?: string | null;
+  fit_score?: number;
+  verified_fit?: boolean;
+  target_professor?: string;
+}
+
+interface DatabaseMilestone {
+  id: string;
+  title: string;
+  due_date: string | null;
+  status: string;
+  schools?: { name: string } | null;
+}
+
+interface DatabaseRecommender {
+  id: string;
+  name: string;
+  due_date?: string | null;
+  status: string;
+  schools?: { name: string } | null;
+}
+
 function mondayOf(d: Date) {
   const date = new Date(d);
   const day = date.getDay();
@@ -15,7 +51,9 @@ function mondayOf(d: Date) {
 }
 
 export default async function DashboardPage() {
-  const supabase = createClient();
+  // FIXED: Await the Supabase server client initialization
+  const supabase = await createClient();
+
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayObj = new Date();
   todayObj.setHours(0, 0, 0, 0);
@@ -36,10 +74,10 @@ export default async function DashboardPage() {
     supabase.from("weekly_logs").select("*").order("week_start", { ascending: false }).limit(6),
   ]);
 
-  const allSchools = schools || [];
-  const allTasks = tasks || [];
-  const allMilestones = milestones || [];
-  const allLetters = letters || [];
+  const allSchools: DatabaseSchool[] = schools || [];
+  const allTasks: DatabaseTask[] = tasks || [];
+  const allMilestones: DatabaseMilestone[] = milestones || [];
+  const allLetters: DatabaseRecommender[] = letters || [];
 
   // 1. Next upcoming school deadline
   const upcomingSchools = allSchools
@@ -70,7 +108,7 @@ export default async function DashboardPage() {
       id: `task-${t.id}`,
       title: t.title,
       due_date: t.due_date,
-      school_name: (t.schools as any)?.name,
+      school_name: t.schools?.name,
       type: "task",
       status: t.status,
       is_done: t.status === "Done" || t.status === "Completed",
@@ -96,7 +134,7 @@ export default async function DashboardPage() {
       id: `milestone-${m.id}`,
       title: m.title,
       due_date: m.due_date,
-      school_name: (m.schools as any)?.name,
+      school_name: m.schools?.name,
       type: "milestone",
       status: m.status,
       is_done: m.status === "Completed" || m.status === "Done",
@@ -107,9 +145,9 @@ export default async function DashboardPage() {
     if (l.due_date) {
       rows.push({
         id: `letter-${l.id}`,
-        title: `LOR: ${l.name} (${(l.schools as any)?.name || "General"})`,
+        title: `LOR: ${l.name} (${l.schools?.name || "General"})`,
         due_date: l.due_date,
-        school_name: (l.schools as any)?.name,
+        school_name: l.schools?.name,
         type: "letter",
         status: l.status,
         is_done: l.status === "Submitted" || l.status === "Received",
@@ -199,7 +237,6 @@ export default async function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto font-sans antialiased">
-      
       {/* Top Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
         <div>
@@ -294,7 +331,6 @@ export default async function DashboardPage() {
 
       {/* Main Grid: Focus Card & Weekly Rhythm */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         {/* Next Up Focus Card */}
         <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm hover:border-blue-500 hover:shadow-md transition-all duration-200 flex flex-col justify-between">
           <div>
@@ -356,7 +392,6 @@ export default async function DashboardPage() {
             </span>
           </div>
         </div>
-
       </div>
 
       {/* Runway Component */}
@@ -364,7 +399,6 @@ export default async function DashboardPage() {
 
       {/* Coming Up List & Application Pipeline */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         {/* Pending Chronological List */}
         <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -455,7 +489,6 @@ export default async function DashboardPage() {
             Manage Pipeline →
           </Link>
         </div>
-
       </div>
 
       {/* Analytics Fold Section */}
@@ -478,7 +511,6 @@ export default async function DashboardPage() {
 
       {/* Fold Component */}
       <Fold />
-
     </main>
   );
 }
