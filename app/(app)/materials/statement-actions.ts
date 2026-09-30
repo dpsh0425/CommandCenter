@@ -1,4 +1,5 @@
 "use server";
+
 import { createClient } from "@/lib/supabase/server";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { revalidatePath } from "next/cache";
@@ -27,10 +28,11 @@ function refresh(id?: string, schoolId?: string | null) {
   revalidatePath("/");
 }
 
-export async function createStatement(input: { kind: string; schoolId?: string | null; fromId?: string | null; title?: string }): Promise<ActionResult<string>> {
+export async function createStatement(input: { kind?: string; schoolId?: string | null; fromId?: string | null; title?: string } = {}): Promise<ActionResult<string>> {
   return toResult(async () => {
     const { supabase, userId } = await owner();
-    if (!isStatementKind(input.kind)) throw new UserError("Unknown statement type.");
+    const kind = input.kind || "sop";
+    if (!isStatementKind(kind)) throw new UserError("Unknown statement type.");
 
     let body = "";
     let prompt: string | null = null;
@@ -50,11 +52,18 @@ export async function createStatement(input: { kind: string; schoolId?: string |
     }
 
     const { data, error } = await supabase.from("statements").insert({
-      owner_id: userId, kind: input.kind, title: input.title?.trim() || defaultTitle(input.kind, schoolName), prompt, body, words: countWordsHtml(body),
-      school_id: input.schoolId ?? null, source_id: sourceId,
+      owner_id: userId,
+      kind,
+      title: input.title?.trim() || defaultTitle(kind, schoolName),
+      prompt,
+      body,
+      words: countWordsHtml(body),
+      school_id: input.schoolId ?? null,
+      source_id: sourceId,
     }).select("id").single();
+
     if (error || !data) {
-      if (error?.code === "23505") throw new UserError("This school already has a statement of that type.");
+      if (error?.code === "23505") throw new UserError("A statement of that type already exists for this selection.");
       throw new Error(error?.message ?? "Could not create the statement.");
     }
     refresh(data.id, input.schoolId);
@@ -88,8 +97,6 @@ export async function updateStatementMeta(id: string, f: { title?: string; kind?
 
 export type SaveResult = { ok: true; words: number; version: number } | { ok: false; reason: "stale" | "error"; message: string };
 
-// Called on every autosave, so it deliberately does not revalidate the page. It never throws: production builds hide
-// thrown messages, and the editor must be able to tell "changed elsewhere" from "could not save".
 export async function saveStatementBody(id: string, body: string, baseVersion: number): Promise<SaveResult> {
   let supabase;
   try { ({ supabase } = await owner()); } catch (e) {
@@ -135,7 +142,6 @@ export async function saveSnapshot(id: string, note?: string): Promise<ActionRes
   });
 }
 
-// Restoring first saves the current text as a snapshot, so nothing is ever lost.
 export async function restoreSnapshot(snapshotId: string): Promise<ActionResult<{ body: string; words: number; version: number }>> {
   return toResult(async () => {
     const { supabase, userId } = await owner();
