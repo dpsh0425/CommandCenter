@@ -48,8 +48,8 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
       href={href}
       className={`block px-3 py-2 rounded-lg text-xs transition-all ${
         active
-          ? "bg-slate-100/80 text-blue-600 font-semibold border-l-2 border-blue-600 pl-2.5"
-          : "text-slate-500 font-medium hover:text-slate-900 hover:bg-slate-50"
+          ? "bg-slate-100 text-slate-900 font-bold border-l-3 border-blue-600 pl-2.5 shadow-2xs"
+          : "text-slate-600 font-medium hover:text-slate-900 hover:bg-slate-50"
       }`}
     >
       {label}
@@ -89,11 +89,12 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
 
           {/* Search trigger button */}
           <button
+            type="button"
             onClick={() => setPaletteOpen(true)}
-            className="w-full flex items-center justify-between text-left bg-slate-50 border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 rounded-lg px-3 py-2 text-xs text-slate-400 hover:border-slate-400 hover:bg-white transition-all shadow-sm"
+            className="w-full flex items-center justify-between text-left bg-slate-50 border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 rounded-lg px-3 py-2 text-xs text-slate-500 hover:border-slate-400 hover:bg-white transition-all shadow-xs"
           >
             <span className="font-sans">Search or jump to…</span>
-            <kbd className="text-[10px] font-mono bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-400">
+            <kbd className="text-[10px] font-mono bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-500">
               Ctrl K
             </kbd>
           </button>
@@ -101,6 +102,7 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
           {/* Quick Add CTA */}
           {isOwner && (
             <button
+              type="button"
               onClick={() => setQuickOpen(true)}
               className="w-full flex items-center justify-between bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-3 py-2 text-xs transition-all shadow-sm font-sans"
             >
@@ -112,7 +114,7 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
           )}
 
           {/* Navigation Items */}
-          <nav className="space-y-1 pt-2 font-sans">
+          <nav className="space-y-1 pt-2 font-sans" aria-label="Main Navigation">
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-3 block mb-1">
               Main
             </span>
@@ -143,11 +145,12 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
         <div className="border-t border-slate-100 pt-3 space-y-1 font-sans">
           <NavLink href="/account" label="Account Settings" active={isActive("/account")} />
           <button
+            type="button"
             onClick={async () => {
               await createClient().auth.signOut();
               window.location.href = "/login";
             }}
-            className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all"
+            className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-all"
           >
             Sign out
           </button>
@@ -163,13 +166,20 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
 
       {/* Mobile Drawer */}
       {moreOpen && (
-        <div className="md:hidden fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-xs" onClick={() => setMoreOpen(false)}>
+        <div 
+          className="md:hidden fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-xs" 
+          onClick={() => setMoreOpen(false)}
+          role="presentation"
+        >
           <div
             className="absolute bottom-16 left-3 right-3 bg-white border border-slate-200 rounded-xl p-3 flex flex-col shadow-xl space-y-1 font-sans"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="More navigation options"
           >
             {isOwner && (
               <button
+                type="button"
                 onClick={() => { setMoreOpen(false); setQuickOpen(true); }}
                 className="text-left px-3 py-2.5 rounded-lg text-xs bg-blue-600 text-white font-semibold mb-1"
               >
@@ -180,14 +190,15 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
               <Link
                 key={item.href}
                 href={item.href}
-                className={`px-3 py-2 rounded-lg text-xs font-medium ${
-                  isActive(item.href) ? "bg-slate-100 text-blue-600 font-semibold" : "text-slate-700"
+                className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                  isActive(item.href) ? "bg-slate-100 text-slate-900 font-bold" : "text-slate-700 hover:bg-slate-50"
                 }`}
               >
                 {item.label}
               </Link>
             ))}
             <button
+              type="button"
               onClick={async () => {
                 await createClient().auth.signOut();
                 window.location.href = "/login";
@@ -206,18 +217,19 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
           <Link
             key={item.href}
             href={item.href}
-            className={`flex-1 text-center text-[11px] py-3.5 font-medium ${
-              isActive(item.href) ? "text-blue-600 font-semibold border-t-2 border-blue-600" : "text-slate-500"
+            className={`flex-1 text-center text-[11px] py-3.5 ${
+              isActive(item.href) ? "text-slate-900 font-bold border-t-2 border-blue-600 bg-slate-50/50" : "text-slate-500 font-medium"
             }`}
           >
             {item.label}
           </Link>
         ))}
         <button
+          type="button"
           onClick={() => setMoreOpen((o) => !o)}
           aria-expanded={moreOpen}
-          className={`flex-1 text-center text-[11px] py-3.5 font-medium ${
-            moreOpen || MORE.some((m) => isActive(m.href)) ? "text-blue-600 font-semibold border-t-2 border-blue-600" : "text-slate-500"
+          className={`flex-1 text-center text-[11px] py-3.5 ${
+            moreOpen || MORE.some((m) => isActive(m.href)) ? "text-slate-900 font-bold border-t-2 border-blue-600 bg-slate-50/50" : "text-slate-500 font-medium"
           }`}
         >
           More
