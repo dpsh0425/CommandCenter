@@ -49,7 +49,7 @@ export function StatementsList({
       });
 
       if (!res.ok) {
-        setError(res.error);
+        setError("error" in res ? res.error : "Failed to create statement");
         return;
       }
 
@@ -62,7 +62,7 @@ export function StatementsList({
     run(async () => {
       const res = await deleteStatement(s.id);
       if (!res.ok) {
-        setError(res.error);
+        setError("error" in res ? res.error : "Failed to delete statement");
         return;
       }
       router.refresh();
