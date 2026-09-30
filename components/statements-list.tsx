@@ -47,8 +47,9 @@ export function StatementsList({
         <button
           onClick={() =>
             run(async () => {
-              const id = await createStatement();
-              router.push(`/materials/statements/${id}`);
+              // Pass empty object payload {} instead of no arguments
+              const id = await createStatement({});
+              if (id) router.push(`/materials/statements/${id}`);
             })
           }
           className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold rounded-lg px-4 py-2 text-xs transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
@@ -106,8 +107,9 @@ export function StatementsList({
                     <button
                       onClick={() =>
                         run(async () => {
-                          const id = await createStatement(undefined, s.id);
-                          router.push(`/materials/statements/${id}`);
+                          // Pass object payload with duplicateFrom property
+                          const id = await createStatement({ duplicateFrom: s.id });
+                          if (id) router.push(`/materials/statements/${id}`);
                         })
                       }
                       className="hover:text-slate-900 font-medium transition-colors px-2 py-1 rounded-md hover:bg-slate-200/60 cursor-pointer"
