@@ -200,7 +200,7 @@ export function ResumeEditor({ id, initialName, initial }: { id: string; initial
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className={`${tab === "edit" ? "block" : "hidden"} lg:block print:hidden`}>{editor}</div>
         <div className={`${tab === "preview" ? "block" : "hidden"} lg:block`}>
-          <div className="lg:sticky lg:top-6 resume-print">
+          <div className="lg:sticky lg:top-20 resume-print">
             <Preview name={name} data={data} />
             <p className="text-xs text-gray-400 mt-3 print:hidden">In the print window, choose &ldquo;Save as PDF&rdquo; and turn off headers and footers.</p>
           </div>

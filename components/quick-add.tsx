@@ -13,6 +13,9 @@ const offset = (days: number) => {
   return localDate(d);
 };
 
+const fieldClass =
+  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-blue-600";
+
 export function QuickAdd({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void }) {
   const [mode, setMode] = useState<Mode>("task");
   const [due, setDue] = useState("");
@@ -44,27 +47,41 @@ export function QuickAdd({ open, setOpen }: { open: boolean; setOpen: (v: boolea
 
   if (!open) return null;
 
-  const chip = (active: boolean) => `px-2.5 py-1 rounded-full text-xs border ${active ? "bg-brass text-ink font-medium border-brass" : "hover:border-brass"}`;
+  const chip = (active: boolean) =>
+    `h-7 rounded-full border px-2.5 text-xs font-medium capitalize transition-colors ${
+      active
+        ? "border-blue-600 bg-blue-600 text-white"
+        : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900"
+    }`;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-start justify-center pt-24 px-4 z-50" onClick={() => setOpen(false)}>
-      <div className="bg-surface-raised border border-line rounded-lg shadow-lg w-full max-w-md p-4 flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <div className="flex gap-1 border border-line rounded p-1">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 px-4 pt-[12vh]" onClick={() => setOpen(false)}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Quick add"
+        className="flex w-full max-w-[520px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+          <div role="group" aria-label="What to add" className="grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1">
             {(["task", "link"] as Mode[]).map((m) => (
               <button
                 key={m} type="button" onClick={() => setMode(m)}
-                className={`px-3 py-1 text-sm rounded ${mode === m ? "bg-surface text-cream font-medium" : "text-gray-500 hover:text-cream"}`}
+                aria-pressed={mode === m}
+                className={`h-8 rounded-md px-3 text-[13px] font-semibold transition-colors ${
+                  mode === m ? "bg-white text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.08)]" : "text-slate-600 hover:text-slate-900"
+                }`}
               >
                 {m === "task" ? "Task" : "Save link"}
               </button>
             ))}
           </div>
-          <span className="text-[10px] text-gray-400 font-mono">Ctrl J · Esc to close</span>
+          <span className="font-mono text-[11px] text-slate-500">Ctrl J · Esc to close</span>
         </div>
 
         <form
-          className="flex flex-col gap-3"
+          className="flex flex-col gap-4 p-4"
           onSubmit={(e) => {
             e.preventDefault();
             const form = e.currentTarget;
@@ -103,16 +120,16 @@ export function QuickAdd({ open, setOpen }: { open: boolean; setOpen: (v: boolea
         >
           {mode === "task" ? (
             <>
-              <input ref={firstField} name="title" required placeholder="What needs doing?" className="border rounded px-3 py-2 text-sm" autoComplete="off" />
-              <div className="flex flex-wrap gap-1.5 items-center">
-                <span className="text-xs text-gray-500 mr-1">Due</span>
+              <input ref={firstField} name="title" required placeholder="What needs doing?" aria-label="Task title" className={fieldClass} autoComplete="off" />
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="mr-1 w-14 text-xs font-medium text-slate-600">Due</span>
                 <button type="button" className={chip(due === offset(0))} onClick={() => setDue(due === offset(0) ? "" : offset(0))}>Today</button>
                 <button type="button" className={chip(due === offset(1))} onClick={() => setDue(due === offset(1) ? "" : offset(1))}>Tomorrow</button>
                 <button type="button" className={chip(due === offset(7))} onClick={() => setDue(due === offset(7) ? "" : offset(7))}>Next week</button>
-                <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="border rounded px-2 py-0.5 text-xs" aria-label="Due date" />
+                <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-7 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-900" aria-label="Due date" />
               </div>
-              <div className="flex gap-1.5 items-center">
-                <span className="text-xs text-gray-500 mr-1">Priority</span>
+              <div className="flex items-center gap-1.5">
+                <span className="mr-1 w-14 text-xs font-medium text-slate-600">Priority</span>
                 {(["low", "medium", "high"] as const).map((p) => (
                   <button key={p} type="button" className={chip(priority === p)} onClick={() => setPriority(p)}>{p}</button>
                 ))}
@@ -120,14 +137,14 @@ export function QuickAdd({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             </>
           ) : (
             <>
-              <input ref={firstField} name="url" required placeholder="Paste a GitHub repo, paper, dataset or doc link" className="border rounded px-3 py-2 text-sm" autoComplete="off" />
-              <input name="notes" placeholder="Note (optional)" className="border rounded px-3 py-2 text-sm" />
-              <p className="text-xs text-gray-400">GitHub repos and arXiv papers get their details filled in automatically. Attach it to a school or milestone from those pages.</p>
+              <input ref={firstField} name="url" required placeholder="Paste a GitHub repo, paper, dataset or doc link" aria-label="Link" className={fieldClass} autoComplete="off" />
+              <input name="notes" placeholder="Note (optional)" aria-label="Note" className={fieldClass} />
+              <p className="text-xs leading-5 text-slate-500">GitHub repos and arXiv papers get their details filled in automatically. Attach it to a school or milestone from those pages.</p>
             </>
           )}
-          {error && <p className="text-red-600 text-xs">{error}</p>}
-          {done && <p className="text-teal-600 text-xs">{done}. Add another, or press Esc.</p>}
-          <button disabled={pending} className="bg-brass text-ink font-medium rounded px-3 py-2 text-sm disabled:opacity-50">
+          {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
+          {done && <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{done}. Add another, or press Esc.</p>}
+          <button disabled={pending} className="h-10 rounded-md bg-blue-600 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
             {pending ? "Saving…" : mode === "task" ? "Add task" : "Save link"}
           </button>
         </form>

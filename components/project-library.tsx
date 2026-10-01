@@ -139,7 +139,7 @@ export function ProjectLibrary({ projectId, userId, items }: { projectId: string
         </div>
 
         {selected && (
-          <aside className="fixed inset-x-0 top-0 bottom-14 z-[60] bg-ink overflow-auto p-4 lg:static lg:z-auto lg:p-0 lg:bg-transparent lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)]" aria-label="Preview">
+          <aside className="fixed inset-x-0 top-0 bottom-14 z-[60] bg-ink overflow-auto p-4 lg:static lg:z-auto lg:p-0 lg:bg-transparent lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)]" aria-label="Preview">
             <Detail key={selected.id} item={selected} all={items} projectId={projectId} userId={userId} folders={folders.map((f) => f[0])} onClose={() => setSelectedId(null)} onSelect={setSelectedId} />
           </aside>
         )}

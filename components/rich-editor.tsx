@@ -95,7 +95,7 @@ function Toolbar({ editor, variant }: { editor: Editor; variant: "full" | "compa
       aria-label="Formatting"
       onKeyDown={onKeyDown}
       onFocus={onFocus}
-      className="sticky top-0 z-10 flex flex-nowrap items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden bg-surface-raised border-b border-line px-2 py-1 rounded-t"
+      className="sticky top-14 z-10 flex flex-nowrap items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden bg-surface-raised border-b border-line px-2 py-1 rounded-t"
     >
       {full && (
         <select
