@@ -13,8 +13,8 @@ import {
   ProjectEditForm, RemoveMemberButton,
 } from "@/components/research-forms";
 import { renderRich } from "@/lib/rich-text-server";
-import { Fold, Meta, Section } from "@/components/ui";
-import { ENTRY_KINDS, PAPER_STATUS, daysBetween, formatMinutes, kindLabel, localDate, projectStatusLabel, relative } from "@/lib/research";
+import { ENTRY_KINDS, PAPER_STATUS, daysBetween, formatMinutes, kindLabel, projectStatusLabel, relative } from "@/lib/research";
+import { todayString } from "@/lib/app-date";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -29,26 +29,52 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 
-const TASK_TONE: Record<string, string> = { todo: "text-gray-500", in_progress: "text-brass", blocked: "text-red-600", done: "text-teal-600", cancelled: "text-gray-400" };
-const longDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+const TASK_BADGE: Record<string, string> = {
+  todo: "bg-slate-100 text-slate-600", in_progress: "bg-blue-50 text-blue-700", blocked: "bg-red-50 text-red-700",
+  done: "bg-emerald-50 text-emerald-700", cancelled: "bg-slate-100 text-slate-400",
+};
+const STATUS_BADGE: Record<string, string> = {
+  idea: "bg-slate-100 text-slate-600", planning: "bg-slate-100 text-slate-700", active: "bg-blue-50 text-blue-700",
+  writing: "bg-emerald-50 text-emerald-700", submitted: "bg-blue-100 text-blue-800", published: "bg-emerald-100 text-emerald-800",
+  paused: "bg-slate-100 text-slate-500",
+};
+const longDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+const shortDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+// "YYYY-MM-DD" arithmetic in UTC, so clock changes don't shift the result.
+const shift = (ymd: string, n: number) => new Date(Date.parse(ymd + "T00:00:00Z") + n * 86400000).toISOString().slice(0, 10);
+
+const card = "rounded-lg border border-slate-200 bg-white";
+const cardHead = "flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3";
+const cardTitle = "text-[15px] font-semibold text-slate-900";
+const headLink = "text-[13px] font-medium text-blue-600 hover:text-blue-700";
+const emptyText = "px-5 py-4 text-[13px] text-slate-500";
 
 export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; kind?: string; w?: string }> }) {
   const { id } = await params;
   const sp = await searchParams;
   const tab: Tab = TABS.some((t) => t.key === sp.tab) ? (sp.tab as Tab) : "overview";
   const supabase = await createClient();
-  const today = localDate(new Date());
-  const weekAgo = localDate(new Date(Date.now() - 6 * 86400000));
+  // "Today" in APP_TIMEZONE, not the server clock.
+  const today = todayString();
+  const weekAgo = shift(today, -6);
 
   const [{ data: { user } }, { data: project }] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("research_projects").select("*").eq("id", id).single(),
   ]);
-  if (user?.id !== OWNER_USER_ID) return <main className="p-4 md:p-8 max-w-xl mx-auto text-sm text-gray-500">Research projects are only available to the workspace owner.</main>;
-  if (!project) return <main className="p-4 md:p-8">Project not found. <Link href="/research" className="underline">Back to research</Link></main>;
+  if (user?.id !== OWNER_USER_ID) return <main className="mx-auto max-w-xl p-4 text-sm text-slate-500 md:p-8">Research projects are only available to the workspace owner.</main>;
+  if (!project) {
+    return (
+      <main className="mx-auto flex max-w-xl flex-col gap-3 p-4 md:p-8">
+        <Link href="/research" className="self-start text-[13px] font-medium text-slate-600 hover:text-slate-900">← All projects</Link>
+        <p className="text-sm text-slate-600">This project doesn&apos;t exist or you don&apos;t have access to it.</p>
+      </main>
+    );
+  }
 
   const { data: milestones } = await supabase.from("research_milestones").select("*").eq("project_id", id).order("target_date", { ascending: true, nullsFirst: false });
   const msIds = (milestones ?? []).map((m) => m.id);
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const [{ data: tasksA }, { data: tasksB }, { data: entries }, { data: papers }, { data: meetings }, { data: members }, { data: people }, { data: links }, { data: docs }, { data: experiments }, { data: sections }] = await Promise.all([
     supabase.from("tasks").select("id, title, status, priority, due_date, assignee_id, research_milestone_id, people(name)").eq("project_id", id),
     msIds.length ? supabase.from("tasks").select("id, title, status, priority, due_date, assignee_id, research_milestone_id, people(name)").in("research_milestone_id", msIds) : Promise.resolve({ data: [] as any[] }),
@@ -87,145 +113,251 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       id: l.id, source: "link", title: l.title, kind: l.kind, folder: l.folder, tags: l.tags ?? [], notes: l.notes, pinned: l.pinned, created_at: l.created_at, url: l.url, meta: l.meta ?? {},
     })),
   ];
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   const expRows = (experiments ?? []) as ExperimentRow[];
   const secRows = (sections ?? []) as SectionRow[];
   const wordsTotal = secRows.reduce((n, x) => n + x.words, 0);
   const wordsTarget = secRows.reduce((n, x) => n + (x.target_words ?? 0), 0);
   const weekOffset = Math.max(-12, Math.min(4, Number(sp.w) || 0));
-  const monday = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + weekOffset * 7); return localDate(d); })();
+  // Monday of the chosen week, counted from today in APP_TIMEZONE.
+  const monday = shift(today, -((new Date(today + "T00:00:00Z").getUTCDay() + 6) % 7) + weekOffset * 7);
   const weekEnd = addDays(monday, 6);
-  const shortDay = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const teamWeek = tab === "team" ? await loadTeamWeek(supabase, id, monday, today) : null;
   const pinnedItems = libItems.filter((i) => i.pinned).slice(0, 4);
+  const overdueTasks = openTasks.filter((t) => t.due_date && t.due_date < today).length;
+  const running = expRows.filter((x) => x.status === "running").length;
+  const memberCount = (members ?? []).length;
+  const tabCount: Partial<Record<Tab, number>> = { reading: toRead, experiments: running, team: memberCount };
+
+  const tiles: Array<{ label: string; value: string; sub?: string; subTone?: string; bar?: number; tone?: string }> = [
+    { label: "Milestones", value: `${doneMs} of ${(milestones ?? []).length}`, bar: (milestones ?? []).length ? Math.round((doneMs / (milestones ?? []).length) * 100) : 0 },
+    { label: "This week", value: weekMinutes ? formatMinutes(weekMinutes) : "0m", sub: `${weekEntries.length} journal entr${weekEntries.length === 1 ? "y" : "ies"}`, tone: weekMinutes ? "text-blue-700" : undefined },
+    { label: "Open tasks", value: String(openTasks.length), sub: overdueTasks ? `${overdueTasks} overdue` : "none overdue", subTone: overdueTasks ? "font-medium text-red-700" : undefined },
+    {
+      label: secRows.length ? "Words written" : "To read",
+      value: secRows.length ? wordsTotal.toLocaleString() : String(toRead),
+      sub: secRows.length ? (wordsTarget ? `of ${wordsTarget.toLocaleString()} target` : `${secRows.length} sections`) : "papers to read or reading",
+    },
+  ];
 
   return (
-    <main className={`p-4 md:p-8 ${tab === "library" ? "max-w-7xl" : "max-w-3xl"} mx-auto flex flex-col gap-8`}>
-      <div className="flex flex-col gap-4">
-        <Link href="/research" className="text-xs text-gray-500 hover:text-cream self-start">← All projects</Link>
-        <div>
-          <h1 className="text-4xl leading-tight">{project.title}</h1>
-          <div className="mt-1"><Meta items={[projectStatusLabel(project.status), project.venue && `${project.venue}${project.venue_deadline ? ` · due ${relative(daysBetween(today, project.venue_deadline))}` : ""}`, (members ?? []).length ? `${(members ?? []).length} on the team` : "solo project"]} /></div>
-          {project.question && <p className="text-gray-500 mt-2 max-w-2xl">{project.question}</p>}
+    <main className={`mx-auto flex w-full flex-col gap-4 p-4 md:p-8 ${tab === "library" ? "max-w-7xl" : "max-w-[1040px]"}`}>
+      <Link href="/research" className="self-start text-[13px] font-medium text-slate-600 hover:text-slate-900">← All projects</Link>
+
+      <section className={`${card} flex flex-wrap items-start justify-between gap-4 px-5 py-5 md:px-6`}>
+        <div className="flex min-w-0 flex-col gap-2">
+          <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">Research project</p>
+          <h1 className="text-[26px] font-semibold leading-[34px] tracking-tight text-slate-900">{project.title}</h1>
+          <div className="flex flex-wrap gap-1.5 text-xs">
+            <span className={`rounded-full px-2.5 py-0.5 font-medium ${STATUS_BADGE[project.status] ?? STATUS_BADGE.planning}`}>{projectStatusLabel(project.status)}</span>
+            {project.venue && (
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-slate-700">
+                {project.venue}{project.venue_deadline ? ` · due ${relative(daysBetween(today, project.venue_deadline))}` : ""}
+              </span>
+            )}
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-slate-700">{memberCount ? `${memberCount} on the team` : "Solo project"}</span>
+          </div>
+          {project.question && <p className="max-w-2xl text-sm text-slate-600">{project.question}</p>}
         </div>
-        <nav className="flex gap-x-5 gap-y-1 flex-wrap border-b border-line" aria-label="Project sections">
-          {TABS.map((t) => (
-            <Link key={t.key} href={t.key === "overview" ? base : `${base}?tab=${t.key}`} className={`pb-2 text-sm border-b-2 -mb-px ${tab === t.key ? "border-brass text-cream font-medium" : "border-transparent text-gray-500 hover:text-cream"}`}>{t.label}</Link>
-          ))}
-        </nav>
-      </div>
+        <Link href={`${base}?tab=journal`} className="inline-flex h-9 items-center rounded-md bg-blue-600 px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-blue-700">+ Log work</Link>
+      </section>
+
+      <nav className="flex gap-5 overflow-x-auto border-b border-slate-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Project sections">
+        {TABS.map((t) => {
+          const active = tab === t.key;
+          const n = tabCount[t.key];
+          return (
+            <Link
+              key={t.key} href={t.key === "overview" ? base : `${base}?tab=${t.key}`} scroll={false} aria-current={active ? "page" : undefined}
+              className={`-mb-px flex items-center gap-1.5 whitespace-nowrap border-b-2 pb-2.5 text-sm transition-colors ${active ? "border-blue-600 font-semibold text-slate-900" : "border-transparent font-medium text-slate-500 hover:text-slate-900"}`}
+            >
+              {t.label}
+              {!!n && <span className="rounded-full bg-slate-100 px-1.5 text-[11px] font-medium text-slate-600">{n}</span>}
+            </Link>
+          );
+        })}
+      </nav>
 
       {tab === "overview" && (
-        <div className="flex flex-col gap-8">
-          <p className="text-sm text-gray-500">
-            <span className="font-mono text-cream">{doneMs}</span> of <span className="font-mono text-cream">{(milestones ?? []).length}</span> milestones done ·{" "}
-            <span className="font-mono text-cream">{openTasks.length}</span> open tasks ·{" "}
-            <span className="font-mono text-cream">{weekMinutes ? formatMinutes(weekMinutes) : "0m"}</span> logged this week ·{" "}
-            <span className="font-mono text-cream">{toRead}</span> papers to read
-            {expRows.length > 0 && <> · <span className="font-mono text-cream">{expRows.length}</span> experiments{expRows.filter((x) => x.status === "running").length ? ` (${expRows.filter((x) => x.status === "running").length} running)` : ""}</>}
-            {secRows.length > 0 && <> · <span className="font-mono text-cream">{wordsTotal.toLocaleString()}</span>{wordsTarget ? ` of ${wordsTarget.toLocaleString()}` : ""} words written</>}
-          </p>
-
-          <Section title="Next milestones" action={<Link href={`${base}?tab=plan`} className="text-xs text-gray-500 hover:text-cream">Open plan →</Link>}>
-            {nextMs.length === 0 ? <p className="text-sm text-gray-500">Nothing pending. Add milestones in the Plan tab.</p> : (
-              <ul className="flex flex-col">
-                {nextMs.map((m) => (
-                  <li key={m.id} className="border-b border-line/60 last:border-0">
-                    <Link href={`/research/${m.id}`} className="flex items-baseline justify-between gap-4 py-2.5 -mx-2 px-2 rounded transition-colors hover:bg-surface-raised">
-                      <span className="truncate">{m.title}</span>
-                      <span className={`text-sm whitespace-nowrap ${m.target_date && m.target_date < today ? "text-red-600" : "text-gray-500"}`}>{m.target_date ? relative(daysBetween(today, m.target_date)) : "no date"}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Section>
-
-          <Section title="Recent work" action={<Link href={`${base}?tab=journal`} className="text-xs text-gray-500 hover:text-cream">Open journal →</Link>}>
-            {(entries ?? []).length === 0 ? <p className="text-sm text-gray-500">Nothing logged yet. Every experiment, reading session, meeting and decision belongs in the journal.</p> : (
-              <ul className="flex flex-col">
-                {(entries ?? []).slice(0, 5).map((e) => (
-                  <li key={e.id} className="flex items-baseline gap-3 py-2 border-b border-line/60 last:border-0 text-sm">
-                    <span className="text-xs text-gray-500 w-20 flex-shrink-0">{kindLabel(e.kind)}</span>
-                    <span className="flex-1 min-w-0 truncate">{e.title}</span>
-                    <span className="text-xs text-gray-400 whitespace-nowrap">{e.occurred_on.slice(5)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Section>
-
-          <Section title="Library" action={<Link href={`${base}?tab=library`} className="text-xs text-gray-500 hover:text-cream">Open library →</Link>}>
-            {libItems.length === 0 ? (
-              <p className="text-sm text-gray-500">Nothing in the library yet. Keep the project&rsquo;s papers, data, code links and figures in one place.</p>
-            ) : (
-              <>
-                <p className="text-sm text-gray-500">{libItems.filter((i) => i.source === "file" && i.is_current !== false).length} files · {libItems.filter((i) => i.source === "link").length} links{pinnedItems.length ? " · pinned:" : ""}</p>
-                {pinnedItems.length > 0 && (
-                  <ul className="flex flex-col">
-                    {pinnedItems.map((i) => <li key={i.id} className="py-1.5 border-b border-line/60 last:border-0 text-sm"><Link href={`${base}?tab=library`} className="hover:text-brass">★ {i.title}</Link></li>)}
-                  </ul>
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {tiles.map((t) => (
+              <div key={t.label} className={`${card} px-4 py-3`}>
+                <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">{t.label}</p>
+                <p className={`text-[22px] font-semibold tabular-nums ${t.tone ?? "text-slate-900"}`}>{t.value}</p>
+                {t.bar != null ? (
+                  <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-blue-600" style={{ width: `${t.bar}%` }} /></span>
+                ) : (
+                  <p className={`truncate text-xs ${t.subTone ?? "text-slate-500"}`}>{t.sub}</p>
                 )}
-              </>
-            )}
-          </Section>
+              </div>
+            ))}
+          </div>
 
-          <Fold title="Project details" summary="title, question, dates, venue">
-            <ProjectEditForm p={project} />
-          </Fold>
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+            <section className={card}>
+              <div className={cardHead}><h2 className={cardTitle}>Coming up</h2><Link href={`${base}?tab=plan`} className={headLink}>Plan</Link></div>
+              {nextMs.length === 0 ? <p className={emptyText}>Nothing pending. Add milestones in the Plan tab.</p> : (
+                <ul className="px-3 py-1.5">
+                  {nextMs.map((m) => {
+                    const mt = tasks.filter((t) => t.research_milestone_id === m.id && t.status !== "done" && t.status !== "cancelled").length;
+                    return (
+                      <li key={m.id}>
+                        <Link href={`/research/${m.id}`} className="flex items-center justify-between gap-4 rounded-md px-2 py-2 transition-colors hover:bg-slate-50">
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-semibold text-slate-900">{m.title}</span>
+                            <span className="block text-xs text-slate-500">{mt ? `${mt} open task${mt === 1 ? "" : "s"}` : "no open tasks"}</span>
+                          </span>
+                          <span className={`whitespace-nowrap text-xs font-medium ${m.target_date && m.target_date < today ? "text-red-700" : m.target_date ? "text-blue-700" : "text-slate-400"}`}>
+                            {m.target_date ? relative(daysBetween(today, m.target_date)) : "no date"}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
 
-          <div><DeleteProjectButton id={id} title={project.title} counts={`its ${(milestones ?? []).length} milestones, ${expRows.length} experiments, ${secRows.length} writing sections, ${tasks.length} tasks, ${(entries ?? []).length} journal entries, ${(papers ?? []).length} papers and ${(meetings ?? []).length} meetings`} /></div>
+            <section className={card}>
+              <div className={cardHead}><h2 className={cardTitle}>Recent journal</h2><Link href={`${base}?tab=journal`} className={headLink}>Journal</Link></div>
+              {(entries ?? []).length === 0 ? <p className={emptyText}>Nothing logged yet. Every experiment, reading session, meeting and decision belongs in the journal.</p> : (
+                <ul className="px-5 py-1">
+                  {(entries ?? []).slice(0, 5).map((e) => (
+                    <li key={e.id} className="flex items-start gap-3 border-b border-slate-100 py-2.5 text-sm last:border-0">
+                      <span className="mt-0.5 w-24 flex-shrink-0"><span className="rounded-md bg-blue-50 px-1.5 py-0.5 text-[11px] text-blue-700">{kindLabel(e.kind)}</span></span>
+                      <span className="min-w-0 flex-1 truncate text-slate-900">{e.title}</span>
+                      <span className="whitespace-nowrap text-xs text-slate-500">{shortDate(e.occurred_on)}{e.minutes ? ` · ${formatMinutes(e.minutes)}` : ""}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className={card}>
+              <div className={cardHead}><h2 className={cardTitle}>Library</h2><Link href={`${base}?tab=library`} className={headLink}>Library</Link></div>
+              {libItems.length === 0 ? (
+                <p className={emptyText}>Nothing in the library yet. Keep the project&rsquo;s papers, data, code links and figures in one place.</p>
+              ) : (
+                <div className="px-5 py-3">
+                  <p className="text-xs text-slate-500">{libItems.filter((i) => i.source === "file" && i.is_current !== false).length} files · {libItems.filter((i) => i.source === "link").length} links{pinnedItems.length ? " · pinned:" : ""}</p>
+                  {pinnedItems.length > 0 && (
+                    <ul className="mt-1">
+                      {pinnedItems.map((i) => (
+                        <li key={i.id} className="border-b border-slate-100 py-2 last:border-0">
+                          <Link href={`${base}?tab=library`} className="flex items-center gap-2 text-sm text-slate-900 hover:text-blue-700"><span aria-hidden className="text-blue-600">★</span><span className="truncate">{i.title}</span></Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </section>
+
+            <section className={card}>
+              <div className={cardHead}><h2 className={cardTitle}>Team</h2><Link href={`${base}?tab=team`} className={headLink}>This week</Link></div>
+              {memberCount === 0 ? <p className={emptyText}>Solo project. Add collaborators on the Team tab to assign them work.</p> : (
+                <ul className="flex flex-wrap gap-3 px-5 py-3">
+                  {(members ?? []).map((m) => {
+                    const p = personById.get(m.person_id);
+                    if (!p) return null;
+                    return (
+                      <li key={p.id}>
+                        <Link href={`/people/${p.id}`} className="flex items-center gap-2 rounded-md py-1 pr-2 text-sm text-slate-900 hover:bg-slate-50">
+                          <Avatar name={p.name} color={p.color} size={28} />
+                          <span><span className="block font-medium leading-tight">{p.name}</span>{m.role && <span className="block text-xs text-slate-500">{m.role}</span>}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          </div>
+
+          <details className={`${card} group`}>
+            <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-3 [&::-webkit-details-marker]:hidden">
+              <span className={cardTitle}>Project details<span className="ml-1 text-[13px] font-normal text-slate-500">· title, question, dates, venue</span></span>
+              <span aria-hidden className="text-slate-400 transition-transform group-open:rotate-90">›</span>
+            </summary>
+            <div className="border-t border-slate-100 px-5 py-4"><ProjectEditForm p={project} /></div>
+          </details>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-white px-5 py-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Delete this project</p>
+              <p className="text-xs text-slate-500">Removes everything in it. This cannot be undone.</p>
+            </div>
+            <DeleteProjectButton id={id} title={project.title} counts={`its ${(milestones ?? []).length} milestones, ${expRows.length} experiments, ${secRows.length} writing sections, ${tasks.length} tasks, ${(entries ?? []).length} journal entries, ${(papers ?? []).length} papers and ${(meetings ?? []).length} meetings`} />
+          </div>
         </div>
       )}
 
       {tab === "plan" && (
-        <div className="flex flex-col gap-8">
-          <Section title="Milestones" hint={(milestones ?? []).length ? `${doneMs} of ${(milestones ?? []).length} done` : undefined}>
-            {(milestones ?? []).length === 0 && <p className="text-sm text-gray-500">No milestones yet. Break the project into stages you can finish one at a time.</p>}
-            <ul className="flex flex-col">
-              {(milestones ?? []).map((m) => {
-                const mt = tasks.filter((t) => t.research_milestone_id === m.id && t.status !== "cancelled");
-                const late = m.status !== "done" && m.target_date && m.target_date < today;
-                return (
-                  <li key={m.id} className="border-b border-line/60 last:border-0 py-3 flex items-start justify-between gap-4">
-                    <Link href={`/research/${m.id}`} className="min-w-0 flex-1 hover:text-brass">
-                      <span className={`block font-medium ${m.status === "done" ? "line-through text-gray-500" : ""}`}>{m.title}</span>
-                      <span className="block text-sm text-gray-500 truncate">
-                        {[m.target_date ? `${m.target_date.slice(5)} · ${relative(daysBetween(today, m.target_date))}` : "no date", mt.length ? `${mt.filter((t) => t.status === "done").length}/${mt.length} tasks` : null].filter(Boolean).join(" · ")}
-                        {late && <span className="text-red-600"> · late</span>}
-                      </span>
-                    </Link>
-                    <MilestoneStatusSelect id={m.id} value={m.status} />
-                  </li>
-                );
-              })}
-            </ul>
-            <AddMilestoneForm projectId={id} />
-          </Section>
-
-          <Section title="Tasks" hint={tasks.length ? `${openTasks.length} open` : undefined}>
-            <AddTaskForm projectId={id} milestones={msOpts} people={assignable} teamSize={memberIds.size} />
-            {tasks.length === 0 ? <p className="text-sm text-gray-500">No tasks yet. Add the smallest concrete steps here and give each an owner and a date.</p> : (
-              <ul className="flex flex-col">
-                {[...openTasks.sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999")), ...tasks.filter((t) => t.status === "done")].map((t) => {
-                  const late = t.due_date && t.due_date < today && t.status !== "done";
+        <div className="flex flex-col gap-4">
+          <section className={card}>
+            <div className={cardHead}>
+              <h2 className={cardTitle}>Milestones{(milestones ?? []).length > 0 && <span className="ml-1 font-normal text-slate-500">· {doneMs} of {(milestones ?? []).length} done</span>}</h2>
+            </div>
+            <div className="flex flex-col gap-2 px-5 py-3">
+              {(milestones ?? []).length === 0 && <p className="text-[13px] text-slate-500">No milestones yet. Break the project into stages you can finish one at a time.</p>}
+              <ol className="flex flex-col">
+                {(milestones ?? []).map((m, i) => {
+                  const mt = tasks.filter((t) => t.research_milestone_id === m.id && t.status !== "cancelled");
+                  const mtDone = mt.filter((t) => t.status === "done").length;
+                  const late = m.status !== "done" && m.target_date && m.target_date < today;
                   return (
-                    <li key={t.id} className="border-b border-line/60 last:border-0">
-                      <Link href={`/tasks/${t.id}`} className="flex items-baseline justify-between gap-4 py-2.5 -mx-2 px-2 rounded transition-colors hover:bg-surface-raised">
-                        <span className="min-w-0">
-                          <span className={`block truncate ${t.status === "done" ? "line-through text-gray-500" : ""}`}>{t.title}</span>
-                          <span className="block text-xs text-gray-500 truncate">{[t.people?.name ?? "Unassigned", t.research_milestone_id ? msById.get(t.research_milestone_id)?.title : null].filter(Boolean).join(" · ")}</span>
+                    <li key={m.id} className="flex items-start justify-between gap-4 border-b border-slate-100 py-3 last:border-0">
+                      <span aria-hidden className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold ${m.status === "done" ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-700"}`}>{m.status === "done" ? "✓" : i + 1}</span>
+                      <Link href={`/research/${m.id}`} className="min-w-0 flex-1 hover:text-blue-700">
+                        <span className={`block font-semibold ${m.status === "done" ? "text-slate-400 line-through" : "text-slate-900"}`}>{m.title}</span>
+                        <span className="block truncate text-xs text-slate-500">
+                          {m.target_date ? `${shortDate(m.target_date)} · ${relative(daysBetween(today, m.target_date))}` : "No date"}
+                          {mt.length ? ` · ${mtDone}/${mt.length} tasks` : ""}
+                          {late && <span className="font-medium text-red-700"> · late</span>}
                         </span>
-                        <span className="text-right whitespace-nowrap">
-                          <span className={`block text-xs ${TASK_TONE[t.status]}`}>{t.status.replace("_", " ")}</span>
-                          {t.due_date && <span className={`block text-xs ${late ? "text-red-600" : "text-gray-400"}`}>due {t.due_date.slice(5)}</span>}
-                        </span>
+                        {mt.length > 0 && (
+                          <span className="mt-1.5 block h-1 w-40 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-blue-600" style={{ width: `${Math.round((mtDone / mt.length) * 100)}%` }} /></span>
+                        )}
                       </Link>
+                      <MilestoneStatusSelect id={m.id} value={m.status} />
                     </li>
                   );
                 })}
-              </ul>
-            )}
-          </Section>
+              </ol>
+              <AddMilestoneForm projectId={id} />
+            </div>
+          </section>
+
+          <section className={card}>
+            <div className={cardHead}>
+              <h2 className={cardTitle}>Tasks{tasks.length > 0 && <span className="ml-1 font-normal text-slate-500">· {openTasks.length} open</span>}</h2>
+            </div>
+            <div className="flex flex-col gap-3 px-5 py-4">
+              <AddTaskForm projectId={id} milestones={msOpts} people={assignable} teamSize={memberIds.size} />
+              {tasks.length === 0 ? <p className="text-[13px] text-slate-500">No tasks yet. Add the smallest concrete steps here and give each an owner and a date.</p> : (
+                <ul className="-mx-2 flex flex-col">
+                  {[...openTasks.sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999")), ...tasks.filter((t) => t.status === "done")].map((t) => {
+                    const late = t.due_date && t.due_date < today && t.status !== "done";
+                    return (
+                      <li key={t.id}>
+                        <Link href={`/tasks/${t.id}`} className="flex items-center justify-between gap-4 rounded-md px-2 py-2 transition-colors hover:bg-slate-50">
+                          <span className="min-w-0">
+                            <span className={`block truncate text-sm ${t.status === "done" ? "text-slate-400 line-through" : "text-slate-900"}`}>{t.title}</span>
+                            <span className="block truncate text-xs text-slate-500">{[t.people?.name ?? "Unassigned", t.research_milestone_id ? msById.get(t.research_milestone_id)?.title : null].filter(Boolean).join(" · ")}</span>
+                          </span>
+                          <span className="flex flex-shrink-0 flex-col items-end gap-0.5">
+                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${TASK_BADGE[t.status] ?? TASK_BADGE.todo}`}>{t.status.replace(/_/g, " ")}</span>
+                            {t.due_date && <span className={`text-xs ${late ? "font-medium text-red-700" : "text-slate-500"}`}>due {shortDate(t.due_date)}</span>}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </section>
         </div>
       )}
 
@@ -237,28 +369,37 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         const groups: Array<{ date: string; rows: typeof shown }> = [];
         shown.forEach((e) => { const g = groups[groups.length - 1]; if (g && g.date === e.occurred_on) g.rows.push(e); else groups.push({ date: e.occurred_on, rows: [e] }); });
         const usedKinds = Array.from(new Set((entries ?? []).map((e) => e.kind)));
+        const chip = (on: boolean) => `h-8 inline-flex items-center rounded-full border px-3 text-[13px] font-medium transition-colors ${on ? "border-blue-600 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`;
         return (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
             <EntryForm projectId={id} people={assignable} milestones={msOpts} teamSize={memberIds.size} />
             {weekMinutes > 0 && (
-              <p className="text-sm text-gray-500">Last 7 days: <span className="font-mono text-cream">{formatMinutes(weekMinutes)}</span> · {Array.from(byKind.entries()).filter(([, m]) => m > 0).sort((a, b) => b[1] - a[1]).map(([k, m]) => `${kindLabel(k)} ${formatMinutes(m)}`).join(" · ")}</p>
+              <p className="text-[13px] text-slate-600">
+                Last 7 days: <span className="font-semibold text-slate-900">{formatMinutes(weekMinutes)}</span> · {Array.from(byKind.entries()).filter(([, m]) => m > 0).sort((a, b) => b[1] - a[1]).map(([k, m]) => `${kindLabel(k)} ${formatMinutes(m)}`).join(" · ")}
+              </p>
             )}
             {usedKinds.length > 1 && (
-              <div className="flex flex-wrap gap-x-5 gap-y-1 border-b border-line text-sm -mb-2">
-                <Link href={`${base}?tab=journal`} className={`pb-2 border-b-2 -mb-px ${!kind ? "border-brass text-cream font-medium" : "border-transparent text-gray-500 hover:text-cream"}`}>All {(entries ?? []).length}</Link>
-                {usedKinds.map((k) => <Link key={k} href={`${base}?tab=journal&kind=${k}`} className={`pb-2 border-b-2 -mb-px ${kind === k ? "border-brass text-cream font-medium" : "border-transparent text-gray-500 hover:text-cream"}`}>{kindLabel(k)}</Link>)}
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by kind">
+                <Link href={`${base}?tab=journal`} scroll={false} aria-current={!kind ? "page" : undefined} className={chip(!kind)}>All {(entries ?? []).length}</Link>
+                {usedKinds.map((k) => <Link key={k} href={`${base}?tab=journal&kind=${k}`} scroll={false} aria-current={kind === k ? "page" : undefined} className={chip(kind === k)}>{kindLabel(k)}</Link>)}
               </div>
             )}
-            {groups.length === 0 ? <p className="text-sm text-gray-500">Nothing logged yet. Log the small things too: a failed run, a paper skimmed, a decision made. They add up to your methods section.</p> : groups.map((g) => (
-              <section key={g.date} className="flex flex-col">
-                <h3 className="font-sans text-sm font-semibold text-gray-500 border-b border-line pb-1">{longDate(g.date)} <span className="font-normal text-gray-400">{formatMinutes(g.rows.reduce((n, r) => n + (r.minutes ?? 0), 0))}</span></h3>
-                <ul>{g.rows.map((e) => <EntryRow key={e.id} projectId={id} e={{ id: e.id, kind: e.kind, title: e.title, bodyHtml: e.body ? renderRich(e.body) : null, minutes: e.minutes, personName: e.person_id ? personById.get(e.person_id)?.name : undefined, milestoneTitle: e.milestone_id ? msById.get(e.milestone_id)?.title : undefined }} />)}</ul>
+            {groups.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-8 text-center text-[13px] text-slate-500">Nothing logged yet. Log the small things too: a failed run, a paper skimmed, a decision made. They add up to your methods section.</div>
+            ) : groups.map((g) => (
+              <section key={g.date} className={card}>
+                <h3 className="flex items-center justify-between border-b border-slate-200 px-5 py-2.5 text-[13px] font-semibold text-slate-900">
+                  {longDate(g.date)}
+                  <span className="text-xs font-normal text-slate-500">{formatMinutes(g.rows.reduce((n, r) => n + (r.minutes ?? 0), 0))}</span>
+                </h3>
+                <ul className="px-5">{g.rows.map((e) => <EntryRow key={e.id} projectId={id} e={{ id: e.id, kind: e.kind, title: e.title, bodyHtml: e.body ? renderRich(e.body) : null, minutes: e.minutes, personName: e.person_id ? personById.get(e.person_id)?.name : undefined, milestoneTitle: e.milestone_id ? msById.get(e.milestone_id)?.title : undefined }} />)}</ul>
               </section>
             ))}
           </div>
         );
       })()}
 
+      {/* Experiments, Writing, Library, Reading and Meetings are restyled in Phase 10b. */}
       {tab === "experiments" && <ExperimentsBoard projectId={id} experiments={expRows} people={peopleOpts} milestones={msOpts} />}
 
       {tab === "writing" && (
@@ -270,13 +411,13 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       {tab === "reading" && (
         <div className="flex flex-col gap-6">
           <PaperForm projectId={id} />
-          {(papers ?? []).length === 0 ? <p className="text-sm text-gray-500">Your reading list is empty. Add the papers this project builds on, then write one line on what each one gives you.</p> : (
+          {(papers ?? []).length === 0 ? <p className="text-sm text-slate-500">Your reading list is empty. Add the papers this project builds on, then write one line on what each one gives you.</p> : (
             [...PAPER_STATUS].sort((a, b) => ["reading", "to_read", "cite", "read"].indexOf(a.key) - ["reading", "to_read", "cite", "read"].indexOf(b.key)).map((s) => {
               const rows = (papers ?? []).filter((p) => p.status === s.key);
               if (rows.length === 0) return null;
               return (
                 <section key={s.key} className="flex flex-col">
-                  <h2 className="font-sans text-[15px] font-semibold border-b border-line pb-2">{s.label} <span className="font-mono text-xs text-gray-500 font-normal">{rows.length}</span></h2>
+                  <h2 className="border-b border-slate-200 pb-2 text-[15px] font-semibold text-slate-900">{s.label} <span className="text-xs font-normal text-slate-500">{rows.length}</span></h2>
                   <ul>{rows.map((p) => <PaperRow key={p.id} projectId={id} p={p} />)}</ul>
                 </section>
               );
@@ -288,42 +429,47 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       {tab === "meetings" && (
         <div className="flex flex-col gap-6">
           <MeetingForm projectId={id} people={peopleOpts} />
-          {(meetings ?? []).length === 0 ? <p className="text-sm text-gray-500">No meetings yet. Add each meeting with its agenda before, and notes and decisions after.</p> : (
+          {(meetings ?? []).length === 0 ? <p className="text-sm text-slate-500">No meetings yet. Add each meeting with its agenda before, and notes and decisions after.</p> : (
             <ul>{(meetings ?? []).map((m, i) => <MeetingCard key={m.id} projectId={id} people={assignable} teamSize={memberIds.size} defaultOpen={i === 0} m={{ id: m.id, title: m.title, held_on: m.held_on, agenda: m.agenda, notes: m.notes, decisions: m.decisions, attendees: (m.attendee_ids as string[]).map((pid) => personById.get(pid)?.name).filter(Boolean) as string[] }} />)}</ul>
           )}
         </div>
       )}
 
       {tab === "team" && (
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-4">
           {teamWeek && (
             <TeamWeek projectId={id} people={teamWeek.people} unattributedMinutes={teamWeek.unattributedMinutes} unattributedEntries={teamWeek.unattributedEntries}
-              offset={weekOffset} label={`${shortDay(monday)} to ${shortDay(weekEnd)}`} isPast={weekEnd < today} />
+              offset={weekOffset} label={`${shortDate(monday)} – ${shortDate(weekEnd)}`} isPast={weekEnd < today} />
           )}
-          <h2 className="font-sans text-[15px] font-semibold text-cream border-b border-line pb-2 -mb-4">Members</h2>
-          {(members ?? []).length === 0 ? <p className="text-sm text-gray-500">This is a solo project. Add collaborators, advisors or annotators to assign them tasks and track their work.</p> : (
-            <ul className="flex flex-col">
-              {(members ?? []).map((m) => {
-                const p = personById.get(m.person_id);
-                if (!p) return null;
-                const mine = openTasks.filter((t) => t.assignee_id === p.id).length;
-                const mins = (entries ?? []).filter((e) => e.person_id === p.id).reduce((n, e) => n + (e.minutes ?? 0), 0);
-                return (
-                  <li key={p.id} className="flex items-center gap-4 py-3 border-b border-line/60 last:border-0">
-                    <Avatar name={p.name} color={p.color} size={36} />
-                    <Link href={`/people/${p.id}`} className="min-w-0 flex-1 hover:text-brass">
-                      <span className="block font-medium truncate">{p.name}</span>
-                      <span className="block text-xs text-gray-500 truncate">{[m.role, `${mine} open task${mine === 1 ? "" : "s"}`, mins ? `${formatMinutes(mins)} logged` : null].filter(Boolean).join(" · ")}</span>
-                    </Link>
-                    <RemoveMemberButton projectId={id} personId={p.id} name={p.name} />
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          <Section title="Add someone">
-            <AddMemberForm projectId={id} candidates={peopleOpts.filter((p) => !memberIds.has(p.id))} totalPeople={peopleOpts.length} />
-          </Section>
+          <section className={card}>
+            <div className={cardHead}><h2 className={cardTitle}>Members{memberCount > 0 && <span className="ml-1 font-normal text-slate-500">· {memberCount}</span>}</h2></div>
+            <div className="flex flex-col gap-3 px-5 py-3">
+              {memberCount === 0 ? <p className="text-[13px] text-slate-500">This is a solo project. Add collaborators, advisors or annotators to assign them tasks and track their work.</p> : (
+                <ul className="flex flex-col">
+                  {(members ?? []).map((m) => {
+                    const p = personById.get(m.person_id);
+                    if (!p) return null;
+                    const mine = openTasks.filter((t) => t.assignee_id === p.id).length;
+                    const mins = (entries ?? []).filter((e) => e.person_id === p.id).reduce((n, e) => n + (e.minutes ?? 0), 0);
+                    return (
+                      <li key={p.id} className="flex flex-wrap items-center gap-3 border-b border-slate-100 py-2.5 last:border-0">
+                        <Avatar name={p.name} color={p.color} size={32} />
+                        <Link href={`/people/${p.id}`} className="min-w-0 flex-1 hover:text-blue-700">
+                          <span className="block truncate text-sm font-semibold text-slate-900">{p.name}</span>
+                          <span className="block truncate text-xs text-slate-500">{[m.role, `${mine} open task${mine === 1 ? "" : "s"}`, mins ? `${formatMinutes(mins)} logged` : null].filter(Boolean).join(" · ")}</span>
+                        </Link>
+                        <RemoveMemberButton projectId={id} personId={p.id} name={p.name} />
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <div className="border-t border-slate-100 pt-3">
+                <p className="mb-2 text-xs font-medium text-slate-600">Add someone</p>
+                <AddMemberForm projectId={id} candidates={peopleOpts.filter((p) => !memberIds.has(p.id))} totalPeople={peopleOpts.length} />
+              </div>
+            </div>
+          </section>
         </div>
       )}
     </main>

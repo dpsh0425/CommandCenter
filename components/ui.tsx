@@ -159,6 +159,7 @@ export const MATERIALS_TABS = [
 ];
 export const RESEARCH_TABS = [
   { href: "/research", label: "Projects" },
+  { href: "/research/reading", label: "Reading list" },
   { href: "/links", label: "Library" },
 ];
 

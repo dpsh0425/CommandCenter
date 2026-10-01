@@ -41,35 +41,53 @@ function useRememberedPerson(storageKey: string, people: Opt[], teamSize: number
   return [person, choose] as const;
 }
 
-const field = "border rounded px-2 py-1.5 text-sm w-full";
-const primary = "bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm disabled:opacity-50";
+const field = "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20";
+const primary = "h-9 whitespace-nowrap rounded-md bg-blue-600 px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60";
+const labelCls = "flex flex-col gap-1 text-xs font-medium text-slate-600";
 const val = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
+const Err = ({ message }: { message: string | null }) => (message ? <span role="alert" className="text-xs text-red-700">{message}</span> : null);
+
+/** A button that asks in place: "question [confirmLabel] [Keep]". */
+function ConfirmButton({ label, question, confirmLabel = "Delete", onConfirm, disabled, className }: {
+  label: string; question: string; confirmLabel?: string; onConfirm: () => void; disabled?: boolean; className: string;
+}) {
+  const [asking, setAsking] = useState(false);
+  if (!asking) return <button type="button" disabled={disabled} onClick={() => setAsking(true)} className={className}>{label}</button>;
+  return (
+    <span role="group" aria-label={question} className="inline-flex flex-wrap items-center gap-1.5 rounded-md bg-red-50 py-1 pl-2.5 pr-1 text-xs text-red-800">
+      {question}
+      <button type="button" disabled={disabled} onClick={() => { setAsking(false); onConfirm(); }} className="h-6 rounded bg-red-600 px-2 font-semibold text-white hover:bg-red-700 disabled:opacity-60">{confirmLabel}</button>
+      <button type="button" onClick={() => setAsking(false)} className="h-6 rounded px-2 font-medium text-slate-700 hover:bg-white">Keep</button>
+    </span>
+  );
+}
 
 export function NewProjectForm() {
   const router = useRouter();
   const { pending, error, run } = useRun();
+  const [open, setOpen] = useState(false);
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className={primary}>+ New project</button>;
   return (
-    <details className="text-sm group">
-      <summary className="cursor-pointer list-none inline-block bg-brass text-ink font-medium rounded px-3 py-1.5">New project</summary>
-      <form
-        className="flex flex-col gap-2 mt-4 max-w-xl"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const f = new FormData(e.currentTarget);
-          run(async () => router.push(`/research/projects/${await createProject({ title: val(f, "title"), question: val(f, "question"), status: val(f, "status") })}`));
-        }}
-      >
-        <input name="title" required placeholder="Project title" className={field} />
-        <textarea name="question" rows={2} placeholder="The research question, in one or two sentences (optional)" className={field} />
-        <div className="flex gap-2 items-center">
-          <select name="status" defaultValue="planning" className={field + " max-w-[10rem] bg-transparent"} aria-label="Status">
-            {PROJECT_STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-          </select>
-          <button disabled={pending} className={primary}>Create project</button>
-          {error && <span className="text-red-600 text-xs">{error}</span>}
-        </div>
-      </form>
-    </details>
+    <form
+      className="flex w-full flex-col gap-3 rounded-lg border border-blue-200 bg-white p-5 sm:w-[520px]"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        run(async () => router.push(`/research/projects/${await createProject({ title: val(f, "title"), question: val(f, "question"), status: val(f, "status") })}`));
+      }}
+    >
+      <h2 className="text-[15px] font-semibold text-slate-900">New project</h2>
+      <input name="title" required autoFocus placeholder="Project title" aria-label="Project title" className={field} />
+      <textarea name="question" rows={2} placeholder="The research question, in one or two sentences (optional)" aria-label="Research question" className={field} />
+      <div className="flex flex-wrap items-center gap-2">
+        <select name="status" defaultValue="planning" className={`${field} w-40`} aria-label="Status">
+          {PROJECT_STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+        </select>
+        <button disabled={pending} className={primary}>{pending ? "Creating…" : "Create project"}</button>
+        <button type="button" onClick={() => setOpen(false)} className="h-9 rounded-md px-3 text-[13px] font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900">Cancel</button>
+        <Err message={error} />
+      </div>
+    </form>
   );
 }
 
@@ -78,7 +96,7 @@ export function ProjectEditForm({ p }: { p: { id: string; title: string; questio
   const [saved, setSaved] = useState(false);
   return (
     <form
-      className="grid gap-3 sm:grid-cols-2 text-sm"
+      className="grid gap-3 sm:grid-cols-2"
       onSubmit={(e) => {
         e.preventDefault();
         const f = new FormData(e.currentTarget);
@@ -89,20 +107,20 @@ export function ProjectEditForm({ p }: { p: { id: string; title: string; questio
         }), () => setSaved(true));
       }}
     >
-      <label className="sm:col-span-2 flex flex-col gap-1">Title<input name="title" defaultValue={p.title} required className={field} /></label>
-      <label className="sm:col-span-2 flex flex-col gap-1">Research question<textarea name="question" defaultValue={p.question ?? ""} rows={2} className={field} /></label>
-      <label className="sm:col-span-2 flex flex-col gap-1">Background and scope<textarea name="description" defaultValue={p.description ?? ""} rows={3} className={field} /></label>
-      <label className="flex flex-col gap-1">Status
-        <select name="status" defaultValue={p.status} className={field + " bg-transparent"}>{PROJECT_STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
+      <label className={`${labelCls} sm:col-span-2`}>Title<input name="title" defaultValue={p.title} required className={field} /></label>
+      <label className={`${labelCls} sm:col-span-2`}>Research question<textarea name="question" defaultValue={p.question ?? ""} rows={2} className={field} /></label>
+      <label className={`${labelCls} sm:col-span-2`}>Background and scope<textarea name="description" defaultValue={p.description ?? ""} rows={3} className={field} /></label>
+      <label className={labelCls}>Status
+        <select name="status" defaultValue={p.status} className={field}>{PROJECT_STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
       </label>
-      <label className="flex flex-col gap-1">Started<input type="date" name="start" defaultValue={p.start_date ?? ""} className={field} /></label>
-      <label className="flex flex-col gap-1">Target finish<input type="date" name="target" defaultValue={p.target_date ?? ""} className={field} /></label>
-      <label className="flex flex-col gap-1">Target venue<input name="venue" defaultValue={p.venue ?? ""} placeholder="e.g. ACL 2027, a workshop" className={field} /></label>
-      <label className="flex flex-col gap-1">Venue deadline<input type="date" name="venue_deadline" defaultValue={p.venue_deadline ?? ""} className={field} /></label>
-      <div className="sm:col-span-2 flex items-center gap-3">
-        <button disabled={pending} className={primary}>Save changes</button>
-        {saved && !pending && <span className="text-teal-600 text-xs">Saved</span>}
-        {error && <span className="text-red-600 text-xs">{error}</span>}
+      <label className={labelCls}>Started<input type="date" name="start" defaultValue={p.start_date ?? ""} className={field} /></label>
+      <label className={labelCls}>Target finish<input type="date" name="target" defaultValue={p.target_date ?? ""} className={field} /></label>
+      <label className={labelCls}>Target venue<input name="venue" defaultValue={p.venue ?? ""} placeholder="e.g. ACL 2027, a workshop" className={field} /></label>
+      <label className={labelCls}>Venue deadline<input type="date" name="venue_deadline" defaultValue={p.venue_deadline ?? ""} className={field} /></label>
+      <div className="flex items-center gap-3 sm:col-span-2">
+        <button disabled={pending} className={primary}>{pending ? "Saving…" : "Save changes"}</button>
+        {saved && !pending && <span role="status" className="text-xs text-emerald-700">Saved</span>}
+        <Err message={error} />
       </div>
     </form>
   );
@@ -111,15 +129,13 @@ export function ProjectEditForm({ p }: { p: { id: string; title: string; questio
 export function DeleteProjectButton({ id, title, counts }: { id: string; title: string; counts: string }) {
   const { pending, error, run } = useRun();
   return (
-    <span className="inline-flex items-center gap-3">
-      <button
-        disabled={pending}
-        onClick={() => { if (confirm(`Delete "${title}"? This also deletes ${counts}. This cannot be undone.`)) run(() => deleteProject(id)); }}
-        className="text-sm text-gray-500 hover:text-red-600"
-      >
-        Delete this project
-      </button>
-      {error && <span className="text-red-600 text-xs">{error}</span>}
+    <span className="inline-flex flex-wrap items-center gap-3">
+      <ConfirmButton
+        label="Delete this project" question={`Delete "${title}"? This also deletes ${counts}. This cannot be undone.`}
+        disabled={pending} onConfirm={() => run(() => deleteProject(id))}
+        className="h-8 rounded-md border border-red-300 bg-white px-3 text-[13px] font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
+      />
+      <Err message={error} />
     </span>
   );
 }
@@ -127,22 +143,22 @@ export function DeleteProjectButton({ id, title, counts }: { id: string; title: 
 export function AddMilestoneForm({ projectId }: { projectId: string }) {
   const { pending, error, run } = useRun();
   return (
-    <details className="text-sm">
-      <summary className="cursor-pointer text-gray-500 hover:text-cream list-none">+ Add a milestone</summary>
+    <details className="group">
+      <summary className="inline-flex cursor-pointer list-none rounded-md px-2 py-1 text-[13px] font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 [&::-webkit-details-marker]:hidden">+ Add a milestone</summary>
       <form
-        className="flex flex-col gap-2 mt-3 max-w-xl"
+        className="mt-3 flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4"
         onSubmit={(e) => {
           e.preventDefault();
           const form = e.currentTarget; const f = new FormData(form);
           run(() => addProjectMilestone(projectId, val(f, "title"), val(f, "description"), val(f, "date")), () => form.reset());
         }}
       >
-        <input name="title" required placeholder="What has to be true when this is done?" className={field} />
-        <textarea name="description" rows={2} placeholder="Details (optional)" className={field} />
-        <div className="flex gap-2 items-center">
-          <input type="date" name="date" className={field + " max-w-[11rem]"} aria-label="Target date" />
+        <input name="title" required placeholder="What has to be true when this is done?" aria-label="Milestone" className={field} />
+        <textarea name="description" rows={2} placeholder="Details (optional)" aria-label="Details" className={field} />
+        <div className="flex flex-wrap items-center gap-2">
+          <input type="date" name="date" className={`${field} w-44`} aria-label="Target date" />
           <button disabled={pending} className={primary}>Add milestone</button>
-          {error && <span className="text-red-600 text-xs">{error}</span>}
+          <Err message={error} />
         </div>
       </form>
     </details>
@@ -154,29 +170,29 @@ export function AddTaskForm({ projectId, milestones, people, teamSize }: { proje
   const [assignee, choose] = useRememberedPerson(`research-task-assignee:${projectId}`, people, teamSize);
   return (
     <form
-      className="flex flex-wrap gap-2 items-center text-sm"
+      className="flex flex-wrap items-center gap-2"
       onSubmit={(e) => {
         e.preventDefault();
         const form = e.currentTarget; const f = new FormData(form);
         run(() => addProjectTask(projectId, { title: val(f, "title"), milestoneId: val(f, "milestone") || null, assigneeId: assignee || null, dueDate: val(f, "due") || null, priority: val(f, "priority") }), () => form.reset());
       }}
     >
-      <input name="title" required placeholder="Add a task" className={field + " flex-1 min-w-[12rem]"} />
-      <select name="milestone" className={field + " max-w-[11rem] bg-transparent"} aria-label="Milestone">
+      <input name="title" required placeholder="Add a task" aria-label="Task" className={`${field} min-w-[12rem] flex-1`} />
+      <select name="milestone" className={`${field} w-44`} aria-label="Milestone">
         <option value="">No milestone</option>
         {milestones.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
       </select>
-      <select value={assignee} onChange={(e) => choose(e.target.value)} className={field + " max-w-[9rem] bg-transparent"} aria-label="Assign to">
+      <select value={assignee} onChange={(e) => choose(e.target.value)} className={`${field} w-36`} aria-label="Assign to">
         <option value="">Unassigned</option>
         {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
       </select>
-      <input type="date" name="due" className={field + " max-w-[10rem]"} aria-label="Due date" />
-      <select name="priority" defaultValue="medium" className={field + " max-w-[7rem] bg-transparent"} aria-label="Priority">
+      <input type="date" name="due" className={`${field} w-40`} aria-label="Due date" />
+      <select name="priority" defaultValue="medium" className={`${field} w-28`} aria-label="Priority">
         <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
       </select>
       <button disabled={pending} className={primary}>Add</button>
-      {teamSize > 0 && !assignee && <span className="text-xs text-gray-400 basis-full">Assign the task to someone so it shows on their page and in the team view. Your choice is remembered.</span>}
-      {error && <span className="text-red-600 text-xs basis-full">{error}</span>}
+      {teamSize > 0 && !assignee && <span className="basis-full text-xs text-slate-500">Assign the task to someone so it shows on their page and in the team view. Your choice is remembered.</span>}
+      {error && <span role="alert" className="basis-full text-xs text-red-700">{error}</span>}
     </form>
   );
 }
@@ -191,7 +207,7 @@ export function EntryForm({ projectId, people, milestones, teamSize }: { project
 
   return (
     <form
-      className="flex flex-col gap-2 text-sm border-b border-line pb-6"
+      className="flex flex-col gap-2.5 rounded-lg border border-slate-200 bg-white p-4"
       onSubmit={(e) => {
         e.preventDefault();
         const form = e.currentTarget; const f = new FormData(form);
@@ -201,35 +217,36 @@ export function EntryForm({ projectId, people, milestones, teamSize }: { project
         }), () => { form.reset(); setMore(false); setBodyHtml(""); setResetKey((k) => k + 1); });
       }}
     >
+      <h2 className="text-[15px] font-semibold text-slate-900">Log work</h2>
       <div className="flex flex-wrap gap-2">
-        <select name="kind" defaultValue="experiment" className={field + " max-w-[9rem] bg-transparent"} aria-label="What kind of work">
+        <select name="kind" defaultValue="experiment" className={`${field} w-36`} aria-label="What kind of work">
           {ENTRY_KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}
         </select>
-        <input name="title" required placeholder="What did you do? e.g. Ran pilot on 200 items" className={field + " flex-1 min-w-[12rem]"} />
-        <input name="minutes" type="number" min={0} placeholder="Minutes" className={field + " max-w-[6rem]"} aria-label="Minutes spent" />
+        <input name="title" required placeholder="What did you do? e.g. Ran pilot on 200 items" aria-label="What did you do" className={`${field} min-w-[12rem] flex-1`} />
+        <input name="minutes" type="number" min={0} placeholder="Minutes" className={`${field} w-24`} aria-label="Minutes spent" />
         {showPerson && (
-          <select value={person} onChange={(e) => choose(e.target.value)} className={field + " max-w-[10rem] bg-transparent"} aria-label="Who did it">
+          <select value={person} onChange={(e) => choose(e.target.value)} className={`${field} w-40`} aria-label="Who did it">
             <option value="">Who did it?</option>
             {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         )}
-        <button disabled={pending} className={primary}>Log it</button>
+        <button disabled={pending} className={primary}>{pending ? "Logging…" : "Log it"}</button>
       </div>
       {showPerson && !person && teamSize > 0 && (
-        <p className="text-xs text-gray-400">Pick who did this so it counts in the team&rsquo;s weekly view. Your choice is remembered.</p>
+        <p className="text-xs text-slate-500">Pick who did this so it counts in the team&rsquo;s weekly view. Your choice is remembered.</p>
       )}
       {more && (
         <div className="flex flex-col gap-2">
           <RichEditorLazy variant="compact" label="Details" placeholder="Details, results, what you'd do next…" value={bodyHtml} onChange={setBodyHtml} resetKey={resetKey} minHeight="8rem" />
           <div className="flex flex-wrap gap-2">
-            <input type="date" name="date" defaultValue={localDate(new Date())} className={field + " max-w-[10rem]"} aria-label="Date" />
-            <select name="milestone" className={field + " max-w-[12rem] bg-transparent"} aria-label="Milestone"><option value="">No milestone</option>{milestones.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
+            <input type="date" name="date" defaultValue={localDate(new Date())} className={`${field} w-40`} aria-label="Date" />
+            <select name="milestone" className={`${field} w-48`} aria-label="Milestone"><option value="">No milestone</option>{milestones.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
           </div>
         </div>
       )}
       <div className="flex items-center gap-3 text-xs">
-        <button type="button" onClick={() => setMore((v) => !v)} className="text-gray-500 underline hover:text-cream">{more ? "Fewer details" : "Add details, date or milestone"}</button>
-        {error && <span className="text-red-600">{error}</span>}
+        <button type="button" onClick={() => setMore((v) => !v)} className="font-medium text-blue-600 hover:text-blue-700">{more ? "Fewer details" : "Add details, date or milestone"}</button>
+        <Err message={error} />
       </div>
     </form>
   );
@@ -241,17 +258,23 @@ export function EntryRow({ e, projectId }: { e: EntryRowData; projectId: string 
   const { pending, error, run } = useRun();
   const [open, setOpen] = useState(false);
   return (
-    <li className={`group py-2.5 border-b border-line/60 last:border-0 ${pending ? "opacity-60" : ""}`}>
-      <div className="flex items-baseline gap-3">
-        <span className="text-xs text-gray-500 w-20 flex-shrink-0">{kindLabel(e.kind)}</span>
-        <button onClick={() => e.bodyHtml && setOpen((v) => !v)} className={`text-left flex-1 min-w-0 ${e.bodyHtml ? "hover:text-brass cursor-pointer" : "cursor-default"}`}>
-          <span className="break-words">{e.title}</span>
-          <span className="block text-xs text-gray-400">{[e.personName, e.milestoneTitle, e.minutes ? formatMinutes(e.minutes) : null].filter(Boolean).join(" · ")}</span>
+    <li className={`group flex flex-col gap-1 border-b border-slate-100 py-3 last:border-0 ${pending ? "opacity-60" : ""}`}>
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 w-24 flex-shrink-0"><span className="rounded-md bg-blue-50 px-1.5 py-0.5 text-[11px] text-blue-700">{kindLabel(e.kind)}</span></span>
+        <button
+          type="button" onClick={() => e.bodyHtml && setOpen((v) => !v)} aria-expanded={e.bodyHtml ? open : undefined}
+          className={`min-w-0 flex-1 text-left ${e.bodyHtml ? "cursor-pointer hover:text-blue-700" : "cursor-default"}`}
+        >
+          <span className="break-words text-sm text-slate-900">{e.title}{e.bodyHtml && <span aria-hidden className="ml-1 text-xs text-slate-400">{open ? "▾" : "▸"}</span>}</span>
+          <span className="block text-xs text-slate-500">{[e.personName, e.milestoneTitle, e.minutes ? formatMinutes(e.minutes) : null].filter(Boolean).join(" · ")}</span>
         </button>
-        <button onClick={() => { if (confirm("Delete this entry?")) run(() => deleteEntry(e.id, projectId)); }} className="text-xs text-gray-500 hover:text-red-600 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100" aria-label="Delete entry">✕</button>
+        <ConfirmButton
+          label="Delete" question="Delete this entry?" disabled={pending} onConfirm={() => run(() => deleteEntry(e.id, projectId))}
+          className="h-7 rounded-md px-2 text-xs font-medium text-slate-500 transition-colors hover:bg-red-50 hover:text-red-700 md:opacity-0 md:focus:opacity-100 md:group-hover:opacity-100"
+        />
       </div>
-      {open && e.bodyHtml && <RichHtml html={e.bodyHtml} className="text-sm pl-[5.75rem] pt-1" onDark />}
-      {error && <p className="text-red-600 text-xs pl-[5.75rem]">{error}</p>}
+      {open && e.bodyHtml && <RichHtml html={e.bodyHtml} className="pl-[6.75rem] pt-1 text-sm" onDark />}
+      {error && <p role="alert" className="pl-[6.75rem] text-xs text-red-700">{error}</p>}
     </li>
   );
 }
@@ -409,21 +432,21 @@ export function AddMemberForm({ projectId, candidates, totalPeople }: { projectI
   const { pending, error, run } = useRun();
   if (candidates.length === 0) {
     return (
-      <p className="text-sm text-gray-500">
+      <p className="text-[13px] text-slate-600">
         {totalPeople === 0 ? "You haven't added anyone yet." : "Everyone in your People list is already on this project."}{" "}
-        <a href="/people" className="underline hover:text-cream">Add people on the People page</a>, then come back to put them on the team.
+        <a href="/people" className="font-medium text-blue-600 hover:text-blue-700">Add people on the People page</a>, then come back to put them on the team.
       </p>
     );
   }
   return (
     <form
-      className="flex flex-wrap gap-2 items-center text-sm"
+      className="flex flex-wrap items-center gap-2"
       onSubmit={(e) => { e.preventDefault(); const form = e.currentTarget; const f = new FormData(form); run(() => addMember(projectId, val(f, "person"), val(f, "role")), () => form.reset()); }}
     >
-      <select name="person" required className={field + " max-w-[14rem] bg-transparent"} aria-label="Person">{candidates.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
-      <input name="role" placeholder="Role, e.g. advisor, co-author, annotator" className={field + " flex-1 min-w-[12rem]"} />
+      <select name="person" required className={`${field} w-56`} aria-label="Person">{candidates.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+      <input name="role" placeholder="Role, e.g. advisor, co-author, annotator" aria-label="Role" className={`${field} min-w-[12rem] flex-1`} />
       <button disabled={pending} className={primary}>Add to project</button>
-      {error && <span className="text-red-600 text-xs">{error}</span>}
+      <Err message={error} />
     </form>
   );
 }
@@ -431,6 +454,10 @@ export function AddMemberForm({ projectId, candidates, totalPeople }: { projectI
 export function RemoveMemberButton({ projectId, personId, name }: { projectId: string; personId: string; name: string }) {
   const { pending, run } = useRun();
   return (
-    <button disabled={pending} onClick={() => { if (confirm(`Remove ${name} from this project? Their tasks stay.`)) run(() => removeMember(projectId, personId)); }} className="text-xs text-gray-500 hover:text-red-600">Remove</button>
+    <ConfirmButton
+      label="Remove" question={`Remove ${name} from this project? Their tasks stay.`} confirmLabel="Remove"
+      disabled={pending} onConfirm={() => run(() => removeMember(projectId, personId))}
+      className="h-7 rounded-md px-2 text-xs font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-700"
+    />
   );
 }

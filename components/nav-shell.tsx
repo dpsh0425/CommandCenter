@@ -124,6 +124,7 @@ const CRUMBS: Array<{ match: string; trail: Crumb[] }> = [
   { match: "/materials/letters", trail: [{ label: "Work" }, { label: "Materials", href: "/materials" }, { label: "Letters", href: "/materials/letters" }] },
   { match: "/materials/documents", trail: [{ label: "Work" }, { label: "Materials", href: "/materials" }, { label: "Documents", href: "/materials/documents" }] },
   { match: "/materials", trail: [{ label: "Work" }, { label: "Materials", href: "/materials" }, { label: "Overview", href: "/materials" }] },
+  { match: "/research/reading", trail: [{ label: "Work" }, { label: "Research", href: "/research" }, { label: "Reading list", href: "/research/reading" }] },
   { match: "/research/projects", trail: [{ label: "Work" }, { label: "Research", href: "/research" }, { label: "Projects", href: "/research" }] },
   { match: "/research", trail: [{ label: "Work" }, { label: "Research", href: "/research" }] },
   { match: "/links", trail: [{ label: "Work" }, { label: "Research", href: "/research" }, { label: "Library", href: "/links" }] },
