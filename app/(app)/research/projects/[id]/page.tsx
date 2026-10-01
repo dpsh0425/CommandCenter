@@ -399,7 +399,6 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         );
       })()}
 
-      {/* Experiments, Writing, Library, Reading and Meetings are restyled in Phase 10b. */}
       {tab === "experiments" && <ExperimentsBoard projectId={id} experiments={expRows} people={peopleOpts} milestones={msOpts} />}
 
       {tab === "writing" && (
@@ -409,28 +408,46 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       {tab === "library" && <ProjectLibrary projectId={id} userId={user.id} items={libItems} />}
 
       {tab === "reading" && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           <PaperForm projectId={id} />
-          {(papers ?? []).length === 0 ? <p className="text-sm text-slate-500">Your reading list is empty. Add the papers this project builds on, then write one line on what each one gives you.</p> : (
-            [...PAPER_STATUS].sort((a, b) => ["reading", "to_read", "cite", "read"].indexOf(a.key) - ["reading", "to_read", "cite", "read"].indexOf(b.key)).map((s) => {
-              const rows = (papers ?? []).filter((p) => p.status === s.key);
-              if (rows.length === 0) return null;
-              return (
-                <section key={s.key} className="flex flex-col">
-                  <h2 className="border-b border-slate-200 pb-2 text-[15px] font-semibold text-slate-900">{s.label} <span className="text-xs font-normal text-slate-500">{rows.length}</span></h2>
-                  <ul>{rows.map((p) => <PaperRow key={p.id} projectId={id} p={p} />)}</ul>
-                </section>
-              );
-            })
+          {(papers ?? []).length === 0 ? (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
+              <p className="text-sm font-medium text-slate-900">Your reading list is empty</p>
+              <p className="mx-auto mt-1 max-w-md text-[13px] text-slate-500">Add the papers this project builds on, then write one line on what each one gives you.</p>
+            </div>
+          ) : (
+            <>
+              {[...PAPER_STATUS].sort((a, b) => ["reading", "to_read", "cite", "read"].indexOf(a.key) - ["reading", "to_read", "cite", "read"].indexOf(b.key)).map((s) => {
+                const rows = (papers ?? []).filter((p) => p.status === s.key);
+                if (rows.length === 0) return null;
+                return (
+                  <section key={s.key} className="rounded-lg border border-slate-200 bg-white">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3">
+                      <h2 className="text-[15px] font-semibold text-slate-900">{s.label}</h2>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium tabular-nums text-slate-600">{rows.length}</span>
+                    </div>
+                    <ul className="px-5">{rows.map((p) => <PaperRow key={p.id} projectId={id} p={p} />)}</ul>
+                  </section>
+                );
+              })}
+              <p className="text-xs text-slate-500">
+                Citation keys and BibTeX for every project are on the <Link href="/research/reading" className="font-medium text-blue-600 hover:text-blue-700">reading list</Link>.
+              </p>
+            </>
           )}
         </div>
       )}
 
       {tab === "meetings" && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           <MeetingForm projectId={id} people={peopleOpts} />
-          {(meetings ?? []).length === 0 ? <p className="text-sm text-slate-500">No meetings yet. Add each meeting with its agenda before, and notes and decisions after.</p> : (
-            <ul>{(meetings ?? []).map((m, i) => <MeetingCard key={m.id} projectId={id} people={assignable} teamSize={memberIds.size} defaultOpen={i === 0} m={{ id: m.id, title: m.title, held_on: m.held_on, agenda: m.agenda, notes: m.notes, decisions: m.decisions, attendees: (m.attendee_ids as string[]).map((pid) => personById.get(pid)?.name).filter(Boolean) as string[] }} />)}</ul>
+          {(meetings ?? []).length === 0 ? (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
+              <p className="text-sm font-medium text-slate-900">No meetings yet</p>
+              <p className="mx-auto mt-1 max-w-md text-[13px] text-slate-500">Add each meeting with its agenda before, and notes and decisions after.</p>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-2.5">{(meetings ?? []).map((m, i) => <MeetingCard key={m.id} projectId={id} people={assignable} teamSize={memberIds.size} defaultOpen={i === 0} m={{ id: m.id, title: m.title, held_on: m.held_on, agenda: m.agenda, notes: m.notes, decisions: m.decisions, attendees: (m.attendee_ids as string[]).map((pid) => personById.get(pid)?.name).filter(Boolean) as string[] }} />)}</ul>
           )}
         </div>
       )}

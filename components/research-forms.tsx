@@ -300,20 +300,21 @@ export function PaperForm({ projectId }: { projectId: string }) {
 
   return (
     <form
-      className="flex flex-col gap-2 text-sm border-b border-line pb-6"
+      className="flex flex-col gap-2.5 rounded-lg border border-slate-200 bg-white p-4"
       onSubmit={(e) => {
         e.preventDefault();
         const form = e.currentTarget; const f = new FormData(form);
         run(() => addPaper(projectId, { title: val(f, "title"), url: val(f, "url"), authors: val(f, "authors"), year: Number(val(f, "year")) || null }), () => form.reset());
       }}
     >
+      <h2 className="text-[15px] font-semibold text-slate-900">Add a paper</h2>
       <input name="url" placeholder="Paste a link (arXiv, PDF, DOI) and the details fill in" onBlur={(e) => e.currentTarget.form && lookup(e.currentTarget.form)} className={field} aria-label="Paper link" />
-      <input name="title" required placeholder="Paper title" className={field} />
-      <div className="flex flex-wrap gap-2 items-center">
-        <input name="authors" placeholder="Authors (optional)" className={field + " flex-1 min-w-[12rem]"} />
-        <input name="year" type="number" min={1900} max={2100} placeholder="Year" className={field + " max-w-[6rem]"} />
+      <input name="title" required placeholder="Paper title" aria-label="Paper title" className={field} />
+      <div className="flex flex-wrap items-center gap-2">
+        <input name="authors" placeholder="Authors (optional)" aria-label="Authors" className={`${field} min-w-[12rem] flex-1`} />
+        <input name="year" type="number" min={1900} max={2100} placeholder="Year" aria-label="Year" className={`${field} w-24`} />
         <button disabled={pending || looking} className={primary}>{looking ? "Looking up…" : "Add to reading list"}</button>
-        {error && <span className="text-red-600 text-xs">{error}</span>}
+        <Err message={error} />
       </div>
     </form>
   );
@@ -321,32 +322,44 @@ export function PaperForm({ projectId }: { projectId: string }) {
 
 export type PaperData = { id: string; title: string; authors: string | null; year: number | null; url: string | null; status: string; takeaway: string | null };
 
+const PAPER_TONE: Record<string, string> = {
+  to_read: "border-slate-300 bg-white text-slate-600",
+  reading: "border-blue-200 bg-blue-50 text-blue-700",
+  read: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  cite: "border-violet-200 bg-violet-50 text-violet-700",
+};
+const smallAction = "h-7 rounded-md px-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900";
+
 export function PaperRow({ p, projectId }: { p: PaperData; projectId: string }) {
   const { pending, error, run } = useRun();
   const [editing, setEditing] = useState(false);
   return (
-    <li className={`group py-3 border-b border-line/60 last:border-0 flex flex-col gap-1 ${pending ? "opacity-60" : ""}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          {p.url ? <a href={p.url} target="_blank" rel="noopener noreferrer" className="font-medium hover:text-brass break-words">{p.title} <span aria-hidden className="text-gray-400">↗</span></a> : <span className="font-medium break-words">{p.title}</span>}
-          <div className="text-xs text-gray-400">{[p.authors, p.year].filter(Boolean).join(" · ")}</div>
+    <li className={`group flex flex-col gap-1.5 border-b border-slate-100 py-3 last:border-0 ${pending ? "opacity-60" : ""}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {p.url ? <a href={p.url} target="_blank" rel="noopener noreferrer" className="break-words text-sm font-semibold text-slate-900 hover:text-blue-700">{p.title} <span aria-hidden className="text-xs text-slate-400">↗</span></a> : <span className="break-words text-sm font-semibold text-slate-900">{p.title}</span>}
+          <div className="text-xs text-slate-500">{[p.authors, p.year].filter(Boolean).join(" · ")}</div>
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <select value={p.status} onChange={(e) => run(() => updatePaper(p.id, projectId, { status: e.target.value }))} className="border rounded px-2 py-1 text-xs bg-transparent" aria-label="Reading status">
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-1">
+          <select value={p.status} onChange={(e) => run(() => updatePaper(p.id, projectId, { status: e.target.value }))} className={`h-7 cursor-pointer rounded-full border px-2 text-xs font-medium ${PAPER_TONE[p.status] ?? PAPER_TONE.to_read}`} aria-label="Reading status">
             {PAPER_STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
-          <button onClick={() => setEditing((v) => !v)} className="text-xs text-gray-500 hover:text-cream md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100">{p.takeaway ? "Edit note" : "Add note"}</button>
-          <button onClick={() => { if (confirm(`Remove "${p.title}"?`)) run(() => deletePaper(p.id, projectId)); }} className="text-xs text-gray-500 hover:text-red-600 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100" aria-label="Remove paper">✕</button>
+          <button type="button" onClick={() => setEditing((v) => !v)} className={smallAction}>{p.takeaway ? "Edit note" : "Add note"}</button>
+          <ConfirmButton
+            label="Remove" question={`Remove "${p.title}"?`} confirmLabel="Remove" disabled={pending}
+            onConfirm={() => run(() => deletePaper(p.id, projectId))}
+            className={`${smallAction} hover:bg-red-50 hover:text-red-700`}
+          />
         </div>
       </div>
-      {p.takeaway && !editing && <p className="text-sm text-gray-500 border-l-2 border-line pl-2 whitespace-pre-line">{p.takeaway}</p>}
+      {p.takeaway && !editing && <p className="whitespace-pre-line rounded-md bg-slate-50 px-2.5 py-1.5 text-[13px] text-slate-700">{p.takeaway}</p>}
       {editing && (
         <form className="flex flex-col gap-2 pt-1" onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); run(() => updatePaper(p.id, projectId, { takeaway: val(f, "takeaway") }), () => setEditing(false)); }}>
-          <textarea name="takeaway" defaultValue={p.takeaway ?? ""} rows={3} placeholder="What does this paper say that matters for your project?" className={field} />
-          <div className="flex gap-2"><button disabled={pending} className={primary}>Save</button><button type="button" onClick={() => setEditing(false)} className="text-sm text-gray-500">Cancel</button></div>
+          <textarea name="takeaway" defaultValue={p.takeaway ?? ""} rows={3} placeholder="What does this paper say that matters for your project?" aria-label="Takeaway" className={field} />
+          <div className="flex gap-2"><button disabled={pending} className={primary}>Save</button><button type="button" onClick={() => setEditing(false)} className="h-9 rounded-md px-3 text-[13px] font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900">Cancel</button></div>
         </form>
       )}
-      {error && <p className="text-red-600 text-xs">{error}</p>}
+      {error && <p role="alert" className="text-xs text-red-700">{error}</p>}
     </li>
   );
 }
@@ -355,25 +368,26 @@ export function MeetingForm({ projectId, people }: { projectId: string; people: 
   const { pending, error, run } = useRun();
   return (
     <form
-      className="flex flex-col gap-2 text-sm border-b border-line pb-6"
+      className="flex flex-col gap-2.5 rounded-lg border border-slate-200 bg-white p-4"
       onSubmit={(e) => {
         e.preventDefault();
         const form = e.currentTarget; const f = new FormData(form);
         run(() => addMeeting(projectId, { title: val(f, "title"), heldOn: val(f, "date") || undefined, attendeeIds: f.getAll("attendees").map(String), agenda: val(f, "agenda") }), () => form.reset());
       }}
     >
+      <h2 className="text-[15px] font-semibold text-slate-900">Add a meeting</h2>
       <div className="flex flex-wrap gap-2">
-        <input name="title" required placeholder="Meeting title, e.g. Weekly sync with advisor" className={field + " flex-1 min-w-[14rem]"} />
-        <input type="date" name="date" defaultValue={localDate(new Date())} className={field + " max-w-[10rem]"} aria-label="Date" />
+        <input name="title" required placeholder="Meeting title, e.g. Weekly sync with advisor" aria-label="Meeting title" className={`${field} min-w-[14rem] flex-1`} />
+        <input type="date" name="date" defaultValue={localDate(new Date())} className={`${field} w-40`} aria-label="Date" />
       </div>
-      <textarea name="agenda" rows={2} placeholder="Agenda or what you want to get out of it (optional)" className={field} />
+      <textarea name="agenda" rows={2} placeholder="Agenda or what you want to get out of it (optional)" aria-label="Agenda" className={field} />
       {people.length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-gray-500">
-          <span>Who is there:</span>
-          {people.map((p) => <label key={p.id} className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" name="attendees" value={p.id} /> {p.name}</label>)}
-        </div>
+        <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-slate-700">
+          <legend className="mb-1 text-xs font-medium text-slate-600">Who is there</legend>
+          {people.map((p) => <label key={p.id} className="flex cursor-pointer items-center gap-1.5"><input type="checkbox" name="attendees" value={p.id} className="h-4 w-4 accent-blue-600" /> {p.name}</label>)}
+        </fieldset>
       )}
-      <div className="flex items-center gap-3"><button disabled={pending} className={primary}>Add meeting</button>{error && <span className="text-red-600 text-xs">{error}</span>}</div>
+      <div className="flex items-center gap-3"><button disabled={pending} className={primary}>Add meeting</button><Err message={error} /></div>
     </form>
   );
 }
@@ -386,42 +400,50 @@ export function MeetingCard({ m, projectId, people, defaultOpen, teamSize }: { m
   const [open, setOpen] = useState(!!defaultOpen);
   const [added, setAdded] = useState<string | null>(null);
   return (
-    <li className={`py-3 border-b border-line/60 last:border-0 ${pending ? "opacity-60" : ""}`}>
-      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-baseline justify-between gap-3 text-left" aria-expanded={open}>
+    <li className={`rounded-lg border border-slate-200 bg-white ${pending ? "opacity-60" : ""}`}>
+      <button type="button" onClick={() => setOpen((v) => !v)} className={`flex w-full items-center justify-between gap-3 px-5 py-3 text-left ${open ? "border-b border-slate-200" : ""}`} aria-expanded={open}>
         <span className="min-w-0">
-          <span className="font-medium block truncate">{m.title}</span>
-          <span className="text-xs text-gray-400">{new Date(m.held_on + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}{m.attendees.length > 0 && ` · ${m.attendees.join(", ")}`}</span>
+          <span className="block truncate text-[15px] font-semibold text-slate-900">{m.title}</span>
+          <span className="text-xs text-slate-500">{new Date(m.held_on + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}{m.attendees.length > 0 && ` · ${m.attendees.join(", ")}`}</span>
         </span>
-        <span className="text-xs text-gray-500">{open ? "Hide" : "Open"}</span>
+        <span className="flex flex-shrink-0 items-center gap-2 text-xs">
+          {m.decisions && <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">Decisions noted</span>}
+          <span className="font-medium text-slate-500">{open ? "Hide" : "Open"}</span>
+        </span>
       </button>
       {open && (
-        <div className="flex flex-col gap-4 pt-3 text-sm">
+        <div className="flex flex-col gap-4 px-5 py-4">
           <form
-            className="flex flex-col gap-2"
+            className="flex flex-col gap-3"
             onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); run(() => updateMeeting(m.id, projectId, { agenda: val(f, "agenda") || null, notes: val(f, "notes") || null, decisions: val(f, "decisions") || null })); }}
           >
-            <label className="flex flex-col gap-1 text-gray-500">Agenda<textarea name="agenda" defaultValue={m.agenda ?? ""} rows={2} className={field + " text-cream"} /></label>
-            <label className="flex flex-col gap-1 text-gray-500">Notes<textarea name="notes" defaultValue={m.notes ?? ""} rows={4} className={field + " text-cream"} /></label>
-            <label className="flex flex-col gap-1 text-gray-500">Decisions<textarea name="decisions" defaultValue={m.decisions ?? ""} rows={2} placeholder="What was agreed" className={field + " text-cream"} /></label>
-            <div className="flex items-center gap-3"><button disabled={pending} className={primary}>Save notes</button>
-              <button type="button" onClick={() => { if (confirm(`Delete "${m.title}"?`)) run(() => deleteMeeting(m.id, projectId)); }} className="text-gray-500 hover:text-red-600">Delete meeting</button></div>
+            <label className={labelCls}>Agenda<textarea name="agenda" defaultValue={m.agenda ?? ""} rows={2} className={field} /></label>
+            <label className={labelCls}>Notes<textarea name="notes" defaultValue={m.notes ?? ""} rows={4} className={field} /></label>
+            <label className={labelCls}>Decisions<textarea name="decisions" defaultValue={m.decisions ?? ""} rows={2} placeholder="What was agreed" className={field} /></label>
+            <div className="flex flex-wrap items-center gap-3"><button disabled={pending} className={primary}>{pending ? "Saving…" : "Save notes"}</button>
+              <ConfirmButton
+                label="Delete meeting" question={`Delete "${m.title}"?`} disabled={pending}
+                onConfirm={() => run(() => deleteMeeting(m.id, projectId))}
+                className="h-8 rounded-md px-2.5 text-[13px] font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-700"
+              />
+            </div>
           </form>
           <form
-            className="flex flex-wrap gap-2 items-center border-t border-line pt-3"
+            className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 p-3"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.currentTarget; const f = new FormData(form); const title = val(f, "title");
               run(() => addProjectTask(projectId, { title, assigneeId: assignee || null, dueDate: val(f, "due") || null }), () => { form.reset(); setAdded(title); });
             }}
           >
-            <span className="text-gray-500 basis-full">Action items become tasks on your board</span>
-            <input name="title" required placeholder="Who does what" className={field + " flex-1 min-w-[12rem]"} />
-            <select value={assignee} onChange={(e) => choose(e.target.value)} className={field + " max-w-[9rem] bg-transparent"} aria-label="Assign to"><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
-            <input type="date" name="due" className={field + " max-w-[10rem]"} aria-label="Due date" />
+            <span className="basis-full text-xs font-medium text-slate-600">Action items become tasks on your board</span>
+            <input name="title" required placeholder="Who does what" aria-label="Action item" className={`${field} min-w-[12rem] flex-1`} />
+            <select value={assignee} onChange={(e) => choose(e.target.value)} className={`${field} w-36`} aria-label="Assign to"><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+            <input type="date" name="due" className={`${field} w-40`} aria-label="Due date" />
             <button disabled={pending} className={primary}>Add task</button>
-            {added && <span className="text-teal-600 text-xs basis-full">Added task: {added}</span>}
+            {added && <span role="status" className="basis-full text-xs text-emerald-700">Added task: {added}</span>}
           </form>
-          {error && <p className="text-red-600 text-xs">{error}</p>}
+          {error && <p role="alert" className="text-xs text-red-700">{error}</p>}
         </div>
       )}
     </li>
