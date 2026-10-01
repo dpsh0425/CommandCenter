@@ -141,6 +141,7 @@ export function SubNav({
 export const TODAY_TABS = [
   { href: "/today", label: "Today" },
   { href: "/week", label: "This week" },
+  { href: "/actions-list", label: "Actions" },
   { href: "/timeline", label: "Timeline" },
   { href: "/wins", label: "Wins" },
 ];

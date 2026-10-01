@@ -42,7 +42,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     label: "Overview",
     items: [
       { href: "/", label: "Home", Icon: HomeIcon },
-      { href: "/today", label: "Today", also: ["/week", "/timeline", "/wins"], Icon: CalendarCheckIcon },
+      { href: "/today", label: "Today", also: ["/week", "/actions-list", "/timeline", "/wins"], Icon: CalendarCheckIcon },
     ],
   },
   {
