@@ -6,6 +6,7 @@ import {
   type AcceptingStatus, type DepartmentInput, type FundingInput, type FundingStatus, type FundingType,
   type OutreachStatus, type ProfessorInput,
 } from "@/app/(app)/schools/[id]/faculty-actions";
+import { fundingTypeLabel } from "@/lib/funding-labels";
 
 function useRun() {
   const [pending, start] = useTransition();
@@ -537,8 +538,7 @@ const FUNDING_STATUSES: Array<{ key: FundingStatus; label: string; tone: string 
   { key: "awarded", label: "Awarded", tone: "border-emerald-200 bg-emerald-50 text-emerald-700" },
   { key: "not_eligible", label: "Not eligible", tone: "border-red-200 bg-red-50 text-red-700" },
 ];
-export const fundingTypeLabel = (t: string) => FUNDING_TYPES.find((x) => x.key === t)?.label ?? t;
-export const fundingStatusLabel = (s: string) => FUNDING_STATUSES.find((x) => x.key === s)?.label ?? s;
+export { fundingTypeLabel, fundingStatusLabel } from "@/lib/funding-labels";
 
 function FundingForm({ initial, departments, professors, onSubmit, onCancel, pending, error, submitLabel }: {
   initial?: FundingRow; departments: Dept[]; professors: Person[]; onSubmit: (f: FundingInput) => void; onCancel: () => void;

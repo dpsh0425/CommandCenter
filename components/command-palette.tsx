@@ -16,6 +16,8 @@ import {
   SendIcon,
   UserIcon,
   UsersIcon,
+  BarChartIcon,
+  WalletIcon,
   type IconComponent,
 } from "@/components/icons";
 
@@ -31,6 +33,8 @@ const JUMP_TO: Array<{ href: string; label: string; sub: string; Icon: IconCompo
   { href: "/tasks", label: "Tasks", sub: "Work", Icon: ListChecksIcon },
   { href: "/research", label: "Research", sub: "Work", Icon: FlaskIcon },
   { href: "/materials", label: "Materials", sub: "Work", Icon: FileTextIcon },
+  { href: "/analytics", label: "Analytics", sub: "Insights", Icon: BarChartIcon },
+  { href: "/finance", label: "Costs & funding", sub: "Insights", Icon: WalletIcon },
 ];
 
 const GROUP_ICONS: Record<string, IconComponent> = {

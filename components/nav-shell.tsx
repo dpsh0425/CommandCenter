@@ -31,6 +31,7 @@ import {
   TrophyIcon,
   UserIcon,
   UsersIcon,
+  WalletIcon,
   type IconComponent,
 } from "./icons";
 
@@ -61,6 +62,13 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
       { href: "/materials", label: "Materials", Icon: FileTextIcon },
     ],
   },
+  {
+    label: "Insights",
+    items: [
+      { href: "/analytics", label: "Analytics", Icon: BarChartIcon },
+      { href: "/finance", label: "Costs & funding", Icon: WalletIcon },
+    ],
+  },
 ];
 
 const MOBILE = [
@@ -81,7 +89,10 @@ const MORE = [
   { href: "/timeline", label: "Timeline" },
   { href: "/wins", label: "Wins" },
   { href: "/people", label: "People" },
+  { href: "/analytics", label: "Analytics" },
+  { href: "/finance", label: "Costs & funding" },
   { href: "/account", label: "Account" },
+  { href: "/status", label: "Status" },
 ];
 
 const ICON_FOR: Record<string, IconComponent> = {
@@ -100,6 +111,9 @@ const ICON_FOR: Record<string, IconComponent> = {
   "/wins": TrophyIcon,
   "/people": UsersIcon,
   "/account": SettingsIcon,
+  "/analytics": BarChartIcon,
+  "/finance": WalletIcon,
+  "/status": ActivityIcon,
 };
 
 // Breadcrumb trail per route, most specific first. A further path segment (an id) adds "Details".
@@ -125,6 +139,9 @@ const CRUMBS: Array<{ match: string; trail: Crumb[] }> = [
   { match: "/outreach", trail: [{ label: "Applications" }, { label: "Outreach", href: "/outreach" }] },
   { match: "/people", trail: [{ label: "Applications" }, { label: "People", href: "/people" }] },
   { match: "/account", trail: [{ label: "Settings" }, { label: "Account", href: "/account" }] },
+  { match: "/status", trail: [{ label: "Settings" }, { label: "Status", href: "/status" }] },
+  { match: "/analytics", trail: [{ label: "Insights" }, { label: "Analytics", href: "/analytics" }] },
+  { match: "/finance", trail: [{ label: "Insights" }, { label: "Costs & funding", href: "/finance" }] },
 ];
 
 function crumbsFor(pathname: string): Crumb[] {
@@ -363,6 +380,14 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
                 >
                   <SettingsIcon className="h-4 w-4 text-slate-500" />
                   Account settings
+                </Link>
+                <Link
+                  href="/status"
+                  role="menuitem"
+                  className="flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sm text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <ActivityIcon className="h-4 w-4 text-slate-500" />
+                  Status
                 </Link>
                 <button
                   type="button"

@@ -14,8 +14,9 @@ type School = {
   readiness?: Readiness;
 };
 
-export const FIT_SCORE_HELP =
-  "A rough ranking, not an objective one: 60% CSRankings NLP publication strength, +25 if the fit is verified, and up to +15 for research keyword matches.";
+import { FIT_SCORE_HELP } from "@/lib/fit-score";
+
+export { FIT_SCORE_HELP };
 
 const localDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

@@ -12,10 +12,11 @@ import {
   AddLetterForm, InterviewRow, LetterRow, NoteForm, ScheduleInterviewForm, SchoolTaskForm, SopForm, VisaStepRow,
 } from "@/components/school-controls";
 import {
-  AddFundingButton, FacultyView, FundingCard, fundingStatusLabel,
+  AddFundingButton, FacultyView, FundingCard,
   type DepartmentRow, type FundingRow, type ProfessorRow,
 } from "@/components/faculty-controls";
 import { AdmissionsPanel, type Profile } from "@/components/admissions-panel";
+import { fundingStatusLabel } from "@/lib/funding-labels";
 import { researchGaps } from "@/lib/school-research";
 import { LinksPanel } from "@/components/links-panel";
 import { Fold } from "@/components/ui";

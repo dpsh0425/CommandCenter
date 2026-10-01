@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { researchGaps } from "@/lib/school-research";
 import { PageHeader, SCHOOL_TABS, SubNav } from "@/components/ui";
-import { FIT_SCORE_HELP } from "@/components/school-table";
+import { FIT_SCORE_HELP } from "@/lib/fit-score";
 import { todayString } from "@/lib/app-date";
 
 export const metadata = { title: "Compare schools" };
