@@ -2,16 +2,11 @@ import type { Config } from "tailwindcss";
 import colors from "tailwindcss/colors";
 
 /*
- * Theme tokens: light, blue-accent system.
+ * Theme tokens: light, blue-accent system (blue-600 primary, slate neutrals).
  *
- * The legacy names (brass, ink, cream, surface, line) are kept because they are
- * used across ~60 files. They now point at the new palette, by the role each one
- * plays in the markup:
- *   brass  -> primary accent (buttons, links, active states)
- *   ink    -> text on the accent, and page-coloured overlays (white)
- *   cream  -> main text (was light-on-dark text)
- *   line   -> borders and dividers
- * New code should prefer the semantic names: primary, canvas, success, danger.
+ * The legacy names (brass, ink, cream, surface, line) were removed in the Phase 10c
+ * sweep once no markup used them. Use Tailwind's blue and slate scales, or the
+ * semantic names below: primary, canvas, success, danger.
  */
 const config: Config = {
   content: [
@@ -35,15 +30,6 @@ const config: Config = {
         canvas: "#F8FAFC", // slate-50, app background
         success: { DEFAULT: "#059669", soft: "#ECFDF5" },
         danger: { DEFAULT: "#DC2626", soft: "#FEF2F2" },
-
-        // Legacy names, remapped
-        brass: "#2563EB",
-        "brass-soft": "#EFF6FF",
-        ink: "#FFFFFF",
-        cream: "#0F172A",
-        surface: "#FFFFFF",
-        "surface-raised": "#F1F5F9",
-        line: "#E2E8F0",
 
         // Gray follows slate so neutrals match the rest of the palette
         gray: colors.slate,

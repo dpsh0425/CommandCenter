@@ -22,7 +22,7 @@ function parseCsv(text: string, delim: string) {
 
 function Notebook({ text }: { text: string }) {
   let nb: any;
-  try { nb = JSON.parse(text); } catch { return <p className="text-sm text-gray-500">This notebook could not be read.</p>; }
+  try { nb = JSON.parse(text); } catch { return <p className="text-sm text-slate-500">This notebook could not be read.</p>; }
   const cells: any[] = nb.cells ?? [];
   const src = (c: any) => (Array.isArray(c.source) ? c.source.join("") : String(c.source ?? ""));
   return (
@@ -31,16 +31,16 @@ function Notebook({ text }: { text: string }) {
         <div key={i}><MiniMarkdown source={src(c)} /></div>
       ) : c.cell_type === "code" ? (
         <div key={i} className="flex flex-col gap-1">
-          <pre className="bg-surface-raised rounded p-3 overflow-x-auto text-xs font-mono">{src(c)}</pre>
+          <pre className="bg-slate-100 rounded p-3 overflow-x-auto text-xs font-mono">{src(c)}</pre>
           {(c.outputs ?? []).map((o: any, j: number) => {
             const t = o.text ?? o.data?.["text/plain"];
             const png = o.data?.["image/png"];
             if (png) return <img key={j} alt="notebook output" src={`data:image/png;base64,${Array.isArray(png) ? png.join("") : png}`} className="max-w-full rounded bg-white" />;
-            return t ? <pre key={j} className="text-xs font-mono text-gray-500 overflow-x-auto pl-3 border-l-2 border-line">{Array.isArray(t) ? t.join("") : String(t)}</pre> : null;
+            return t ? <pre key={j} className="text-xs font-mono text-slate-500 overflow-x-auto pl-3 border-l-2 border-slate-200">{Array.isArray(t) ? t.join("") : String(t)}</pre> : null;
           })}
         </div>
       ) : null)}
-      {cells.length > 120 && <p className="text-xs text-gray-400">Showing the first 120 cells.</p>}
+      {cells.length > 120 && <p className="text-xs text-slate-400">Showing the first 120 cells.</p>}
     </div>
   );
 }
@@ -74,17 +74,17 @@ export function FilePreview({ id, fileName, mime }: { id: string; fileName: stri
     return () => { dead = true; };
   }, [id, kind]);
 
-  if (kind === "none") return <p className="text-sm text-gray-500 py-8 text-center">No preview for this file type. Use Download to open it.</p>;
+  if (kind === "none") return <p className="text-sm text-slate-500 py-8 text-center">No preview for this file type. Use Download to open it.</p>;
   if (error) return <p className="text-sm text-red-600 py-6">{error}</p>;
-  if (!url) return <p className="text-sm text-gray-400 py-8 text-center">Loading preview…</p>;
-  if (kind === "pdf") return <iframe src={url} title={fileName} className="w-full h-[70vh] rounded border border-line bg-white" />;
+  if (!url) return <p className="text-sm text-slate-400 py-8 text-center">Loading preview…</p>;
+  if (kind === "pdf") return <iframe src={url} title={fileName} className="w-full h-[70vh] rounded border border-slate-200 bg-white" />;
   if (kind === "image") return <img src={url} alt={fileName} className="max-w-full max-h-[70vh] mx-auto rounded" />;
   if (kind === "video") return <video src={url} controls className="w-full max-h-[70vh] rounded bg-black" />;
   if (kind === "audio") return <audio src={url} controls className="w-full" />;
-  if (text == null) return <p className="text-sm text-gray-400 py-8 text-center">Loading preview…</p>;
+  if (text == null) return <p className="text-sm text-slate-400 py-8 text-center">Loading preview…</p>;
 
   return (
-    <div className="max-h-[70vh] overflow-auto rounded border border-line p-3">
+    <div className="max-h-[70vh] overflow-auto rounded border border-slate-200 p-3">
       {kind === "markdown" && <MiniMarkdown source={text} />}
       {kind === "notebook" && <Notebook text={text} />}
       {kind === "csv" && (() => {
@@ -92,14 +92,14 @@ export function FilePreview({ id, fileName, mime }: { id: string; fileName: stri
         const [head, ...body] = rows;
         return (
           <table className="text-xs border-collapse w-max min-w-full">
-            <thead><tr>{head?.map((h, i) => <th key={i} className="text-left font-semibold border-b border-line px-2 py-1 whitespace-nowrap">{h}</th>)}</tr></thead>
-            <tbody>{body.slice(0, 200).map((r, i) => <tr key={i} className="border-b border-line/50">{r.map((c, j) => <td key={j} className="px-2 py-1 whitespace-nowrap max-w-[16rem] truncate">{c}</td>)}</tr>)}</tbody>
+            <thead><tr>{head?.map((h, i) => <th key={i} className="text-left font-semibold border-b border-slate-200 px-2 py-1 whitespace-nowrap">{h}</th>)}</tr></thead>
+            <tbody>{body.slice(0, 200).map((r, i) => <tr key={i} className="border-b border-slate-100">{r.map((c, j) => <td key={j} className="px-2 py-1 whitespace-nowrap max-w-[16rem] truncate">{c}</td>)}</tr>)}</tbody>
           </table>
         );
       })()}
       {kind === "json" && <pre className="text-xs font-mono whitespace-pre-wrap break-words">{(() => { try { return JSON.stringify(JSON.parse(text), null, 2); } catch { return text; } })()}</pre>}
       {kind === "text" && <pre className="text-xs font-mono whitespace-pre-wrap break-words">{text}</pre>}
-      {truncated && <p className="text-xs text-gray-400 pt-2">Preview cut off. Download the file to see everything.</p>}
+      {truncated && <p className="text-xs text-slate-400 pt-2">Preview cut off. Download the file to see everything.</p>}
     </div>
   );
 }
@@ -114,21 +114,21 @@ export function LinkPreviewPane({ id, url, meta }: { id: string; url: string; me
     return () => { dead = true; };
   }, [id]);
 
-  if (!p) return <p className="text-sm text-gray-400 py-8 text-center">Loading preview…</p>;
+  if (!p) return <p className="text-sm text-slate-400 py-8 text-center">Loading preview…</p>;
   if (p.type === "youtube") return <iframe src={p.embed} title="Video" allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen className="w-full aspect-video rounded" />;
-  if (p.type === "pdf") return <iframe src={p.url} title="PDF" className="w-full h-[70vh] rounded border border-line bg-white" />;
+  if (p.type === "pdf") return <iframe src={p.url} title="PDF" className="w-full h-[70vh] rounded border border-slate-200 bg-white" />;
   if (p.type === "github") {
     return (
       <div className="flex flex-col gap-3">
-        {meta.description && <p className="text-sm text-gray-500">{meta.description}</p>}
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 font-mono">
-          {meta.language && <span className="text-cream">{meta.language}</span>}
+        {meta.description && <p className="text-sm text-slate-500">{meta.description}</p>}
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 font-mono">
+          {meta.language && <span className="text-slate-900">{meta.language}</span>}
           <span>★ {Number(meta.stars ?? 0).toLocaleString()}</span>
           <span>⑂ {Number(meta.forks ?? 0).toLocaleString()}</span>
           <span>{Number(meta.openIssues ?? 0)} open issues</span>
           {meta.license && <span>{meta.license}</span>}
         </div>
-        {p.readme ? <div className="max-h-[60vh] overflow-auto rounded border border-line p-3"><MiniMarkdown source={p.readme} /></div> : <p className="text-sm text-gray-500">No README to show. The repository may be private or empty.</p>}
+        {p.readme ? <div className="max-h-[60vh] overflow-auto rounded border border-slate-200 p-3"><MiniMarkdown source={p.readme} /></div> : <p className="text-sm text-slate-500">No README to show. The repository may be private or empty.</p>}
       </div>
     );
   }
@@ -136,24 +136,24 @@ export function LinkPreviewPane({ id, url, meta }: { id: string; url: string; me
     return (
       <div className="flex flex-col gap-3">
         <h4 className="font-serif text-xl leading-snug">{p.title}</h4>
-        <p className="text-xs text-gray-500">{p.authors.join(", ")}{p.published ? ` · ${p.published}` : ""}</p>
+        <p className="text-xs text-slate-500">{p.authors.join(", ")}{p.published ? ` · ${p.published}` : ""}</p>
         <p className="text-sm leading-relaxed">{p.summary}</p>
-        <button onClick={() => setShowPdf((v) => !v)} className="text-sm text-brass hover:underline self-start">{showPdf ? "Hide PDF" : "Read the PDF here"}</button>
-        {showPdf && <iframe src={p.pdfUrl} title="Paper PDF" className="w-full h-[70vh] rounded border border-line bg-white" />}
+        <button onClick={() => setShowPdf((v) => !v)} className="text-sm text-blue-600 hover:underline self-start">{showPdf ? "Hide PDF" : "Read the PDF here"}</button>
+        {showPdf && <iframe src={p.pdfUrl} title="Paper PDF" className="w-full h-[70vh] rounded border border-slate-200 bg-white" />}
       </div>
     );
   }
   if (p.type === "page") {
     return (
-      <div className="flex flex-col gap-3 border border-line rounded overflow-hidden">
+      <div className="flex flex-col gap-3 border border-slate-200 rounded overflow-hidden">
         {p.image && <img src={p.image} alt="" className="w-full max-h-56 object-cover" />}
         <div className="p-4 flex flex-col gap-1">
-          <span className="text-xs text-gray-400">{p.siteName}</span>
+          <span className="text-xs text-slate-400">{p.siteName}</span>
           <span className="font-medium">{p.title ?? url}</span>
-          {p.description && <p className="text-sm text-gray-500">{p.description}</p>}
+          {p.description && <p className="text-sm text-slate-500">{p.description}</p>}
         </div>
       </div>
     );
   }
-  return <p className="text-sm text-gray-500 py-6">{p.reason}</p>;
+  return <p className="text-sm text-slate-500 py-6">{p.reason}</p>;
 }

@@ -21,12 +21,25 @@ const field = "h-9 rounded-md border border-slate-300 bg-white px-3 text-sm text
 const select = "h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 hover:border-slate-300 disabled:opacity-50";
 const Err = ({ message }: { message: string | null }) => (message ? <p role="alert" className="text-xs text-red-700">{message}</p> : null);
 
-function RemoveButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
+// Asks in place before running onConfirm: the question with a red confirm button and "Keep".
+function ConfirmInline({ question, confirmLabel, onConfirm, onCancel, disabled }: { question: string; confirmLabel: string; onConfirm: () => void; onCancel: () => void; disabled?: boolean }) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5 rounded-md bg-red-50 px-2 py-1 text-[13px] text-red-800" role="group" aria-label={question}>
+      {question}
+      <button type="button" disabled={disabled} onClick={onConfirm} className="h-7 rounded-md bg-red-600 px-2.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60">{confirmLabel}</button>
+      <button type="button" onClick={onCancel} className="h-7 rounded-md px-2 text-xs font-medium text-slate-600 hover:bg-white">Keep</button>
+    </span>
+  );
+}
+
+function RemoveButton({ label, question, confirmLabel = "Remove", onConfirm, disabled }: { label: string; question: string; confirmLabel?: string; onConfirm: () => void; disabled?: boolean }) {
+  const [asking, setAsking] = useState(false);
+  if (asking) return <ConfirmInline question={question} confirmLabel={confirmLabel} disabled={disabled} onConfirm={() => { setAsking(false); onConfirm(); }} onCancel={() => setAsking(false)} />;
   return (
     <button
       type="button"
       disabled={disabled}
-      onClick={onClick}
+      onClick={() => setAsking(true)}
       aria-label={label}
       className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
     >
@@ -118,7 +131,9 @@ export function DeleteNoteButton({ schoolId, activityId }: { schoolId: string; a
       <RemoveButton
         label="Delete note"
         disabled={pending}
-        onClick={() => { if (confirm("Delete this note?")) run(() => deleteNote(schoolId, activityId)); }}
+        question="Delete this note?"
+        confirmLabel="Delete"
+        onConfirm={() => run(() => deleteNote(schoolId, activityId))}
       />
       {error && <span role="alert" className="text-xs text-red-700">{error}</span>}
     </span>
@@ -209,7 +224,8 @@ export function LetterRow({
           <RemoveButton
             label="Remove letter request"
             disabled={pending}
-            onClick={() => { if (confirm(`Remove ${name}'s letter request?`)) run(() => removeLetterRequest(id, schoolId)); }}
+            question={`Remove ${name}'s letter request?`}
+            onConfirm={() => run(() => removeLetterRequest(id, schoolId))}
           />
         </span>
       </div>
@@ -249,21 +265,32 @@ export function AddLetterForm({ schoolId, people }: { schoolId: string; people: 
 export function SopForm({ schoolId, current }: { schoolId: string; current: { label: string; sentAt: string | null } | null }) {
   const { pending, error, run } = useRun();
   const [editing, setEditing] = useState(!current);
+  const [clearing, setClearing] = useState(false);
   return (
     <div className="flex flex-col gap-2">
       {current && (
-        <div className="flex items-center justify-between gap-2 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <span><span className="font-medium text-slate-900">{current.label}</span><span className="text-slate-500"> · sent {current.sentAt ?? "date unknown"}</span></span>
-          <span className="flex gap-1">
+          <span className="flex flex-wrap gap-1">
             <button type="button" onClick={() => setEditing((v) => !v)} className={ghost}>{editing ? "Cancel" : "Change"}</button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => { if (confirm("Clear the recorded SOP for this school?")) run(() => clearSchoolSop(schoolId)); }}
-              className="h-8 rounded-md px-2.5 text-[13px] font-medium text-red-700 hover:bg-red-50"
-            >
-              Clear
-            </button>
+            {clearing ? (
+              <ConfirmInline
+                question="Clear the recorded SOP for this school?"
+                confirmLabel="Clear"
+                disabled={pending}
+                onConfirm={() => { setClearing(false); run(() => clearSchoolSop(schoolId)); }}
+                onCancel={() => setClearing(false)}
+              />
+            ) : (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setClearing(true)}
+                className="h-8 rounded-md px-2.5 text-[13px] font-medium text-red-700 hover:bg-red-50"
+              >
+                Clear
+              </button>
+            )}
           </span>
         </div>
       )}
@@ -314,7 +341,9 @@ export function InterviewRow({
           <RemoveButton
             label="Delete interview"
             disabled={pending}
-            onClick={() => { if (confirm("Delete this interview?")) run(() => deleteInterview(id, schoolId)); }}
+            question="Delete this interview?"
+            confirmLabel="Delete"
+            onConfirm={() => run(() => deleteInterview(id, schoolId))}
           />
         </span>
       </div>

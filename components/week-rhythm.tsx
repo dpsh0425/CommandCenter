@@ -9,16 +9,16 @@ export function WeekRhythm({ days }: { days: Array<{ label: string; date: string
           <div key={d.date} className="flex flex-col items-center gap-1.5" title={d.date}>
             <span
               className={`w-7 h-7 rounded-full border flex items-center justify-center text-[11px] transition-colors ${
-                d.active ? "bg-brass border-brass text-ink font-medium" : d.future ? "border-line/60 text-gray-400" : "border-line text-gray-400"
-              } ${d.isToday ? "ring-2 ring-cream/40 ring-offset-2 ring-offset-ink" : ""}`}
+                d.active ? "bg-blue-600 border-blue-600 text-white font-medium" : d.future ? "border-slate-200/60 text-slate-400" : "border-slate-200 text-slate-400"
+              } ${d.isToday ? "ring-2 ring-blue-600/40 ring-offset-2 ring-offset-white" : ""}`}
             >
               {d.active ? "✓" : ""}
             </span>
-            <span className={`text-[10px] uppercase tracking-wider ${d.isToday ? "text-cream" : "text-gray-400"}`}>{d.label}</span>
+            <span className={`text-[10px] uppercase tracking-wider ${d.isToday ? "text-slate-900" : "text-slate-400"}`}>{d.label}</span>
           </div>
         ))}
       </div>
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-slate-500">
         {activeCount === 0 ? "A fresh week. One small step today starts the rhythm." : `${activeCount} day${activeCount === 1 ? "" : "s"} moving forward this week.`}
       </p>
     </div>

@@ -149,29 +149,29 @@ function renderText(d: { dateLabel: string; sections: DigestSection[]; appUrl: s
 function renderHtml(d: { subject: string; preheader: string; dateLabel: string; sections: DigestSection[]; appUrl: string }) {
   const font = "font-family:'Helvetica Neue',Arial,sans-serif;";
   const rowHtml = (r: Row) => `
-    <tr><td style="padding:10px 0;border-bottom:1px solid #ece9df;${font}">
+    <tr><td style="padding:10px 0;border-bottom:1px solid #E2E8F0;${font}">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td style="${font}font-size:15px;color:#1c1f26;line-height:1.35;">${r.href ? `<a href="${esc(r.href)}" style="color:#1c1f26;text-decoration:none;font-weight:600;">${esc(r.primary)}</a>` : `<span style="font-weight:600;">${esc(r.primary)}</span>`}${r.secondary ? `<div style="font-size:13px;color:#6b7280;margin-top:2px;">${esc(r.secondary)}</div>` : ""}</td>
-        ${r.right ? `<td align="right" style="${font}font-size:13px;color:#a8691f;white-space:nowrap;padding-left:12px;vertical-align:top;">${esc(r.right)}</td>` : ""}
+        <td style="${font}font-size:15px;color:#0F172A;line-height:1.35;">${r.href ? `<a href="${esc(r.href)}" style="color:#0F172A;text-decoration:none;font-weight:600;">${esc(r.primary)}</a>` : `<span style="font-weight:600;">${esc(r.primary)}</span>`}${r.secondary ? `<div style="font-size:13px;color:#64748B;margin-top:2px;">${esc(r.secondary)}</div>` : ""}</td>
+        ${r.right ? `<td align="right" style="${font}font-size:13px;color:#1D4ED8;white-space:nowrap;padding-left:12px;vertical-align:top;">${esc(r.right)}</td>` : ""}
       </tr></table>
     </td></tr>`;
   const kvHtml = (x: { k: string; v: string }) => `
-    <tr><td style="padding:7px 0;border-bottom:1px solid #ece9df;${font}font-size:14px;color:#1c1f26;line-height:1.4;"><span style="color:#6b7280;display:inline-block;min-width:130px;">${esc(x.k)}</span> ${esc(x.v)}</td></tr>`;
+    <tr><td style="padding:7px 0;border-bottom:1px solid #E2E8F0;${font}font-size:14px;color:#0F172A;line-height:1.4;"><span style="color:#64748B;display:inline-block;min-width:130px;">${esc(x.k)}</span> ${esc(x.v)}</td></tr>`;
   const sectionHtml = (s: DigestSection) => `
-    <tr><td style="padding:26px 0 6px;${font}"><div style="font-size:17px;font-weight:700;color:#1c1f26;border-bottom:2px solid #c98a3e;padding-bottom:6px;">${esc(s.title)}</div>${s.note ? `<div style="font-size:13px;color:#6b7280;margin-top:6px;">${esc(s.note)}</div>` : ""}</td></tr>
+    <tr><td style="padding:26px 0 6px;${font}"><div style="font-size:17px;font-weight:700;color:#0F172A;border-bottom:2px solid #2563EB;padding-bottom:6px;">${esc(s.title)}</div>${s.note ? `<div style="font-size:13px;color:#64748B;margin-top:6px;">${esc(s.note)}</div>` : ""}</td></tr>
     <tr><td><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${s.rows.map(rowHtml).join("")}${(s.kv ?? []).map(kvHtml).join("")}</table></td></tr>`;
 
   return `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(d.subject)}</title></head>
-<body style="margin:0;padding:0;background:#f5f3ec;">
+<body style="margin:0;padding:0;background:#F8FAFC;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(d.preheader)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ec;"><tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFC;"><tr><td align="center" style="padding:24px 12px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:10px;padding:28px 30px;">
-    <tr><td style="${font}font-size:13px;color:#6b7280;">${esc(d.dateLabel)}</td></tr>
-    <tr><td style="font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.15;color:#1c1f26;padding-top:4px;">Your week ahead</td></tr>
-    ${d.sections.length === 0 ? `<tr><td style="${font}font-size:15px;color:#1c1f26;padding-top:18px;">Nothing urgent is due. A good week to move an application forward.</td></tr>` : d.sections.map(sectionHtml).join("")}
-    ${d.appUrl ? `<tr><td style="padding-top:28px;${font}"><a href="${esc(d.appUrl)}" style="background:#c98a3e;color:#1c1f26;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:6px;display:inline-block;">Open Command Center</a></td></tr>` : ""}
-    <tr><td style="${font}font-size:12px;color:#9aa0aa;padding-top:26px;">Sent every Monday from your own Command Center.</td></tr>
+    <tr><td style="${font}font-size:13px;color:#64748B;">${esc(d.dateLabel)}</td></tr>
+    <tr><td style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:28px;font-weight:700;letter-spacing:-0.01em;line-height:1.15;color:#0F172A;padding-top:4px;">Your week ahead</td></tr>
+    ${d.sections.length === 0 ? `<tr><td style="${font}font-size:15px;color:#0F172A;padding-top:18px;">Nothing urgent is due. A good week to move an application forward.</td></tr>` : d.sections.map(sectionHtml).join("")}
+    ${d.appUrl ? `<tr><td style="padding-top:28px;${font}"><a href="${esc(d.appUrl)}" style="background:#2563EB;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:6px;display:inline-block;">Open Command Center</a></td></tr>` : ""}
+    <tr><td style="${font}font-size:12px;color:#94A3B8;padding-top:26px;">Sent every Monday from your own Command Center.</td></tr>
   </table>
 </td></tr></table>
 </body></html>`;

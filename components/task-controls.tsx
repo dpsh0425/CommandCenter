@@ -212,14 +212,33 @@ export function RemoveDependencyButton({ taskId, dependsOnId }: { taskId: string
 
 export function DeleteTaskButton({ id, title }: { id: string; title: string }) {
   const [pending, start] = useTransition();
+  const [asking, setAsking] = useState(false);
+  if (asking) {
+    return (
+      <div className="flex flex-col gap-2 self-start rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-[13px] text-red-900" role="group" aria-label="Confirm delete">
+        <span>Delete task &ldquo;{title}&rdquo;? Its log and focus sessions go with it. This cannot be undone.</span>
+        <span className="flex gap-2">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              setAsking(false);
+              start(() => deleteTask(id));
+            }}
+            className="h-8 rounded-md bg-red-600 px-3 text-[13px] font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+          >
+            Delete task
+          </button>
+          <button type="button" onClick={() => setAsking(false)} className="h-8 rounded-md px-3 text-[13px] font-medium text-slate-600 hover:bg-white">Keep</button>
+        </span>
+      </div>
+    );
+  }
   return (
     <button
       type="button"
       disabled={pending}
-      onClick={() => {
-        if (!confirm(`Delete task "${title}"? Its log and focus sessions go with it. This cannot be undone.`)) return;
-        start(() => deleteTask(id));
-      }}
+      onClick={() => setAsking(true)}
       className="h-8 self-start rounded-md border border-red-300 bg-white px-3 text-[13px] font-medium text-red-700 transition-colors hover:border-red-600 hover:bg-red-600 hover:text-white disabled:opacity-50"
     >
       {pending ? "Deleting…" : "Delete task"}

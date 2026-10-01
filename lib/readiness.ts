@@ -49,6 +49,6 @@ export const RISK_LABEL: Record<Risk, string> = {
   submitted: "Submitted", overdue: "Deadline passed", urgent: "Needs action now", watch: "Start soon", ok: "On track", nodate: "No deadline set",
 };
 export const RISK_TONE: Record<Risk, string> = {
-  submitted: "text-teal-600", overdue: "text-red-600", urgent: "text-red-600", watch: "text-brass", ok: "text-gray-500", nodate: "text-gray-400",
+  submitted: "text-teal-600", overdue: "text-red-600", urgent: "text-red-600", watch: "text-blue-600", ok: "text-slate-500", nodate: "text-slate-400",
 };
 export const RISK_ORDER: Record<Risk, number> = { overdue: 0, urgent: 1, watch: 2, ok: 3, nodate: 4, submitted: 5 };

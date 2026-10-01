@@ -80,6 +80,7 @@ const MOBILE = [
 
 const MORE = [
   { href: "/week", label: "This week" },
+  { href: "/actions-list", label: "Action list" },
   { href: "/compare", label: "Compare schools" },
   { href: "/readiness", label: "Readiness" },
   { href: "/outreach", label: "Outreach" },
@@ -101,6 +102,7 @@ const ICON_FOR: Record<string, IconComponent> = {
   "/schools": GraduationCapIcon,
   "/tasks": ListChecksIcon,
   "/week": CalendarIcon,
+  "/actions-list": ListChecksIcon,
   "/compare": BarChartIcon,
   "/readiness": ActivityIcon,
   "/outreach": SendIcon,
@@ -192,6 +194,16 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
     });
   }
 
+  // Escape closes the mobile "More" sheet.
+  useEffect(() => {
+    if (!moreOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMoreOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [moreOpen]);
+
   // Close the account menu on an outside click or Escape.
   useEffect(() => {
     if (!menuOpen) return;
@@ -216,6 +228,10 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
 
   const crumbs = crumbsFor(pathname);
   const sectionTitle = crumbs.find((c, i) => i === 1)?.label ?? "Command Center";
+  // On phones the breadcrumb collapses to a back link to the nearest parent page.
+  const lastCrumb = crumbs[crumbs.length - 1]?.label;
+  const mobileTitle = crumbs.length > 2 && lastCrumb !== "Details" && lastCrumb !== "Overview" ? lastCrumb : sectionTitle;
+  const backTo = crumbs.length > 2 ? [...crumbs.slice(0, -1)].reverse().find((c) => c.href && c.href !== pathname) : undefined;
 
   const navItemClass = (active: boolean) =>
     `group relative flex h-9 items-center gap-3 rounded-md text-sm transition-colors ${
@@ -406,10 +422,19 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
 
         {/* Mobile topbar */}
         <header className="sticky top-0 z-20 flex h-14 flex-shrink-0 items-center gap-2.5 border-b border-slate-200 bg-white pl-4 pr-2 md:hidden">
-          <Link href="/" aria-label="Command Center home" className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[7px] bg-blue-600 text-white">
-            <CommandIcon className="h-4 w-4" />
-          </Link>
-          <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-slate-900">{sectionTitle}</span>
+          {backTo?.href ? (
+            <Link href={backTo.href} aria-label={`Back to ${backTo.label}`} className="-ml-2 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md text-slate-700 hover:bg-slate-100">
+              <ChevronRightIcon className="h-5 w-5 rotate-180" />
+            </Link>
+          ) : (
+            <Link href="/" aria-label="Command Center home" className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[7px] bg-blue-600 text-white">
+              <CommandIcon className="h-4 w-4" />
+            </Link>
+          )}
+          <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-slate-900">
+            {backTo && backTo.label !== mobileTitle && <span className="block truncate text-[11px] font-medium leading-3 text-slate-500">{backTo.label}</span>}
+            {mobileTitle}
+          </span>
           <button
             type="button"
             onClick={() => setPaletteOpen(true)}
@@ -423,7 +448,7 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
               type="button"
               onClick={() => setQuickOpen(true)}
               aria-label="Quick add"
-              className="mr-1 flex h-9 w-9 items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700"
+              className="mr-1 flex h-10 w-10 items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700"
             >
               <PlusIcon className="h-[18px] w-[18px]" />
             </button>
@@ -431,7 +456,7 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
         </header>
 
         {/* Main Content Area */}
-        <div className="flex-1 min-w-0 pb-16 md:pb-0">{children}</div>
+        <div className="min-w-0 flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
       </div>
 
       {/* Modals */}
@@ -450,9 +475,10 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
           role="presentation"
         >
           <div
-            className="absolute inset-x-0 bottom-16 flex max-h-[75vh] flex-col gap-3 overflow-y-auto rounded-t-2xl bg-white px-4 pb-4 pt-2 shadow-xl"
+            className="absolute inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] flex max-h-[75vh] flex-col gap-3 overflow-y-auto rounded-t-2xl bg-white px-4 pb-4 pt-2 shadow-xl"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
+            aria-modal="true"
             aria-label="More navigation options"
           >
             <div className="mx-auto mb-1 h-1 w-9 rounded-full bg-slate-300" aria-hidden="true" />
@@ -501,7 +527,7 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
       {/* Mobile bottom navigation */}
       <nav
         aria-label="Main navigation"
-        className="fixed inset-x-0 bottom-0 z-50 grid h-16 grid-cols-5 border-t border-slate-200 bg-white md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-5 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         {MOBILE.map((item) => {
           const Icon = ICON_FOR[item.href] ?? HomeIcon;
@@ -525,6 +551,7 @@ export function NavShell({ children, isOwner }: { children: React.ReactNode; isO
           type="button"
           onClick={() => setMoreOpen((o) => !o)}
           aria-expanded={moreOpen}
+          aria-haspopup="dialog"
           className={`relative flex flex-col items-center justify-center gap-0.5 text-[11px] ${
             moreOpen || MORE.some((m) => isActive(m.href)) ? "font-semibold text-blue-700" : "font-medium text-slate-500"
           }`}

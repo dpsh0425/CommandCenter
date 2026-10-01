@@ -11,7 +11,7 @@ export type RichDraftProps = {
   onWords?: (words: number) => void; placeholder?: string; minHeight?: string; variant?: "full" | "compact";
 };
 
-const primary = "bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm disabled:opacity-50";
+const primary = "h-8 whitespace-nowrap rounded-md bg-blue-600 px-3 text-[13px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60";
 
 // A rich text field that saves itself, with a crash-backup offer and a conflict warning.
 export function RichDraft({ kind, id, initial, version, label, save, onWords, placeholder, minHeight, variant = "full" }: RichDraftProps) {
@@ -24,17 +24,17 @@ export function RichDraft({ kind, id, initial, version, label, save, onWords, pl
   return (
     <div className="flex flex-col gap-1">
       {offer && (
-        <div className="flex flex-wrap items-center gap-3 text-sm border border-brass rounded px-3 py-2 mb-2" role="status">
+        <div className="mb-2 flex flex-wrap items-center gap-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-[13px] text-blue-900" role="status">
           <span>We found changes from {new Date(offer.savedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} on this device that were never saved. Restore them?</span>
           <button type="button" className={primary} onClick={restoreBackup}>Restore</button>
-          <button type="button" className="text-gray-500 hover:text-cream" onClick={discardBackup}>Discard</button>
+          <button type="button" className="h-8 rounded-md px-2.5 text-[13px] font-medium text-slate-600 hover:bg-white hover:text-slate-900" onClick={discardBackup}>Discard</button>
         </div>
       )}
       {state === "conflict" && (
-        <div className="flex flex-wrap items-center gap-3 text-sm border border-red-600 rounded px-3 py-2 mb-2" role="alert">
+        <div className="mb-2 flex flex-wrap items-center gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-900" role="alert">
           <span>This was changed somewhere else, so your last edits were not saved. Copy your text, then reload to see the latest.</span>
           <button type="button" className={primary} onClick={() => { try { void navigator.clipboard.writeText(htmlToText(text)); } catch { /* ignore */ } }}>Copy my text</button>
-          <button type="button" className="text-gray-500 hover:text-cream" onClick={() => window.location.reload()}>Reload</button>
+          <button type="button" className="h-8 rounded-md px-2.5 text-[13px] font-medium text-slate-600 hover:bg-white hover:text-slate-900" onClick={() => window.location.reload()}>Reload</button>
         </div>
       )}
       <RichEditorLazy
@@ -42,8 +42,8 @@ export function RichDraft({ kind, id, initial, version, label, save, onWords, pl
         label={label} variant={variant} placeholder={placeholder} minHeight={minHeight}
       />
       <div className="flex flex-wrap items-baseline justify-between gap-3 text-xs">
-        <span className="text-gray-400">{words.toLocaleString()} {words === 1 ? "word" : "words"}</span>
-        <span className={state === "error" || state === "conflict" ? "text-red-600" : "text-gray-400"} aria-live="polite">{saveLabel}</span>
+        <span className="tabular-nums text-slate-500">{words.toLocaleString()} {words === 1 ? "word" : "words"}</span>
+        <span className={state === "error" || state === "conflict" ? "text-red-700" : "text-slate-500"} aria-live="polite">{saveLabel}</span>
       </div>
     </div>
   );

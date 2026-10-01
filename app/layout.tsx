@@ -1,5 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+
+// viewport-fit=cover lets the phone bottom bar pad itself clear of the home indicator (env(safe-area-inset-bottom)).
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#ffffff" };
 
 export const metadata: Metadata = {
   title: { default: "Command Center", template: "%s · Command Center" },

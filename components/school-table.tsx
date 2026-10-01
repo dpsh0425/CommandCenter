@@ -125,7 +125,7 @@ export function SchoolTable({ schools }: { schools: School[] }) {
 
       {view === "table" && (
         <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white md:block">
-          <table className="w-full border-collapse text-[13px]">
+          <div className="overflow-x-auto"><table className="w-full min-w-[720px] border-collapse text-[13px]">
             <thead>
               <tr className="bg-slate-50 text-left text-slate-600">
                 <th scope="col" className="px-4 py-2.5 font-medium">School</th>
@@ -156,7 +156,7 @@ export function SchoolTable({ schools }: { schools: School[] }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
     </div>

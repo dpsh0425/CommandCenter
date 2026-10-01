@@ -124,7 +124,7 @@ export function SubNav({
             key={it.href}
             href={it.href}
             aria-current={isActive ? "page" : undefined}
-            className={`pb-2.5 text-sm border-b-2 transition-colors -mb-px whitespace-nowrap ${
+            className={`-mb-px whitespace-nowrap border-b-2 pb-2.5 pt-2 text-sm transition-colors md:pt-0 ${
               isActive
                 ? "border-blue-600 text-slate-900 font-semibold"
                 : "border-transparent text-slate-500 font-medium hover:text-slate-900"

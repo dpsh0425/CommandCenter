@@ -39,7 +39,7 @@ function Btn({ title, active, disabled, onClick, children }: { title: string; ac
       disabled={disabled}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className={`shrink-0 min-w-8 h-8 px-2 rounded text-sm border ${active ? "bg-brass text-black border-brass" : "border-transparent text-cream hover:bg-brass-soft"} ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+      className={`shrink-0 min-w-8 h-8 px-2 rounded text-sm border ${active ? "bg-blue-600 text-white border-blue-600" : "border-transparent text-slate-900 hover:bg-blue-50"} ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
     >
       {children}
     </button>
@@ -50,6 +50,8 @@ function Toolbar({ editor, variant }: { editor: Editor; variant: "full" | "compa
   const s = useToolbarState(editor);
   const ref = useRef<HTMLDivElement>(null);
   const [tabIdx, setTabIdx] = useState(0);
+  const [link, setLinkDraft] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState(false);
   const full = variant === "full";
 
   // Roving tabindex: only one control is in the tab order.
@@ -73,14 +75,17 @@ function Toolbar({ editor, variant }: { editor: Editor; variant: "full" | "compa
     const at = list.indexOf(document.activeElement as HTMLElement);
     if (at >= 0) setTabIdx(at);
   }
+  // The link address is asked for in a small bar under the toolbar rather than a browser pop-up.
   function setLink() {
-    const current = (editor.getAttributes("link").href as string | undefined) ?? "";
-    const input = window.prompt("Link address", current);
-    if (input === null) return;
-    if (input.trim() === "") { editor.chain().focus().extendMarkRange("link").unsetLink().run(); return; }
+    setLinkError(false);
+    setLinkDraft((editor.getAttributes("link").href as string | undefined) ?? "");
+  }
+  function applyLink(input: string) {
+    if (input.trim() === "") { editor.chain().focus().extendMarkRange("link").unsetLink().run(); setLinkDraft(null); return; }
     const href = linkHref(input);
-    if (!href) return;
+    if (!href) { setLinkError(true); return; }
     editor.chain().focus().extendMarkRange("link").setLink({ href }).run();
+    setLinkDraft(null);
   }
   function setBlock(v: Block) {
     const c = editor.chain().focus();
@@ -89,13 +94,14 @@ function Toolbar({ editor, variant }: { editor: Editor; variant: "full" | "compa
   }
 
   return (
+    <div className="sticky top-14 z-10 rounded-t border-b border-slate-200 bg-slate-100">
     <div
       ref={ref}
       role="toolbar"
       aria-label="Formatting"
       onKeyDown={onKeyDown}
       onFocus={onFocus}
-      className="sticky top-14 z-10 flex flex-nowrap items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden bg-surface-raised border-b border-line px-2 py-1 rounded-t"
+      className="flex flex-nowrap items-center gap-1 overflow-x-auto px-2 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {full && (
         <select
@@ -104,7 +110,7 @@ function Toolbar({ editor, variant }: { editor: Editor; variant: "full" | "compa
           title="Paragraph style"
           value={s.block}
           onChange={(e) => setBlock(e.target.value as Block)}
-          className="shrink-0 h-8 rounded border border-line bg-surface text-cream text-sm px-1"
+          className="shrink-0 h-8 rounded border border-slate-200 bg-white text-slate-900 text-sm px-1"
         >
           <option value="p">Paragraph</option>
           <option value="h1">Heading 1</option>
@@ -127,6 +133,26 @@ function Toolbar({ editor, variant }: { editor: Editor; variant: "full" | "compa
       {full && <Btn title="Undo (Ctrl+Z)" disabled={!s.canUndo} onClick={() => editor.chain().focus().undo().run()}>Undo</Btn>}
       {full && <Btn title="Redo (Ctrl+Shift+Z)" disabled={!s.canRedo} onClick={() => editor.chain().focus().redo().run()}>Redo</Btn>}
       {full && <Btn title="Clear formatting" onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}>Clear</Btn>}
+    </div>
+    {link !== null && (
+      // Not a <form>: the editor often sits inside one (notes, statements), and forms cannot nest.
+      <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-200 px-2 py-1.5" role="group" aria-label="Link">
+        <input
+          autoFocus
+          value={link}
+          onChange={(e) => { setLinkDraft(e.target.value); setLinkError(false); }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyLink(link); } if (e.key === "Escape") { e.preventDefault(); setLinkDraft(null); editor.commands.focus(); } }}
+          placeholder="https://… (leave empty to remove the link)"
+          aria-label="Link address"
+          aria-invalid={linkError}
+          className={`h-8 min-w-0 flex-1 rounded-md border bg-white px-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 ${linkError ? "border-red-400" : "border-slate-300 focus:border-blue-600"}`}
+        />
+        <button type="button" onClick={() => applyLink(link)} className="h-8 rounded-md bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
+        {s.link && <button type="button" onClick={() => applyLink("")} className="h-8 rounded-md px-2.5 text-xs font-medium text-red-700 hover:bg-red-50">Remove link</button>}
+        <button type="button" onClick={() => { setLinkDraft(null); editor.commands.focus(); }} className="h-8 rounded-md px-2.5 text-xs font-medium text-slate-600 hover:bg-white">Cancel</button>
+        {linkError && <span role="alert" className="basis-full text-xs text-red-700">That doesn&apos;t look like a web or email address.</span>}
+      </div>
+    )}
     </div>
   );
 }
@@ -166,7 +192,7 @@ export function RichEditor({ value, onChange, label, variant = "full", placehold
   if (!editor) return <div className="paper paper-page" style={{ minHeight: height }} aria-busy="true" />;
 
   return (
-    <div className="paper focus-within:ring-1 focus-within:ring-brass">
+    <div className="paper focus-within:ring-1 focus-within:ring-blue-600">
       {!readOnly && <Toolbar editor={editor} variant={variant} />}
       <div className={`paper-page${printable ? " statement-print" : ""}`} onClick={() => { if (!readOnly) editor.commands.focus(); }}>
         <EditorContent editor={editor} />
