@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { OWNER_USER_ID } from "@/lib/owner";
-import { Fold, PageHeader, Section, SubNav, TODAY_TABS } from "@/components/ui";
+import { Fold, PageHeader, SubNav, TODAY_TABS } from "@/components/ui";
 import { CopyUpdate } from "@/components/copy-update";
 import { loadResearchWeek, summarizeProjectWeek, type ProjectWeek } from "@/lib/research-week";
 import { formatMinutes, projectStatusLabel } from "@/lib/research";
 import { FLAG_LABEL, lettersToChase, type ChaseInput } from "@/lib/letters";
+import { todayString, zonedDay, zonedMidnightISO, zonedTime } from "@/lib/app-date";
 
 export const metadata = { title: "This week" };
 
@@ -15,13 +16,20 @@ const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.get
 const mondayOf = (d: Date) => { const m = new Date(d.getFullYear(), d.getMonth(), d.getDate()); m.setDate(m.getDate() - ((m.getDay() + 6) % 7)); return m; };
 const daysBetween = (from: string, to: string) => Math.round((new Date(to + "T00:00:00").getTime() - new Date(from + "T00:00:00").getTime()) / 86400000);
 const rel = (d: number) => (d === 0 ? "today" : d === 1 ? "tomorrow" : d < 0 ? `${-d}d ago` : `in ${d}d`);
-const short = (d: Date) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+const short = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
 type Item = { date: string; label: string; sub: string; href: string; kind: "task" | "deadline" | "letter" | "funding" | "milestone" | "interview" };
 const KIND: Record<Item["kind"], { label: string; dot: string }> = {
-  task: { label: "Task", dot: "bg-brass" }, deadline: { label: "Deadline", dot: "bg-red-600" }, letter: { label: "Letter", dot: "bg-violet-600" },
-  funding: { label: "Funding", dot: "bg-teal-600" }, milestone: { label: "Milestone", dot: "bg-violet-600" }, interview: { label: "Interview", dot: "bg-teal-600" },
+  task: { label: "Task", dot: "bg-blue-600" }, deadline: { label: "Deadline", dot: "bg-rose-600" }, letter: { label: "Letter", dot: "bg-violet-600" },
+  funding: { label: "Funding", dot: "bg-emerald-600" }, milestone: { label: "Milestone", dot: "bg-slate-500" }, interview: { label: "Interview", dot: "bg-cyan-600" },
 };
+const KIND_ORDER: Item["kind"][] = ["task", "deadline", "letter", "funding", "milestone", "interview"];
+
+const card = "rounded-lg border border-slate-200 bg-white";
+const cardHead = "flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3";
+const cardTitle = "text-[15px] font-semibold text-slate-900";
+const hintText = "ml-1 text-[13px] font-normal text-slate-500";
+const rowLink = "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-900 transition-colors hover:bg-slate-50";
 
 export default async function WeekPage({ searchParams }: { searchParams: Promise<{ w?: string }> }) {
   const { w } = await searchParams;
@@ -29,10 +37,11 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user?.id !== OWNER_USER_ID) {
-    return <main className="p-4 md:p-8 max-w-xl mx-auto text-sm text-gray-500">The weekly plan is only available to the workspace owner.</main>;
+    return <main className="mx-auto max-w-xl p-4 text-sm text-slate-500 md:p-8">The weekly plan is only available to the workspace owner.</main>;
   }
 
-  const now = new Date();
+  // Anchor every date to today in APP_TIMEZONE (the server clock runs in UTC).
+  const now = new Date(todayString() + "T00:00:00");
   const today = ymd(now);
   const start = addDays(mondayOf(now), offset * 7);
   const end = addDays(start, 6);
@@ -55,11 +64,12 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
     supabase.from("interviews").select("id, school_id, scheduled_at, status, schools(name)").eq("status", "scheduled").not("scheduled_at", "is", null),
     supabase.from("professors").select("id, name, school_id, accepting, fit_score, outreach, last_contacted_on, research_areas, schools(name, deadline_date)"),
     supabase.from("schools").select("id").not("sop_version_id", "is", null),
-    supabase.from("task_updates").select("created_at").eq("type", "status_change").eq("is_win", true).gte("created_at", new Date(lastWeekStart + "T00:00:00").toISOString()),
-    supabase.from("activity_log").select("created_at").eq("is_win", true).gte("created_at", new Date(lastWeekStart + "T00:00:00").toISOString()),
+    supabase.from("task_updates").select("created_at").eq("type", "status_change").eq("is_win", true).gte("created_at", zonedMidnightISO(lastWeekStart)),
+    supabase.from("activity_log").select("created_at").eq("is_win", true).gte("created_at", zonedMidnightISO(lastWeekStart)),
   ]);
 
   const chase = lettersToChase(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ((letters ?? []) as any[]).map((l): ChaseInput => ({
       id: l.id, school_id: l.school_id, school_name: l.schools?.name ?? "School", recommender_id: l.recommender_id,
       recommender_name: l.people?.name ?? "Recommender", status: l.status, letter_deadline: l.letter_deadline,
@@ -68,6 +78,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
     today,
   );
 
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   // ---- Everything dated ----
   const all: Item[] = [
     ...(tasks ?? []).map((t: any) => ({ date: t.due_date, label: t.title, sub: [t.schools?.name, t.research_milestones?.title, `${t.priority} priority`].filter(Boolean).join(" · "), href: `/tasks/${t.id}`, kind: "task" as const })),
@@ -76,13 +87,13 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
     ...(funds ?? []).map((f: any) => ({ date: f.deadline_date, label: `${f.name} (${f.schools?.name})`, sub: `funding · ${String(f.status).replace("_", " ")}`, href: `/schools/${f.school_id}?tab=funding`, kind: "funding" as const })),
     ...((letters ?? []) as any[]).filter((l) => l.letter_deadline && l.status !== "submitted").map((l) => ({ date: l.letter_deadline, label: `${l.people?.name ?? "Recommender"}'s letter for ${l.schools?.name}`, sub: `letter · ${String(l.status).replace("_", " ")}`, href: `/schools/${l.school_id}?tab=application`, kind: "letter" as const })),
     ...(milestones ?? []).map((m: any) => ({ date: m.target_date, label: m.title, sub: "research milestone", href: `/research/${m.id}`, kind: "milestone" as const })),
-    ...((interviews ?? []) as any[]).map((i) => ({ date: ymd(new Date(i.scheduled_at)), label: `Interview: ${i.schools?.name}`, sub: new Date(i.scheduled_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }), href: `/schools/${i.school_id}?tab=application`, kind: "interview" as const })),
+    ...((interviews ?? []) as any[]).map((i) => ({ date: zonedDay(i.scheduled_at), label: `Interview: ${i.schools?.name}`, sub: zonedTime(i.scheduled_at), href: `/schools/${i.school_id}?tab=application`, kind: "interview" as const })),
   ].sort((a, b) => a.date.localeCompare(b.date));
 
   const overdue = all.filter((i) => i.date < today);
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = addDays(start, i);
-    return { date: ymd(d), label: d.toLocaleDateString(undefined, { weekday: "long" }), short: short(d), items: all.filter((x) => x.date === ymd(d)) };
+    return { date: ymd(d), label: d.toLocaleDateString("en-US", { weekday: "long" }), short: short(d), items: all.filter((x) => x.date === ymd(d)) };
   });
   const weekCount = days.reduce((n, d) => n + d.items.length, 0);
 
@@ -130,166 +141,279 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
     .sort((a, b) => (b.accepting === "yes" ? 1 : 0) - (a.accepting === "yes" ? 1 : 0) || (b.fit_score ?? 0) - (a.fit_score ?? 0) || a.schools.deadline_date.localeCompare(b.schools.deadline_date)).slice(0, 6);
 
   // ---- Last week ----
-  const inLast = (iso: string) => { const d = ymd(new Date(iso)); return d >= lastWeekStart && d <= lastWeekEnd; };
+  const inLast = (iso: string) => { const d = zonedDay(iso); return d >= lastWeekStart && d <= lastWeekEnd; };
   const doneLast = (doneTasks ?? []).filter((t) => inLast(t.created_at)).length;
   const winsLast = (winsA ?? []).filter((t) => inLast(t.created_at)).length;
   const contactedLast = P.filter((p) => p.last_contacted_on && p.last_contacted_on >= lastWeekStart && p.last_contacted_on <= lastWeekEnd).length;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
-  const dayLabel = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+  const dayLabel = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
   const daysWithItems = days.filter((d) => d.items.length > 0);
   const nextStep = (checks: Array<{ ok: boolean; text: string }>) => checks.find((c) => !c.ok)?.text;
-  const navLink = "text-sm text-gray-500 hover:text-cream";
+  const navBtn = "flex h-9 items-center px-3 text-[13px] font-medium text-slate-900 transition-colors hover:bg-slate-50";
+  const kindsUsed = KIND_ORDER.filter((k) => all.some((i) => i.kind === k && i.date >= startS && i.date <= endS));
 
   return (
-    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-8">
+    <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-5 p-4 md:p-8">
       <div className="flex flex-col gap-4">
         <PageHeader
+          eyebrow="Overview"
           title={offset === 0 ? "This week" : offset === 1 ? "Next week" : offset === -1 ? "Last week" : "Week plan"}
           subtitle={`${short(start)} to ${short(end)}, ${end.getFullYear()}`}
           actions={
-            <>
-              <Link href={`/week?w=${offset - 1}`} className={navLink}>← Previous</Link>
-              {offset !== 0 && <Link href="/week" className={navLink}>Today</Link>}
-              <Link href={`/week?w=${offset + 1}`} className={navLink}>Next →</Link>
-            </>
+            <nav aria-label="Change week" className="flex overflow-hidden rounded-md border border-slate-300 bg-white">
+              <Link href={`/week?w=${offset - 1}`} className={`${navBtn} border-r border-slate-200`}>← Previous</Link>
+              {offset !== 0 ? (
+                <Link href="/week" className={`${navBtn} border-r border-slate-200`}>This week</Link>
+              ) : (
+                <span className="flex h-9 items-center border-r border-slate-200 px-3 text-[13px] font-medium text-slate-400">This week</span>
+              )}
+              <Link href={`/week?w=${offset + 1}`} className={navBtn}>Next →</Link>
+            </nav>
           }
         />
         <SubNav items={TODAY_TABS} current="/week" />
       </div>
 
-      {countdown.length > 0 && (
-        <Section title="Application deadlines" hint="next 90 days">
-          <ul className="flex flex-col">
-            {countdown.map(({ s, days: d, checks, ready }) => {
-              const next = nextStep(checks);
-              return (
-                <li key={s.id} className="border-b border-line/60 last:border-0">
-                  <Link href={`/schools/${s.id}?tab=application`} className="flex items-baseline justify-between gap-4 py-3 hover:text-brass">
-                    <span className="min-w-0">
-                      <span className="block font-medium truncate">{s.name}</span>
-                      <span className="block text-sm text-gray-500">
-                        {ready === checks.length ? "Everything ready" : `${ready} of ${checks.length} steps done · next: ${next?.toLowerCase()}`}
-                      </span>
-                    </span>
-                    <span className="text-right flex-shrink-0">
-                      <span className={`block font-mono text-sm ${d <= 14 ? "text-red-600" : d <= 30 ? "text-brass" : "text-gray-500"}`}>{d} days</span>
-                      <span className="block text-xs text-gray-400">{short(new Date(s.deadline_date + "T00:00:00"))}</span>
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </Section>
-      )}
-
-      {offset === 0 && chase.length > 0 && (
-        <Section title="Recommenders to chase" hint={`${chase.length}`}>
-          <ul className="flex flex-col">
-            {chase.slice(0, 8).map(({ letter, flag, reason }) => (
-              <li key={letter.id} className="border-b border-line/60 last:border-0">
-                <Link href={`/materials/letters${letter.recommender_id ? `?focus=${letter.recommender_id}` : ""}`} className="flex items-baseline justify-between gap-4 py-3 hover:text-brass">
-                  <span className="min-w-0">
-                    <span className="block font-medium truncate">{letter.recommender_name}: {letter.school_name}</span>
-                    <span className="block text-sm text-gray-500">{reason}</span>
-                  </span>
-                  <span className={`text-xs whitespace-nowrap ${flag === "overdue" ? "text-red-600" : "text-brass"}`}>{FLAG_LABEL[flag]}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          {chase.length > 8 && <span className="text-xs text-gray-400">and {chase.length - 8} more on the Letters tab</span>}
-        </Section>
-      )}
-
-      <Section title={offset === 0 ? "On your plate" : "Scheduled"} hint={weekCount === 0 && overdue.length === 0 ? undefined : `${weekCount} this week`}>
-        {offset >= 0 && overdue.length > 0 && (
-          <div className="flex flex-col">
-            <h3 className="font-sans text-sm text-red-600 mb-1">Overdue</h3>
-            {overdue.slice(0, 8).map((i, idx) => (
-              <Link key={idx} href={i.href} className="flex justify-between gap-4 py-2 border-b border-line/60 last:border-0 hover:text-brass">
-                <span className="truncate">{i.label}</span>
-                <span className="text-sm text-red-600 whitespace-nowrap">{rel(daysBetween(today, i.date))}</span>
-              </Link>
-            ))}
-            {overdue.length > 8 && <span className="text-xs text-gray-400 pt-1">and {overdue.length - 8} more</span>}
-          </div>
-        )}
-        {daysWithItems.length === 0 && overdue.length === 0 && (
-          <p className="text-sm text-gray-500">Nothing due {offset === 0 ? "this week" : "that week"}. A good time to move an application forward.</p>
-        )}
-        {daysWithItems.map((d) => (
-          <div key={d.date} className="flex flex-col">
-            <h3 className={`font-sans text-sm mb-1 ${d.date === today ? "text-brass font-medium" : "text-gray-500"}`}>{dayLabel(d.date)}{d.date === today && " (today)"}</h3>
-            {d.items.map((i, idx) => (
-              <Link key={idx} href={i.href} className="flex justify-between gap-4 py-2 border-b border-line/60 last:border-0 hover:text-brass">
-                <span className="truncate">{i.label}</span>
-                <span className="text-sm text-gray-400 whitespace-nowrap">{KIND[i.kind].label}</span>
-              </Link>
-            ))}
-          </div>
-        ))}
-      </Section>
-
-      {research.length > 0 && (
-        <Section
-          title="Research"
-          hint={researchTotal ? `${formatMinutes(researchTotal)} logged` : undefined}
-          action={<CopyUpdate text={researchText} />}
-        >
-          {research.map((r) => {
-            const ls = researchLines(r);
-            return (
-              <div key={r.id} className="flex flex-col gap-1.5">
-                <h3 className="font-sans text-sm flex items-baseline justify-between gap-3">
-                  <Link href={`/research/projects/${r.id}`} className="font-semibold hover:text-brass">{r.title}</Link>
-                  <span className="text-xs text-gray-400">{projectStatusLabel(r.status)}</span>
-                </h3>
-                {ls.length === 0 ? (
-                  <p className="text-sm text-gray-500">Nothing recorded {offset === 0 ? "yet this week" : "that week"}. <Link href={`/research/projects/${r.id}?tab=journal`} className="underline hover:text-cream">Log what you did</Link>.</p>
-                ) : (
-                  <dl className="flex flex-col divide-y divide-line/60 text-sm">
-                    {ls.map((l) => (
-                      <div key={l.k} className="flex gap-4 py-1.5">
-                        <dt className="w-36 flex-shrink-0 text-gray-500">{l.k}</dt>
-                        <dd className="min-w-0 break-words">{l.v}</dd>
-                      </div>
+      {/* Week strip */}
+      <div className="flex flex-col gap-2.5">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-7 sm:overflow-visible sm:px-0 sm:pb-0">
+          {days.map((d) => {
+            const isToday = d.date === today;
+            const date = new Date(d.date + "T00:00:00");
+            const inner = (
+              <>
+                <span className={`text-xs ${isToday ? "font-semibold text-blue-700" : "text-slate-500"}`}>
+                  {date.toLocaleDateString("en-US", { weekday: "short" })}{isToday && " · Today"}
+                </span>
+                <span className={`text-lg font-semibold tabular-nums ${isToday ? "text-blue-700" : "text-slate-900"}`}>{date.getDate()}</span>
+                {d.items.length ? (
+                  <span className="flex flex-wrap items-center gap-1" aria-label={`${d.items.length} ${d.items.length === 1 ? "item" : "items"}`}>
+                    {d.items.slice(0, 5).map((it, i) => (
+                      <i key={i} className={`h-[7px] w-[7px] rounded-full ${KIND[it.kind].dot}`} aria-hidden="true" />
                     ))}
-                  </dl>
+                    {d.items.length > 5 && <span className="text-[11px] text-slate-500">+{d.items.length - 5}</span>}
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-400">Nothing due</span>
                 )}
-              </div>
+              </>
+            );
+            const cls = `flex min-w-[88px] flex-1 flex-col gap-1.5 rounded-lg px-3 py-2.5 ${
+              isToday ? "border-[1.5px] border-blue-600 bg-blue-50" : "border border-slate-200 bg-white"
+            }`;
+            return d.items.length ? (
+              <a key={d.date} href={`#day-${d.date}`} className={`${cls} transition-colors hover:border-slate-300`}>{inner}</a>
+            ) : (
+              <div key={d.date} className={cls}>{inner}</div>
             );
           })}
-        </Section>
-      )}
+        </div>
+        {kindsUsed.length > 0 && (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+            {kindsUsed.map((k) => (
+              <span key={k} className="flex items-center gap-1.5">
+                <i className={`h-2 w-2 rounded-full ${KIND[k].dot}`} aria-hidden="true" />
+                {KIND[k].label}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
 
-      <Fold
-        title="People to contact"
-        summary={[followUps.length && `${followUps.length} to follow up`, replies.length && `${replies.length} in conversation`, reachOut.length && `${reachOut.length} to reach out to`].filter(Boolean).join(" · ") || "Nobody needs attention"}
-        defaultOpen={followUps.length > 0}
-      >
-        <div className="flex flex-col gap-5">
-          {[
-            { title: "Follow up", hint: "Contacted 10 or more days ago, no reply", list: followUps, why: (p: any) => `contacted ${p.last_contacted_on}` },
-            { title: "Keep talking", hint: "They replied or a meeting is booked", list: replies, why: (p: any) => String(p.outreach).replace("_", " ") },
-            { title: "Reach out next", hint: "Best fit at schools closing soon", list: reachOut, why: (p: any) => `${p.accepting === "yes" ? "taking students · " : ""}school due ${p.schools?.deadline_date?.slice(5)}` },
-          ].filter((c) => c.list.length > 0).map((col) => (
-            <div key={col.title} className="flex flex-col">
-              <h3 className="font-sans text-sm mb-1">{col.title} <span className="text-xs text-gray-400">{col.hint}</span></h3>
-              {col.list.map((p: any) => (
-                <Link key={p.id} href="/outreach" className="flex justify-between gap-4 py-2 border-b border-line/60 last:border-0 hover:text-brass">
-                  <span className="truncate">{p.name} <span className="text-gray-500">· {p.schools?.name}</span></span>
-                  <span className="text-sm text-gray-400 whitespace-nowrap">{col.why(p)}</span>
-                </Link>
-              ))}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        {/* Agenda */}
+        <section className={card}>
+          <div className={cardHead}>
+            <h2 className={cardTitle}>{offset === 0 ? "On your plate" : "Scheduled"}</h2>
+            {(weekCount > 0 || overdue.length > 0) && <span className="text-[13px] text-slate-500">{weekCount} this week</span>}
+          </div>
+          {daysWithItems.length === 0 && !(offset >= 0 && overdue.length > 0) && (
+            <p className="px-5 py-6 text-sm text-slate-500">
+              Nothing due {offset === 0 ? "this week" : "that week"}. A good time to move an application forward.
+            </p>
+          )}
+          {offset >= 0 && overdue.length > 0 && (
+            <div className="pb-1">
+              <h3 className="px-5 pb-1 pt-3 text-xs font-semibold uppercase tracking-[0.04em] text-red-700">Overdue</h3>
+              <ul className="px-2">
+                {overdue.slice(0, 8).map((i, idx) => (
+                  <li key={idx}>
+                    <Link href={i.href} className={rowLink}>
+                      <i className={`h-[7px] w-[7px] flex-shrink-0 rounded-full ${KIND[i.kind].dot}`} aria-hidden="true" />
+                      <span className="min-w-0 flex-1 truncate">{i.label}</span>
+                      <span className="whitespace-nowrap text-xs text-red-700">{rel(daysBetween(today, i.date))}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              {overdue.length > 8 && <p className="px-5 pt-1 text-xs text-slate-500">and {overdue.length - 8} more</p>}
+            </div>
+          )}
+          {daysWithItems.map((d) => (
+            <div key={d.date} id={`day-${d.date}`} className="scroll-mt-20 pb-1 last:pb-2">
+              <h3 className={`px-5 pb-1 pt-3 text-xs font-semibold uppercase tracking-[0.04em] ${d.date === today ? "text-blue-700" : "text-slate-500"}`}>
+                {dayLabel(d.date)}{d.date === today && " · Today"}
+              </h3>
+              <ul className="px-2">
+                {d.items.map((i, idx) => (
+                  <li key={idx}>
+                    <Link href={i.href} className={rowLink}>
+                      <i className={`h-[7px] w-[7px] flex-shrink-0 rounded-full ${KIND[i.kind].dot}`} aria-hidden="true" />
+                      <span className="min-w-0 flex-1 truncate">{i.label}</span>
+                      <span className="whitespace-nowrap text-xs text-slate-500">{KIND[i.kind].label}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
-        </div>
-      </Fold>
+        </section>
 
-      <p className="text-sm text-gray-500 border-t border-line pt-4">
-        Last week: {doneLast} task{doneLast === 1 ? "" : "s"} done · {contactedLast} professor{contactedLast === 1 ? "" : "s"} contacted · {winsLast} win{winsLast === 1 ? "" : "s"}
-      </p>
+        {/* Side column */}
+        <div className="flex min-w-0 flex-col gap-4">
+          {countdown.length > 0 && (
+            <section className={card}>
+              <div className={cardHead}>
+                <h2 className={cardTitle}>Application deadlines<span className={hintText}>· next 90 days</span></h2>
+              </div>
+              <ul className="px-2 py-1.5">
+                {countdown.map(({ s, days: d, checks, ready }) => {
+                  const next = nextStep(checks);
+                  const allDone = ready === checks.length;
+                  return (
+                    <li key={s.id}>
+                      <Link href={`/schools/${s.id}?tab=application`} className="flex flex-col gap-1.5 rounded-md px-3 py-2.5 transition-colors hover:bg-slate-50">
+                        <span className="flex items-baseline justify-between gap-3">
+                          <span className="truncate text-sm font-semibold text-slate-900">{s.name}</span>
+                          <span className={`flex-shrink-0 text-xs font-semibold tabular-nums ${d <= 14 ? "text-red-700" : d <= 30 ? "text-blue-700" : "text-slate-500"}`}>
+                            {d} {d === 1 ? "day" : "days"}
+                          </span>
+                        </span>
+                        <span className="h-1 rounded-full bg-slate-100">
+                          <span className={`block h-1 rounded-full ${allDone ? "bg-emerald-600" : "bg-blue-600"}`} style={{ width: `${Math.round((ready / checks.length) * 100)}%` }} />
+                        </span>
+                        <span className={`text-xs ${allDone ? "text-emerald-700" : "text-slate-500"}`}>
+                          {allDone ? "Everything ready" : `${ready} of ${checks.length} steps · next: ${next?.toLowerCase()}`}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+
+          {offset === 0 && chase.length > 0 && (
+            <section className={card}>
+              <div className={cardHead}>
+                <h2 className={cardTitle}>Recommenders to chase<span className={hintText}>· {chase.length}</span></h2>
+              </div>
+              <ul className="px-2 py-1.5">
+                {chase.slice(0, 8).map(({ letter, flag, reason }) => (
+                  <li key={letter.id}>
+                    <Link
+                      href={`/materials/letters${letter.recommender_id ? `?focus=${letter.recommender_id}` : ""}`}
+                      className="flex items-start justify-between gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-slate-50"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-slate-900">{letter.recommender_name}: {letter.school_name}</span>
+                        <span className="block text-xs text-slate-500">{reason}</span>
+                      </span>
+                      <span className={`whitespace-nowrap text-xs font-medium ${flag === "overdue" ? "text-red-700" : "text-blue-700"}`}>{FLAG_LABEL[flag]}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              {chase.length > 8 && <p className="px-5 pb-3 text-xs text-slate-500">and {chase.length - 8} more on the Letters tab</p>}
+            </section>
+          )}
+
+          <section className={`${card} flex flex-col gap-3 px-5 py-4`}>
+            <h2 className={cardTitle}>Last week</h2>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {[
+                { n: doneLast, label: doneLast === 1 ? "task done" : "tasks done" },
+                { n: contactedLast, label: contactedLast === 1 ? "professor contacted" : "professors contacted" },
+                { n: winsLast, label: winsLast === 1 ? "win" : "wins" },
+              ].map((x) => (
+                <div key={x.label} className="rounded-md bg-slate-50 px-2 py-2.5">
+                  <div className="text-xl font-semibold tabular-nums text-slate-900">{x.n}</div>
+                  <div className="text-xs text-slate-500">{x.label}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
+
+      {research.length > 0 && (
+        <section className={card}>
+          <div className={cardHead}>
+            <h2 className={cardTitle}>Research{researchTotal ? <span className={hintText}>· {formatMinutes(researchTotal)} logged</span> : null}</h2>
+            <CopyUpdate text={researchText} />
+          </div>
+          <div className="grid gap-5 px-5 py-4 md:grid-cols-2">
+            {research.map((r) => {
+              const ls = researchLines(r);
+              return (
+                <div key={r.id} className="flex min-w-0 flex-col gap-1.5">
+                  <h3 className="flex items-baseline justify-between gap-3 text-sm">
+                    <Link href={`/research/projects/${r.id}`} className="font-semibold text-slate-900 hover:text-blue-700">{r.title}</Link>
+                    <span className="text-xs text-slate-500">{projectStatusLabel(r.status)}</span>
+                  </h3>
+                  {ls.length === 0 ? (
+                    <p className="text-[13px] text-slate-500">
+                      Nothing recorded {offset === 0 ? "yet this week" : "that week"}.{" "}
+                      <Link href={`/research/projects/${r.id}?tab=journal`} className="font-medium text-blue-600 hover:text-blue-700">Log what you did</Link>.
+                    </p>
+                  ) : (
+                    <dl className="flex flex-col text-[13px]">
+                      {ls.map((l) => (
+                        <div key={l.k} className="flex gap-4 py-1">
+                          <dt className="w-32 flex-shrink-0 text-slate-500">{l.k}</dt>
+                          <dd className="min-w-0 break-words text-slate-900">{l.v}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <section className={`${card} px-5 py-3`}>
+        <Fold
+          title="People to contact"
+          summary={[followUps.length && `${followUps.length} to follow up`, replies.length && `${replies.length} in conversation`, reachOut.length && `${reachOut.length} to reach out to`].filter(Boolean).join(" · ") || "Nobody needs attention"}
+          defaultOpen={followUps.length > 0}
+        >
+          <div className="grid gap-5 md:grid-cols-3">
+            {[
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              { title: "Follow up", hint: "Contacted 10 or more days ago, no reply", list: followUps, why: (p: any) => `contacted ${p.last_contacted_on}` },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              { title: "Keep talking", hint: "They replied or a meeting is booked", list: replies, why: (p: any) => String(p.outreach).replace("_", " ") },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              { title: "Reach out next", hint: "Best fit at schools closing soon", list: reachOut, why: (p: any) => `${p.accepting === "yes" ? "taking students · " : ""}school due ${p.schools?.deadline_date?.slice(5)}` },
+            ].filter((c) => c.list.length > 0).map((col) => (
+              <div key={col.title} className="flex min-w-0 flex-col">
+                <h3 className="text-[13px] font-semibold text-slate-900">{col.title}</h3>
+                <p className="mb-1.5 text-xs text-slate-500">{col.hint}</p>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {col.list.map((p: any) => (
+                  <Link key={p.id} href="/outreach" className="flex flex-col rounded-md py-1.5 text-[13px] transition-colors hover:text-blue-700">
+                    <span className="truncate text-slate-900">{p.name} <span className="text-slate-500">· {p.schools?.name}</span></span>
+                    <span className="text-xs text-slate-500">{col.why(p)}</span>
+                  </Link>
+                ))}
+              </div>
+            ))}
+          </div>
+        </Fold>
+      </section>
     </main>
   );
 }
