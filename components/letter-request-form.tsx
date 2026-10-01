@@ -10,8 +10,8 @@ import type { LetterRecord } from "@/lib/letters";
 export type PersonOpt = { id: string; name: string; email: string | null };
 export type SchoolOpt = { id: string; name: string; deadline_date: string | null; applying: boolean | null };
 
-const field = "border rounded px-2 py-1.5 text-sm w-full";
-const primary = "bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass";
+const field = "h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20";
+const primary = "h-9 rounded-md bg-blue-600 px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50";
 const fmt = (d: string) => new Date(d + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 
 export function LetterRequestForm({ people, schools, letters }: { people: PersonOpt[]; schools: SchoolOpt[]; letters: LetterRecord[] }) {
@@ -49,39 +49,51 @@ export function LetterRequestForm({ people, schools, letters }: { people: Person
   };
 
   return (
-    <details className="rounded border border-line">
-      <summary className="cursor-pointer px-4 py-2.5 text-sm font-medium hover:text-brass focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass">Request letters</summary>
-      <form onSubmit={submit} className="flex flex-col gap-4 border-t border-line p-4">
+    <details className="group rounded-lg border border-slate-200 bg-white">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 [&::-webkit-details-marker]:hidden">
+        <span className="text-[15px] font-semibold text-slate-900">Request letters</span>
+        <span className="inline-flex h-8 items-center rounded-md bg-blue-600 px-3 text-[13px] font-semibold text-white group-open:bg-slate-100 group-open:text-slate-700">
+          <span className="group-open:hidden">+ Request letters</span><span className="hidden group-open:inline">Close</span>
+        </span>
+      </summary>
+      <form onSubmit={submit} className="flex flex-col gap-4 border-t border-slate-200 p-5">
         {people.length === 0 ? (
-          <p className="text-sm text-gray-500">Add a recommender on the <Link href="/people" className="text-brass hover:underline">People page</Link> first.</p>
+          <p className="text-[13px] text-slate-600">Add a recommender on the <Link href="/people" className="font-medium text-blue-600 hover:text-blue-700">People page</Link> first.</p>
         ) : (
           <>
-            <label className="flex flex-col gap-1 text-sm text-gray-500 max-w-sm">
-              Recommender
-              <select value={recommender} onChange={(e) => { setRecommender(e.target.value); setDone(null); }} className={field + " bg-transparent text-cream"}>
-                <option value="">Choose a recommender</option>
-                {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+                Recommender
+                <select value={recommender} onChange={(e) => { setRecommender(e.target.value); setDone(null); }} className={field}>
+                  <option value="">Choose a recommender</option>
+                  {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+                Letter deadline for all
+                <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className={field} />
+                <span className="font-normal text-slate-500">Leave blank to use each school&rsquo;s own deadline.</span>
+              </label>
+            </div>
 
             <div className="flex flex-col gap-2">
-              <label className="flex flex-col gap-1 text-sm text-gray-500 max-w-sm">
+              <label className="flex flex-col gap-1 text-xs font-medium text-slate-600 sm:max-w-sm">
                 Find a school
-                <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} className={field + " text-cream"} />
+                <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} className={field} />
               </label>
-              <ul className="max-h-56 overflow-auto rounded border border-line divide-y divide-line/60">
-                {shown.length === 0 && <li className="px-3 py-2 text-sm text-gray-500">No schools match.</li>}
+              <ul className="max-h-56 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200">
+                {shown.length === 0 && <li className="px-3 py-2 text-sm text-slate-500">No schools match.</li>}
                 {shown.map((s) => {
                   const already = taken.has(s.id);
                   return (
                     <li key={s.id}>
-                      <label className={`flex items-start gap-2 px-3 py-2 text-sm ${already ? "opacity-50" : "cursor-pointer hover:bg-surface-raised"}`}>
-                        <input type="checkbox" className="mt-1 shrink-0" disabled={already} checked={!already && chosen.includes(s.id)} onChange={() => toggle(s.id)} />
-                        <span className="min-w-0 break-words">
+                      <label className={`flex items-start gap-2.5 px-3 py-2 text-sm ${already ? "opacity-50" : "cursor-pointer hover:bg-slate-50"}`}>
+                        <input type="checkbox" className="mt-0.5 h-4 w-4 flex-shrink-0 accent-blue-600" disabled={already} checked={!already && chosen.includes(s.id)} onChange={() => toggle(s.id)} />
+                        <span className="min-w-0 break-words text-slate-900">
                           {s.name}
-                          {s.applying && <span className="ml-2 text-xs rounded border border-brass text-brass px-1.5 py-0.5">applying</span>}
-                          {s.deadline_date && <span className="ml-2 text-xs text-gray-500">due {fmt(s.deadline_date)}</span>}
-                          {already && <span className="ml-2 text-xs text-gray-400">{" "}(already requested)</span>}
+                          {s.applying && <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">Applying</span>}
+                          {s.deadline_date && <span className="ml-2 text-xs text-slate-500">due {fmt(s.deadline_date)}</span>}
+                          {already && <span className="ml-2 text-xs text-slate-500">(already requested)</span>}
                         </span>
                       </label>
                     </li>
@@ -90,16 +102,10 @@ export function LetterRequestForm({ people, schools, letters }: { people: Person
               </ul>
             </div>
 
-            <label className="flex flex-col gap-1 text-sm text-gray-500 max-w-sm">
-              Letter deadline for all
-              <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className={field + " text-cream"} />
-              <span className="text-xs text-gray-400">Leave blank to use each school&rsquo;s own deadline.</span>
-            </label>
-
             <div className="flex flex-wrap items-center gap-3">
               <button type="submit" disabled={pending || !recommender || picked.length === 0} className={primary}>Request letters ({picked.length})</button>
-              {done && <span role="status" className="text-xs text-teal-600">{done}</span>}
-              {error && <span role="alert" className="text-xs text-red-600">{error}</span>}
+              {done && <span role="status" className="text-xs text-emerald-700">{done}</span>}
+              {error && <span role="alert" className="text-xs text-red-700">{error}</span>}
             </div>
           </>
         )}

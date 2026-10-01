@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { htmlToText, portalText, toEditorHtml } from "@/lib/rich-text";
 
-const btn = "rounded border border-line px-3 py-1.5 text-sm text-gray-500 hover:text-cream disabled:opacity-50";
+const btn = "h-9 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-900 transition-colors hover:bg-slate-50 disabled:opacity-50";
 type Feedback = { key: "plain" | "portal"; ok: boolean } | null;
 
 export function StatementExport({ statementId, text, beforeExport }: { statementId: string; text: string; beforeExport: () => Promise<boolean> }) {
@@ -53,12 +53,12 @@ export function StatementExport({ statementId, text, beforeExport }: { statement
 
   return (
     <div className="flex flex-col gap-2 text-sm">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <button type="button" disabled={busy} onClick={download} className={btn}>Download Word (.docx)</button>
         <button type="button" disabled={busy} onClick={print} className={btn}>Print or save as PDF</button>
         <button type="button" onClick={() => copy("plain", htmlToText(toEditorHtml(text)))} className={btn}>{label("plain", "Copy as plain text")}</button>
         <button type="button" onClick={() => copy("portal", portalText(text, { straightQuotes: straight }))} className={btn}>{label("portal", "Copy for a portal")}</button>
-        <label className="flex items-center gap-1.5 text-xs text-gray-500">
+        <label className="col-span-2 flex items-center gap-1.5 pt-1 text-xs text-slate-600">
           <input
             type="checkbox" checked={straight}
             onChange={(e) => { setStraight(e.target.checked); try { localStorage.setItem("portal-straight-quotes", e.target.checked ? "1" : "0"); } catch { /* storage unavailable */ } }}
@@ -66,9 +66,9 @@ export function StatementExport({ statementId, text, beforeExport }: { statement
           Use straight quotes
         </label>
       </div>
-      {feedback && !feedback.ok && <p className="text-xs text-red-600" role="alert">Copy failed, select the text and copy it yourself.</p>}
-      {message && <p className="text-xs text-red-600" role="alert">{message}</p>}
-      <p className="text-xs text-gray-400">Plain text with single blank lines between paragraphs, ready to paste into an application form.</p>
+      {feedback && !feedback.ok && <p className="text-xs text-red-700" role="alert">Copy failed, select the text and copy it yourself.</p>}
+      {message && <p className="text-xs text-red-700" role="alert">{message}</p>}
+      <p className="text-xs text-slate-500">"Copy for a portal": plain text with single blank lines between paragraphs, ready to paste into an application form.</p>
     </div>
   );
 }

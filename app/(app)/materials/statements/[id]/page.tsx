@@ -14,16 +14,16 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
     supabase.from("statement_snapshots").select("id, body, words, note, created_at").eq("statement_id", id).order("created_at", { ascending: false }),
   ]);
   if (!user || user.id !== OWNER_USER_ID) {
-    return <main className="p-4 md:p-8 max-w-xl mx-auto text-sm text-gray-500">Statements are only available to the workspace owner.</main>;
+    return <main className="mx-auto max-w-xl p-4 text-sm text-slate-500 md:p-8">Statements are only available to the workspace owner.</main>;
   }
-  if (!statement) return <main className="p-4 md:p-8 max-w-3xl mx-auto text-sm text-gray-500">Statement not found.</main>;
+  if (!statement) return <main className="mx-auto max-w-3xl p-4 text-sm text-slate-500 md:p-8">Statement not found.</main>;
   let schoolName: string | null = null;
   if (statement.school_id) {
     const { data: school } = await supabase.from("schools").select("name").eq("id", statement.school_id).single();
     schoolName = school?.name ?? null;
   }
   return (
-    <main className="p-4 md:p-8 max-w-3xl mx-auto">
+    <main className="mx-auto w-full max-w-[1200px] p-4 md:p-8">
       <StatementEditor statement={{ ...(statement as Omit<EditorStatement, "schoolName">), schoolName }} snapshots={((snapshots ?? []) as Omit<EditorSnapshot, "html">[]).map((s) => ({ ...s, html: renderRich(s.body) }))} />
     </main>
   );

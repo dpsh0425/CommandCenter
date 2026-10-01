@@ -1,51 +1,29 @@
-import { StatementsList } from "@/components/statements-list";
+import { createClient } from "@/lib/supabase/server";
+import { OWNER_USER_ID } from "@/lib/owner";
+import { StatementsList, type StatementRow } from "@/components/statements-list";
 import { MATERIALS_TABS, PageHeader, SubNav } from "@/components/ui";
 
 export const metadata = { title: "Statements" };
 
-export default function StatementsPage() {
-  const mockStatements = [
-    {
-      id: "1",
-      kind: "sop",
-      title: "Personal statement: Stanford University",
-      status: "Sent",
-      words: 650,
-      word_limit: 1000,
-      school_id: "sch_1",
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      kind: "sop",
-      title: "Statement of purpose (general draft)",
-      status: "Draft",
-      words: 420,
-      word_limit: 800,
-      school_id: null,
-      updated_at: new Date().toISOString(),
-    },
-  ];
-
-  const mockSchools = [
-    { id: "sch_1", name: "Stanford University" },
-    { id: "sch_2", name: "MIT" },
-    { id: "sch_3", name: "Harvard University" },
-  ];
-
+export default async function StatementsPage() {
+  const supabase = await createClient();
+  const [{ data: { user } }, { data: statements }, { data: schools }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from("statements").select("id, kind, title, status, words, word_limit, school_id, updated_at").order("updated_at", { ascending: false }),
+    supabase.from("schools").select("id, name, applying").order("name"),
+  ]);
+  if (!user || user.id !== OWNER_USER_ID) {
+    return <main className="mx-auto max-w-xl p-4 text-sm text-slate-500 md:p-8">Statements are only available to the workspace owner.</main>;
+  }
+  // Schools you are applying to come first in the picker.
+  const ordered = [...(schools ?? [])].sort((a, b) => Number(b.applying) - Number(a.applying) || a.name.localeCompare(b.name));
   return (
-    <main className="p-4 md:p-8 max-w-3xl mx-auto flex flex-col gap-6">
+    <main className="mx-auto flex w-full max-w-[1040px] flex-col gap-6 p-4 md:p-8">
       <div className="flex flex-col gap-4">
-        <PageHeader
-          title="Materials"
-          subtitle="Draft personal statements and SOPs tailored to each school."
-        />
+        <PageHeader eyebrow="Materials" title="Statements" subtitle="Write your statements here: a general draft, then a tailored version for each school." />
         <SubNav items={MATERIALS_TABS} current="/materials/statements" />
       </div>
-      <StatementsList
-        statements={mockStatements}
-        schools={mockSchools}
-      />
+      <StatementsList statements={(statements ?? []) as StatementRow[]} schools={ordered.map((s) => ({ id: s.id, name: s.name }))} />
     </main>
   );
 }

@@ -24,8 +24,32 @@ export type EditorStatement = {
 };
 export type EditorSnapshot = { id: string; body: string; words: number; note: string | null; created_at: string; html: string };
 
-const field = "border rounded px-2 py-1.5 text-sm w-full";
-const primary = "bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm disabled:opacity-50";
+const field = "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20";
+const primary = "h-9 whitespace-nowrap rounded-md bg-blue-600 px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60";
+const quiet = "h-9 rounded-md px-3 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900";
+const card = "rounded-lg border border-slate-200 bg-white";
+const cardHead = "flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3";
+const smallAction = "h-7 rounded-md px-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:opacity-50";
+
+/** A button that asks in place before doing something that can't be undone easily. */
+function ConfirmButton({ label, question, confirmLabel, onConfirm, disabled, className = smallAction, tone = "danger" }: {
+  label: string; question: string; confirmLabel: string; onConfirm: () => void; disabled?: boolean; className?: string; tone?: "danger" | "primary";
+}) {
+  const [asking, setAsking] = useState(false);
+  if (!asking) return <button type="button" disabled={disabled} onClick={() => setAsking(true)} className={className}>{label}</button>;
+  return (
+    <span role="group" aria-label={question} className={`inline-flex flex-wrap items-center gap-1.5 rounded-md py-1 pl-2.5 pr-1 text-xs ${tone === "danger" ? "bg-red-50 text-red-800" : "bg-blue-50 text-blue-900"}`}>
+      {question}
+      <button
+        type="button" disabled={disabled} onClick={() => { setAsking(false); onConfirm(); }}
+        className={`h-6 rounded px-2 font-semibold text-white disabled:opacity-60 ${tone === "danger" ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"}`}
+      >
+        {confirmLabel}
+      </button>
+      <button type="button" onClick={() => setAsking(false)} className="h-6 rounded px-2 font-medium text-slate-700 hover:bg-white">Keep</button>
+    </span>
+  );
+}
 
 export function StatementEditor({ statement, snapshots }: { statement: EditorStatement; snapshots: EditorSnapshot[] }) {
   const router = useRouter();
@@ -102,175 +126,221 @@ export function StatementEditor({ statement, snapshots }: { statement: EditorSta
   }
   const saveLabel = saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving…" : saveState === "dirty" ? "Unsaved changes" : saveState === "conflict" ? "Not saved: changed elsewhere" : "Could not save. Copy your text before leaving.";
 
+  const viewed = snapshots.find((s) => s.id === viewing) ?? null;
+  const compared = snapshots.find((s) => s.id === comparing) ?? null;
+  const stamp = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+  const restore = (s: EditorSnapshot) =>
+    run(async () => { const r = await restoreSnapshot(s.id); if (!r.ok) return r; lastSaved.current = r.data.body; setText(r.data.body); version.current = r.data.version; setResetKey((k) => k + 1); unsaved.current = false; conflict.current = false; setSaveState("saved"); clearBackup(); }, () => router.refresh());
+
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <Link href="/materials/statements" className="text-xs text-gray-500 hover:text-cream self-start py-2 -my-2">← Statements</Link>
-        <h1 className="text-3xl leading-tight break-words">{statement.title}</h1>
-        <p className="text-sm text-gray-500">
-          {[statementKindLabel(statement.kind), statement.schoolName ? (
-            <Link key="s" href={`/schools/${statement.school_id}?tab=application`} className="text-brass hover:underline">{statement.schoolName}</Link>
-          ) : "General draft"].reduce<React.ReactNode[]>((a, x, i) => (i ? [...a, " · ", x] : [x]), [])}
-        </p>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
+        <Link href="/materials/statements" className="self-start text-[13px] font-medium text-slate-600 hover:text-slate-900">← Statements</Link>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <h1 className="break-words text-[26px] font-semibold leading-[34px] tracking-tight text-slate-900">{statement.title}</h1>
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="rounded-md bg-blue-50 px-2 py-0.5 text-blue-700">{statementKindLabel(statement.kind)}</span>
+              {statement.schoolName ? (
+                <Link href={`/schools/${statement.school_id}?tab=application`} className="rounded-md bg-slate-100 px-2 py-0.5 font-medium text-slate-800 hover:bg-slate-200">{statement.schoolName} ↗</Link>
+              ) : (
+                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-slate-600">General draft</span>
+              )}
+              {statement.sent_on && <span className="text-slate-500">Sent {new Date(statement.sent_on + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>}
+            </div>
+          </div>
+          <div className="flex flex-col items-start gap-1 sm:items-end">
+            <div className="flex overflow-hidden rounded-md border border-slate-300" role="group" aria-label="Status">
+              {STATEMENT_STATUS.map((s, i) => (
+                <button
+                  key={s.key} type="button" disabled={pending} onClick={() => run(() => setStatementStatus(statement.id, s.key), () => router.refresh())}
+                  className={`h-9 px-3.5 text-[13px] transition-colors disabled:opacity-60 ${i > 0 ? "border-l border-slate-300" : ""} ${
+                    statement.status === s.key ? "bg-blue-600 font-semibold text-white" : "bg-white font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                  aria-pressed={statement.status === s.key}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <p className="max-w-xs text-[11px] text-slate-500 sm:text-right">{statement.school_id && statement.kind === "statement_of_purpose" ? "Final or Sent ticks the statement on the school's readiness checklist." : "Final means it is ready to submit."}</p>
+          </div>
+        </div>
+        {error && <p role="alert" className="text-xs text-red-700">{error}</p>}
       </div>
 
-      {statement.prompt && (
-        <details open className="border-l-2 border-line pl-4">
-          <summary className="cursor-pointer font-sans text-xs font-semibold text-gray-400 mb-1">The prompt</summary>
-          <p className="text-sm text-gray-500 whitespace-pre-line">{statement.prompt}</p>
-        </details>
-      )}
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-w-0 flex-col gap-3">
+          {statement.prompt && (
+            <details open className={`${card} px-4 py-3`}>
+              <summary className="cursor-pointer text-xs font-semibold text-slate-600">The prompt</summary>
+              <p className="mt-2 whitespace-pre-line text-[13px] text-slate-600">{statement.prompt}</p>
+            </details>
+          )}
 
-      <section
-        className={focus ? "fixed inset-0 z-50 bg-ink overflow-auto p-4 md:px-[12%] md:py-8 flex flex-col gap-1" : "flex flex-col gap-1"}
-        onKeyDown={(e) => { if (focus && e.key === "Escape" && !e.defaultPrevented) setFocus(false); }}
-      >
-        {focus && (
-          <div className="flex justify-end mb-2">
-            <button type="button" onClick={() => setFocus(false)} className="text-xs text-gray-500 hover:text-cream">Exit focus mode</button>
+          {(viewed || compared) && (
+            <section className={`${card} border-blue-200`}>
+              <div className={cardHead}>
+                <h2 className="text-[13px] font-semibold text-slate-900">
+                  {compared ? <>Comparing &ldquo;{compared.note ?? "Saved version"}&rdquo; with your current text</> : <>Viewing &ldquo;{viewed!.note ?? "Saved version"}&rdquo;</>}
+                </h2>
+                <button type="button" onClick={() => { setViewing(null); setComparing(null); }} className="h-8 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-900 hover:bg-slate-50">Close</button>
+              </div>
+              <div className="px-4 pb-4">
+                {compared ? <VersionDiff before={compared.body} after={text} /> : <RichHtml html={viewed!.html} className="paper paper-page mt-3 max-h-96 overflow-auto" />}
+              </div>
+            </section>
+          )}
+
+          <section
+            className={focus ? "fixed inset-0 z-50 flex flex-col gap-1 overflow-auto bg-white p-4 md:px-[12%] md:py-8" : `${card} flex flex-col gap-1 p-3 md:p-4`}
+            onKeyDown={(e) => { if (focus && e.key === "Escape" && !e.defaultPrevented) setFocus(false); }}
+          >
+            {focus && (
+              <div className="mb-2 flex justify-end">
+                <button type="button" onClick={() => setFocus(false)} className="h-8 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-900 hover:bg-slate-50">Exit focus mode</button>
+              </div>
+            )}
+            {backup.offer && (
+              <div className="mb-2 flex flex-wrap items-center gap-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-slate-900" role="status">
+                <span>We found changes from {new Date(backup.offer.savedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} on this device that were never saved. Restore them?</span>
+                <button type="button" className={primary} onClick={() => { const o = backup.offer; if (o) { setText(o.html); setResetKey((k) => k + 1); } clearBackup(); }}>Restore</button>
+                <button type="button" className={quiet} onClick={clearBackup}>Discard</button>
+              </div>
+            )}
+            {saveState === "conflict" && (
+              <div className="mb-2 flex flex-wrap items-center gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert">
+                <span>This was changed somewhere else, so your last edits were not saved. Copy your text, then reload to see the latest.</span>
+                <button type="button" className={primary} onClick={() => { try { void navigator.clipboard.writeText(htmlToText(text)); } catch { /* ignore */ } }}>Copy my text</button>
+                <button type="button" className={quiet} onClick={() => window.location.reload()}>Reload</button>
+              </div>
+            )}
+            <RichEditorLazy
+              value={text} onChange={(html) => { if (html !== latest.current) setText(html); }} label="Statement text" variant="full"
+              placeholder="Write here. It saves on its own." resetKey={resetKey} printable
+            />
+            <div className="flex flex-wrap items-start justify-between gap-3 border-t border-slate-100 pt-2.5 text-xs">
+              <StatementMetrics text={text} wordLimit={limit} charLimit={charLimit} />
+              <span className="flex items-center gap-3">
+                {!focus && <button type="button" onClick={() => setFocus(true)} className="font-medium text-blue-600 hover:text-blue-700">Focus mode</button>}
+                <span className={saveState === "error" || saveState === "conflict" ? "font-medium text-red-700" : saveState === "saved" ? "text-slate-500" : "text-blue-700"} aria-live="polite">{saveLabel}</span>
+              </span>
+            </div>
+          </section>
+
+          <div className={`${card} px-4 py-3`}>
+            <WritingHintsPanel text={text} />
           </div>
-        )}
-        {backup.offer && (
-          <div className="flex flex-wrap items-center gap-3 text-sm border border-brass rounded px-3 py-2 mb-2" role="status">
-            <span>We found changes from {new Date(backup.offer.savedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} on this device that were never saved. Restore them?</span>
-            <button type="button" className={primary} onClick={() => { const o = backup.offer; if (o) { setText(o.html); setResetKey((k) => k + 1); } clearBackup(); }}>Restore</button>
-            <button type="button" className="text-gray-500 hover:text-cream" onClick={clearBackup}>Discard</button>
-          </div>
-        )}
-        {saveState === "conflict" && (
-          <div className="flex flex-wrap items-center gap-3 text-sm border border-red-600 rounded px-3 py-2 mb-2" role="alert">
-            <span>This was changed somewhere else, so your last edits were not saved. Copy your text, then reload to see the latest.</span>
-            <button type="button" className={primary} onClick={() => { try { void navigator.clipboard.writeText(htmlToText(text)); } catch { /* ignore */ } }}>Copy my text</button>
-            <button type="button" className="text-gray-500 hover:text-cream" onClick={() => window.location.reload()}>Reload</button>
-          </div>
-        )}
-        <RichEditorLazy
-          value={text} onChange={(html) => { if (html !== latest.current) setText(html); }} label="Statement text" variant="full"
-          placeholder="Write here. It saves on its own." resetKey={resetKey} printable
-        />
-        <div className="flex flex-wrap items-baseline justify-between gap-3 text-xs">
-          <StatementMetrics text={text} wordLimit={limit} charLimit={charLimit} />
-          <span className="flex items-baseline gap-3">
-            {!focus && <button type="button" onClick={() => setFocus(true)} className="text-gray-500 hover:text-cream">Focus mode</button>}
-            <span className={saveState === "error" || saveState === "conflict" ? "text-red-600" : "text-gray-400"} aria-live="polite">{saveLabel}</span>
-          </span>
         </div>
-        <WritingHintsPanel text={text} />
-      </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-sans text-[15px] font-semibold border-b border-line pb-2">Status</h2>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          {STATEMENT_STATUS.map((s) => (
-            <button
-              key={s.key} disabled={pending} onClick={() => run(() => setStatementStatus(statement.id, s.key), () => router.refresh())}
-              className={`rounded border px-3 py-1 ${statement.status === s.key ? "border-brass text-cream font-medium" : "border-line text-gray-500 hover:text-cream"}`}
-              aria-pressed={statement.status === s.key}
+        <aside className="flex flex-col gap-3">
+          <section className={card}>
+            <div className={cardHead}>
+              <h2 className="text-[15px] font-semibold text-slate-900">Versions<span className="ml-1 font-normal text-slate-500">· {snapshots.length}</span></h2>
+            </div>
+            <form
+              className="flex gap-2 border-b border-slate-100 px-4 py-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const note = String(new FormData(form).get("note") ?? "");
+                run(async () => {
+                  // Make sure the latest text is stored before it is copied into a version.
+                  const r = await saveStatementBody(statement.id, latest.current, version.current);
+                  if (!r.ok) {
+                    if (r.reason === "stale") { conflict.current = true; setSaveState("conflict"); return fail("Not saved: this was changed somewhere else."); }
+                    return fail(r.message);
+                  }
+                  version.current = r.version; lastSaved.current = latest.current; unsaved.current = false; setSaveState("saved"); clearBackup();
+                  return await saveSnapshot(statement.id, note);
+                }, () => { form.reset(); router.refresh(); });
+              }}
             >
-              {s.label}
-            </button>
-          ))}
-          {statement.sent_on && <span className="text-xs text-gray-400">Sent {statement.sent_on}</span>}
-        </div>
-        <p className="text-xs text-gray-400">{statement.school_id && statement.kind === "statement_of_purpose" ? "Marking this Final or Sent ticks the statement on the school's readiness checklist." : "Final means it is ready to submit."}</p>
-      </section>
+              <input name="note" placeholder="Name this version" className={`${field} h-9 min-w-0 flex-1 py-0`} aria-label="Version note" />
+              <button disabled={pending} className={primary}>Save</button>
+            </form>
+            {snapshots.length === 0 ? (
+              <p className="px-4 py-3 text-[13px] text-slate-500">No saved versions yet. Save one before a big rewrite so you can go back.</p>
+            ) : (
+              <ol className="px-2 py-1.5">
+                {snapshots.map((s, i) => {
+                  const active = viewing === s.id || comparing === s.id;
+                  return (
+                    <li key={s.id} className={`flex flex-col gap-1 rounded-md px-2 py-2 ${active ? "bg-blue-50" : ""}`}>
+                      <div className="flex gap-2.5">
+                        <span aria-hidden className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${i === 0 ? "bg-blue-600" : "bg-slate-300"}`} />
+                        <span className="min-w-0">
+                          <span className="block truncate text-[13px] font-semibold text-slate-900">{s.note ?? "Saved version"}</span>
+                          <span className="block text-xs text-slate-500">{stamp(s.created_at)} · {s.words.toLocaleString()} words</span>
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-0.5 pl-4">
+                        <button type="button" onClick={() => { setComparing(null); setViewing(viewing === s.id ? null : s.id); }} className={smallAction}>{viewing === s.id ? "Hide" : "View"}</button>
+                        <button type="button" onClick={() => { setViewing(null); setComparing(comparing === s.id ? null : s.id); }} className={`${smallAction} text-blue-600`}>{comparing === s.id ? "Hide compare" : "Compare"}</button>
+                        <ConfirmButton
+                          label="Restore" question="Replace your text with this version? Your current text is saved as a version first." confirmLabel="Restore" tone="primary"
+                          disabled={pending} onConfirm={() => restore(s)}
+                        />
+                        <ConfirmButton
+                          label="Delete" question="Delete this saved version?" confirmLabel="Delete"
+                          disabled={pending} onConfirm={() => run(() => deleteSnapshot(s.id, statement.id), () => router.refresh())}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-sans text-[15px] font-semibold border-b border-line pb-2">Export</h2>
-        <StatementExport statementId={statement.id} text={text} beforeExport={flushSave} />
-      </section>
+          <section className={card}>
+            <div className={cardHead}><h2 className="text-[15px] font-semibold text-slate-900">Export</h2></div>
+            <div className="px-4 py-3">
+              <StatementExport statementId={statement.id} text={text} beforeExport={flushSave} />
+            </div>
+          </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-sans text-[15px] font-semibold border-b border-line pb-2">Versions</h2>
-        <form
-          className="flex flex-wrap gap-2 text-sm"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const form = e.currentTarget;
-            const note = String(new FormData(form).get("note") ?? "");
-            run(async () => {
-              // Make sure the latest text is stored before it is copied into a version.
-              const r = await saveStatementBody(statement.id, latest.current, version.current);
-              if (!r.ok) {
-                if (r.reason === "stale") { conflict.current = true; setSaveState("conflict"); return fail("Not saved: this was changed somewhere else."); }
-                return fail(r.message);
-              }
-              version.current = r.version; lastSaved.current = latest.current; unsaved.current = false; setSaveState("saved"); clearBackup();
-              return await saveSnapshot(statement.id, note);
-            }, () => { form.reset(); router.refresh(); });
-          }}
-        >
-          <input name="note" placeholder="Name this version, e.g. after advisor feedback" className={field + " flex-1 min-w-[14rem]"} aria-label="Version note" />
-          <button disabled={pending} className={primary}>Save a version</button>
-        </form>
-        {snapshots.length === 0 ? (
-          <p className="text-sm text-gray-500">No saved versions yet. Save one before a big rewrite so you can go back.</p>
-        ) : (
-          <ul className="flex flex-col">
-            {snapshots.map((s) => (
-              <li key={s.id} className="border-b border-line/60 last:border-0 py-2.5">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="min-w-0">
-                    <span className="block text-sm truncate">{s.note ?? "Saved version"}</span>
-                    <span className="block text-xs text-gray-400">{new Date(s.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} · {s.words.toLocaleString()} words</span>
-                  </span>
-                  <span className="flex gap-3 text-xs text-gray-500 whitespace-nowrap">
-                    <button onClick={() => setViewing(viewing === s.id ? null : s.id)} className="hover:text-cream">{viewing === s.id ? "Hide" : "View"}</button>
-                    <button onClick={() => setComparing(comparing === s.id ? null : s.id)} className="hover:text-cream">{comparing === s.id ? "Hide compare" : "Compare"}</button>
-                    <button
-                      disabled={pending}
-                      onClick={() => { if (confirm("Replace the current text with this version? Your current text is saved as a version first.")) run(async () => { const r = await restoreSnapshot(s.id); if (!r.ok) return r; lastSaved.current = r.data.body; setText(r.data.body); version.current = r.data.version; setResetKey((k) => k + 1); unsaved.current = false; conflict.current = false; setSaveState("saved"); clearBackup(); }, () => router.refresh()); }}
-                      className="hover:text-brass"
-                    >
-                      Restore
-                    </button>
-                    <button disabled={pending} onClick={() => { if (confirm("Delete this saved version?")) run(() => deleteSnapshot(s.id, statement.id), () => router.refresh()); }} className="hover:text-red-600" aria-label="Delete version">✕</button>
-                  </span>
-                </div>
-                {viewing === s.id && <RichHtml html={s.html} className="paper paper-page max-h-72 overflow-auto mt-2" />}
-                {comparing === s.id && <VersionDiff before={s.body} after={text} />}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+          <details className={`${card} group`}>
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-[13px] font-semibold text-slate-900 [&::-webkit-details-marker]:hidden">
+              Details: title, type, prompt, limits
+              <span aria-hidden className="text-slate-400 transition-transform group-open:rotate-90">›</span>
+            </summary>
+            <form
+              className="grid gap-3 border-t border-slate-100 px-4 py-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const f = new FormData(e.currentTarget); const v = (k: string) => String(f.get(k) ?? "").trim();
+                const wl = Number(v("limit")) || null;
+                const cl = Number(v("charlimit")) || null;
+                setMetaSaved(false);
+                run(() => updateStatementMeta(statement.id, { title: v("title"), kind: v("kind"), prompt: v("prompt") || null, wordLimit: wl, charLimit: cl }), () => { setLimit(wl); setCharLimit(cl); setMetaSaved(true); router.refresh(); });
+              }}
+            >
+              <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">Title<input name="title" defaultValue={statement.title} required className={field} /></label>
+              <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">Type
+                <select name="kind" defaultValue={statement.kind} className={field}>{STATEMENT_KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}</select>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">Word limit<input name="limit" type="number" min={1} defaultValue={statement.word_limit ?? ""} placeholder="No limit" className={field} /></label>
+                <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">Character limit<input name="charlimit" type="number" min={1} defaultValue={statement.char_limit ?? ""} placeholder="No limit" className={field} /></label>
+              </div>
+              <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">The school&rsquo;s prompt<textarea name="prompt" defaultValue={statement.prompt ?? ""} rows={4} placeholder="Paste the question or instructions from the application" className={field} /></label>
+              <div className="flex items-center gap-3">
+                <button disabled={pending} className={primary}>Save details</button>
+                {metaSaved && !pending && <span role="status" className="text-xs text-emerald-700">Saved</span>}
+              </div>
+            </form>
+          </details>
 
-      <details className="text-sm group">
-        <summary className="cursor-pointer text-gray-500 hover:text-cream list-none border-b border-line pb-2">Details: title, type, prompt, limits</summary>
-        <form
-          className="grid gap-3 sm:grid-cols-2 pt-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const f = new FormData(e.currentTarget); const v = (k: string) => String(f.get(k) ?? "").trim();
-            const wl = Number(v("limit")) || null;
-            const cl = Number(v("charlimit")) || null;
-            setMetaSaved(false);
-            run(() => updateStatementMeta(statement.id, { title: v("title"), kind: v("kind"), prompt: v("prompt") || null, wordLimit: wl, charLimit: cl }), () => { setLimit(wl); setCharLimit(cl); setMetaSaved(true); router.refresh(); });
-          }}
-        >
-          <label className="sm:col-span-2 flex flex-col gap-1 text-gray-500">Title<input name="title" defaultValue={statement.title} required className={field + " text-cream"} /></label>
-          <label className="flex flex-col gap-1 text-gray-500">Type
-            <select name="kind" defaultValue={statement.kind} className={field + " text-cream bg-transparent"}>{STATEMENT_KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}</select>
-          </label>
-          <label className="flex flex-col gap-1 text-gray-500">Word limit<input name="limit" type="number" min={1} defaultValue={statement.word_limit ?? ""} placeholder="No limit" className={field + " text-cream"} /></label>
-          <label className="flex flex-col gap-1 text-gray-500">Character limit<input name="charlimit" type="number" min={1} defaultValue={statement.char_limit ?? ""} placeholder="No limit" className={field + " text-cream"} /></label>
-          <label className="sm:col-span-2 flex flex-col gap-1 text-gray-500">The school&rsquo;s prompt<textarea name="prompt" defaultValue={statement.prompt ?? ""} rows={4} placeholder="Paste the question or instructions from the application" className={field + " text-cream"} /></label>
-          <div className="sm:col-span-2 flex items-center gap-3">
-            <button disabled={pending} className={primary}>Save details</button>
-            {metaSaved && !pending && <span className="text-teal-600 text-xs">Saved</span>}
+          <div className="pt-1">
+            <ConfirmButton
+              label="Delete this statement" question={`Delete "${statement.title}" and all its saved versions? This cannot be undone.`} confirmLabel="Delete"
+              className="h-8 rounded-md px-2.5 text-[13px] font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
+              disabled={pending} onConfirm={() => run(() => deleteStatement(statement.id), () => router.push("/materials/statements"))}
+            />
           </div>
-        </form>
-      </details>
-
-      <div className="flex items-center gap-4 text-sm">
-        <button
-          disabled={pending}
-          onClick={() => { if (confirm(`Delete "${statement.title}" and all its saved versions? This cannot be undone.`)) run(() => deleteStatement(statement.id), () => router.push("/materials/statements")); }}
-          className="text-gray-500 hover:text-red-600"
-        >
-          Delete this statement
-        </button>
-        {error && <span className="text-red-600 text-xs">{error}</span>}
+        </aside>
       </div>
     </div>
   );
