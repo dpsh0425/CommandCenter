@@ -49,7 +49,7 @@ const STATUS_COLORS: Record<string, { fill: string; stroke: string; badge: strin
   Shortlisted: { fill: "bg-blue-600", stroke: "stroke-blue-600 border-blue-600", badge: "bg-blue-50 text-blue-700 border-blue-200" },
   "In Progress": { fill: "bg-sky-500", stroke: "stroke-sky-500 border-sky-500", badge: "bg-sky-50 text-sky-700 border-sky-200" },
   Submitted: { fill: "bg-emerald-600", stroke: "stroke-emerald-600 border-emerald-600", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  Interview: { fill: "bg-amber-500", stroke: "stroke-amber-500 border-amber-500", badge: "bg-amber-50 text-amber-700 border-amber-200" },
+  Interview: { fill: "bg-violet-600", stroke: "stroke-violet-600 border-violet-600", badge: "bg-violet-50 text-violet-700 border-violet-200" },
 };
 
 const DEFAULT_COLOR = { fill: "bg-slate-600", stroke: "stroke-slate-600 border-slate-600", badge: "bg-slate-100 text-slate-700 border-slate-200" };
@@ -102,7 +102,7 @@ export function DashboardAnalytics({
         {[
           { label: "SHORTLISTED", value: shortlistedCount, sub: "schools tracked", accent: "border-blue-600 text-blue-600" },
           { label: "IN PROGRESS", value: inProgressCount, sub: "active applications", accent: "border-sky-500 text-sky-600" },
-          { label: "INTERVIEWS", value: interviewCount, sub: "scheduled invites", accent: "border-amber-500 text-amber-600" },
+          { label: "INTERVIEWS", value: interviewCount, sub: "scheduled invites", accent: "border-violet-600 text-violet-600" },
           { label: "AVG SCORE", value: `${avgFit}%`, sub: "composite alignment", accent: "border-emerald-600 text-emerald-600" },
         ].map((m) => (
           <div key={m.label} className={`bg-white rounded-xl p-5 border border-slate-200 shadow-sm border-l-4 ${m.accent}`}>

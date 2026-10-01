@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import { addPerson, deletePerson, invitePerson, updatePerson } from "@/app/(app)/people/actions";
 
-export const SWATCHES = ["#c98a3e", "#5cae97", "#9f93e0", "#d97e78", "#6f9fd8", "#d99456", "#4f9d8a", "#b07cc6"];
+export const SWATCHES = ["#2563eb", "#5cae97", "#9f93e0", "#d97e78", "#6f9fd8", "#0891b2", "#4f9d8a", "#b07cc6"];
 
 function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
   return (

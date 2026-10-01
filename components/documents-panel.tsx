@@ -87,7 +87,7 @@ function DocItem({
               <span className="text-slate-700 font-medium"> · {d.schoolName}</span>
             )}
             {!d.is_current && (
-              <span className="text-amber-600 font-medium"> · older version</span>
+              <span className="text-slate-500 font-medium"> · older version</span>
             )}
           </div>
         </div>

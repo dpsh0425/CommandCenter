@@ -271,7 +271,7 @@ export default async function DashboardPage() {
             </span>
             <div
               className={`font-mono text-4xl font-extrabold tracking-tight ${
-                daysToNextSchool !== null && daysToNextSchool <= 14 ? "text-amber-600" : "text-slate-900"
+                daysToNextSchool !== null && daysToNextSchool <= 14 ? "text-rose-600" : "text-slate-900"
               }`}
             >
               {daysToNextSchool !== null ? `${daysToNextSchool}d` : "N/A"}
@@ -305,12 +305,12 @@ export default async function DashboardPage() {
             ))}
 
             {atRiskSchools.slice(0, 2).map((s) => (
-              <div key={s.id} className="p-3 bg-amber-50/60 border border-amber-200/80 rounded-lg flex items-center justify-between gap-3">
+              <div key={s.id} className="p-3 bg-white border border-rose-200/80 rounded-lg flex items-center justify-between gap-3">
                 <div className="truncate">
                   <span className="text-xs font-semibold text-slate-900 block truncate">{s.name} Deadline Reached</span>
                   <span className="text-[10px] text-slate-500 font-mono">Status: In Progress</span>
                 </div>
-                <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-200 shrink-0">
+                <span className="text-[10px] font-mono font-bold text-rose-700 bg-white px-2 py-0.5 rounded border border-rose-300 shrink-0">
                   At Risk
                 </span>
               </div>
@@ -435,7 +435,7 @@ export default async function DashboardPage() {
               <div style={{ width: `${(PIPELINE.shortlisted / totalSchools) * 100}%` }} className="bg-blue-600" title="Shortlisted" />
               <div style={{ width: `${(PIPELINE.inProgress / totalSchools) * 100}%` }} className="bg-sky-500" title="In Progress" />
               <div style={{ width: `${(PIPELINE.submitted / totalSchools) * 100}%` }} className="bg-emerald-600" title="Submitted" />
-              <div style={{ width: `${(PIPELINE.interview / totalSchools) * 100}%` }} className="bg-amber-500" title="Interview" />
+              <div style={{ width: `${(PIPELINE.interview / totalSchools) * 100}%` }} className="bg-violet-600" title="Interview" />
             </div>
 
             {/* Segment Breakdown */}
@@ -463,7 +463,7 @@ export default async function DashboardPage() {
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-violet-600" />
                   <span className="text-slate-700">Interview</span>
                 </div>
                 <span className="font-mono text-slate-900 font-bold">{PIPELINE.interview}</span>

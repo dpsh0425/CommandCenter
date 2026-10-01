@@ -1,5 +1,18 @@
 import type { Config } from "tailwindcss";
+import colors from "tailwindcss/colors";
 
+/*
+ * Theme tokens: light, blue-accent system.
+ *
+ * The legacy names (brass, ink, cream, surface, line) are kept because they are
+ * used across ~60 files. They now point at the new palette, by the role each one
+ * plays in the markup:
+ *   brass  -> primary accent (buttons, links, active states)
+ *   ink    -> text on the accent, and page-coloured overlays (white)
+ *   cream  -> main text (was light-on-dark text)
+ *   line   -> borders and dividers
+ * New code should prefer the semantic names: primary, canvas, success, danger.
+ */
 const config: Config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -11,28 +24,32 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        ink: "#12151c",
-        surface: "#1a1f29",
-        "surface-raised": "#212836",
-        line: "#313a4a",
-        cream: "#e9e7de",
-        brass: "#c98a3e",
-        "brass-soft": "#3a2f1e",
-        gray: {
-          50: "#242b38",
-          100: "#2b3342",
-          400: "#9aa2b1",
-          500: "#8b93a3",
-          600: "#6f7686",
+
+        // New semantic tokens
+        primary: {
+          DEFAULT: "#2563EB", // blue-600
+          hover: "#1D4ED8", // blue-700
+          soft: "#EFF6FF", // blue-50
+          muted: "#DBEAFE", // blue-100
         },
-        red: { 50: "#2c1c1b", 600: "#d97e78" },
-        yellow: { 50: "#2c2117", 300: "#d99456" },
-        teal: { 600: "#5cae97", 700: "#5cae97" },
-        violet: { 600: "#9f93e0", 700: "#9f93e0" },
-        amber: { 700: "#d99456" },
+        canvas: "#F8FAFC", // slate-50, app background
+        success: { DEFAULT: "#059669", soft: "#ECFDF5" },
+        danger: { DEFAULT: "#DC2626", soft: "#FEF2F2" },
+
+        // Legacy names, remapped
+        brass: "#2563EB",
+        "brass-soft": "#EFF6FF",
+        ink: "#FFFFFF",
+        cream: "#0F172A",
+        surface: "#FFFFFF",
+        "surface-raised": "#F1F5F9",
+        line: "#E2E8F0",
+
+        // Gray follows slate so neutrals match the rest of the palette
+        gray: colors.slate,
       },
       borderColor: {
-        DEFAULT: "#313a4a",
+        DEFAULT: "#E2E8F0",
       },
       fontFamily: {
         sans: ["'IBM Plex Sans'", "system-ui", "sans-serif"],

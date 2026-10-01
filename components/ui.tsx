@@ -128,7 +128,7 @@ export function SubNav({
             href={it.href}
             className={`pb-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               isActive
-                ? "border-amber-500 text-slate-900 font-semibold"
+                ? "border-blue-600 text-slate-900 font-semibold"
                 : "border-transparent text-slate-400 hover:text-slate-700"
             }`}
           >
