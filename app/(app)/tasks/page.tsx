@@ -3,6 +3,7 @@ import { TaskBoard } from "@/components/task-board";
 import { NewTaskForm } from "@/components/new-task-form";
 import { OWNER_USER_ID } from "@/lib/owner";
 import { PageHeader } from "@/components/ui";
+import { todayString } from "@/lib/app-date";
 
 export const metadata = { title: "Tasks" };
 
@@ -23,6 +24,7 @@ export default async function TasksPage() {
 
   const depsByTask = new Map<string, { title: string; status: string }[]>();
   for (const d of deps ?? []) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dep = (d as any).tasks;
     if (dep.status === "done") continue;
     const list = depsByTask.get(d.task_id) ?? [];
@@ -30,6 +32,7 @@ export default async function TasksPage() {
     depsByTask.set(d.task_id, list);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const shaped = (tasks ?? []).map((t: any) => ({
     id: t.id, title: t.title, status: t.status, priority: t.priority, due_date: t.due_date,
     school_name: t.schools?.name ?? null, milestone_title: t.research_milestones?.title ?? null,
@@ -38,15 +41,25 @@ export default async function TasksPage() {
   }));
 
   const open = shaped.filter((t) => t.status !== "done" && t.status !== "cancelled");
-  const today = new Date();
-  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  // "Today" in APP_TIMEZONE, not the server clock.
+  const todayKey = todayString();
   const overdueCount = open.filter((t) => t.due_date && t.due_date < todayKey).length;
 
   return (
-    <main className="p-4 md:p-8 max-w-6xl mx-auto flex flex-col gap-8">
+    <main className="mx-auto flex w-full max-w-[1280px] flex-col gap-5 p-4 md:p-8">
       <PageHeader
+        eyebrow="Work"
         title="Tasks"
-        subtitle={open.length === 0 ? "Nothing open. Add a task to get moving." : `${open.length} open${overdueCount > 0 ? ` · ${overdueCount} overdue` : ""}`}
+        subtitle={
+          open.length === 0 ? (
+            "Nothing open. Add a task to get moving."
+          ) : (
+            <>
+              {open.length} open
+              {overdueCount > 0 && <> · <span className="font-medium text-red-700">{overdueCount} overdue</span></>}
+            </>
+          )
+        }
         actions={isOwner ? (
           <NewTaskForm
             schools={(schools ?? []).map((s) => ({ id: s.id, label: s.name }))}

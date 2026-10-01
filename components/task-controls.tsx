@@ -11,18 +11,38 @@ const STATUSES = [
 type Priority = "low" | "medium" | "high";
 const messageOf = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback);
 
+const fieldClass = "h-9 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600";
+const primaryBtn = "h-9 rounded-md bg-blue-600 px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60";
+const secondaryBtn = "h-9 rounded-md border border-slate-300 bg-white px-3.5 text-[13px] font-medium text-slate-900 transition-colors hover:border-slate-400 hover:bg-slate-50 disabled:opacity-60";
+const errorText = "text-xs text-red-700";
+
 export function TaskStatusSelect({ id, value }: { id: string; value: string }) {
   const [pending, start] = useTransition();
+  const [failed, setFailed] = useState(false);
   return (
-    <select
-      value={value}
-      disabled={pending}
-      onChange={(e) => start(() => updateTaskStatus(id, e.target.value as any))}
-      className={`border rounded px-2 py-1 text-sm ${pending ? "opacity-50" : ""}`}
-      aria-label="Task status"
-    >
-      {STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-    </select>
+    <span className="flex flex-col gap-1">
+      <select
+        value={value}
+        disabled={pending}
+        onChange={(e) => {
+          setFailed(false);
+          const next = e.target.value;
+          start(async () => {
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await updateTaskStatus(id, next as any);
+            } catch {
+              setFailed(true);
+            }
+          });
+        }}
+        className={`${fieldClass} w-full ${pending ? "opacity-50" : ""}`}
+        aria-label="Task status"
+      >
+        {STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+      </select>
+      {failed && <span role="alert" className={errorText}>Couldn&apos;t save. Try again.</span>}
+    </span>
   );
 }
 
@@ -34,11 +54,11 @@ export function TaskEditForm({
   const [error, setError] = useState<string | null>(null);
 
   if (!open) {
-    return <button onClick={() => setOpen(true)} className="text-xs text-gray-500 underline self-start hover:text-cream">Edit details</button>;
+    return <button type="button" onClick={() => setOpen(true)} className={`${secondaryBtn} h-8 self-start px-3`}>Edit details</button>;
   }
   return (
     <form
-      className="border border-line bg-surface rounded-lg p-4 flex flex-col gap-2"
+      className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4"
       onSubmit={(e) => {
         e.preventDefault();
         const f = new FormData(e.currentTarget);
@@ -60,20 +80,30 @@ export function TaskEditForm({
         });
       }}
     >
-      <input name="title" defaultValue={title} required className="border rounded px-2 py-1.5 text-sm" />
-      <textarea name="description" defaultValue={description ?? ""} rows={3} placeholder="Description" className="border rounded px-2 py-1.5 text-sm" />
-      <div className="flex gap-2 flex-wrap items-center">
-        <select name="priority" defaultValue={priority} className="border rounded px-2 py-1.5 text-sm">
-          <option value="low">Low priority</option><option value="medium">Medium priority</option><option value="high">High priority</option>
-        </select>
-        <label className="text-xs text-gray-500 flex items-center gap-2">
-          Due <input type="date" name="due_date" defaultValue={dueDate ?? ""} className="border rounded px-2 py-1.5 text-sm" />
+      <label className="flex flex-col gap-1.5 text-[13px] font-medium text-slate-700">
+        Title
+        <input name="title" defaultValue={title} required className={fieldClass} />
+      </label>
+      <label className="flex flex-col gap-1.5 text-[13px] font-medium text-slate-700">
+        Description
+        <textarea name="description" defaultValue={description ?? ""} rows={3} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-blue-600" />
+      </label>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1.5 text-[13px] font-medium text-slate-700">
+          Priority
+          <select name="priority" defaultValue={priority} className={fieldClass}>
+            <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1.5 text-[13px] font-medium text-slate-700">
+          Due date
+          <input type="date" name="due_date" defaultValue={dueDate ?? ""} className={fieldClass} />
         </label>
       </div>
-      {error && <p className="text-red-600 text-xs">{error}</p>}
+      {error && <p role="alert" className={errorText}>{error}</p>}
       <div className="flex gap-2">
-        <button disabled={pending} className="bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm disabled:opacity-50">{pending ? "Saving…" : "Save"}</button>
-        <button type="button" onClick={() => setOpen(false)} className="text-sm text-gray-500">Cancel</button>
+        <button disabled={pending} className={primaryBtn}>{pending ? "Saving…" : "Save"}</button>
+        <button type="button" onClick={() => setOpen(false)} className={secondaryBtn}>Cancel</button>
       </div>
     </form>
   );
@@ -85,7 +115,7 @@ export function LogForm({ taskId }: { taskId: string }) {
   const [error, setError] = useState<string | null>(null);
   return (
     <form
-      className="flex flex-col gap-2"
+      className="flex flex-col gap-2.5"
       onSubmit={(e) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -102,11 +132,13 @@ export function LogForm({ taskId }: { taskId: string }) {
         });
       }}
     >
-      <div className="flex gap-1 border border-line rounded p-1 self-start text-xs">
+      <div role="group" aria-label="Entry type" className="grid grid-cols-2 gap-1 self-start rounded-lg bg-slate-100 p-1">
         {(["note", "result"] as const).map((k) => (
           <button
-            key={k} type="button" onClick={() => setKind(k)}
-            className={`px-3 py-1 rounded ${kind === k ? "bg-surface-raised text-cream font-medium" : "text-gray-500 hover:text-cream"}`}
+            key={k} type="button" onClick={() => setKind(k)} aria-pressed={kind === k}
+            className={`h-7 rounded-md px-3 text-xs font-semibold transition-colors ${
+              kind === k ? "bg-white text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.08)]" : "text-slate-600 hover:text-slate-900"
+            }`}
           >
             {k === "note" ? "Note" : "Result (counts as a win)"}
           </button>
@@ -114,11 +146,12 @@ export function LogForm({ taskId }: { taskId: string }) {
       </div>
       <textarea
         name="content" rows={2} required
+        aria-label={kind === "note" ? "Note" : "Result"}
         placeholder={kind === "note" ? "What happened? Any blockers or context…" : "What did you finish or find out?"}
-        className="border rounded p-2 text-sm"
+        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600"
       />
-      {error && <p className="text-red-600 text-xs">{error}</p>}
-      <button disabled={pending} className="bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm self-start disabled:opacity-50">
+      {error && <p role="alert" className={errorText}>{error}</p>}
+      <button disabled={pending} className={`${primaryBtn} self-start`}>
         {pending ? "Saving…" : kind === "note" ? "Add note" : "Log result"}
       </button>
     </form>
@@ -130,10 +163,10 @@ export function DependencyControls({
 }: { taskId: string; options: Array<{ id: string; title: string }> }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  if (options.length === 0) return <p className="text-xs text-gray-400 mt-2">No other open tasks to depend on.</p>;
+  if (options.length === 0) return <p className="text-xs text-slate-500">No other open tasks to depend on.</p>;
   return (
     <form
-      className="flex gap-2 mt-3"
+      className="flex flex-col gap-1.5"
       onSubmit={(e) => {
         e.preventDefault();
         const depId = String(new FormData(e.currentTarget).get("dep") ?? "");
@@ -148,12 +181,14 @@ export function DependencyControls({
         });
       }}
     >
-      <select name="dep" defaultValue="" className="border rounded px-2 py-1.5 text-sm flex-1 min-w-0" aria-label="Depends on task">
-        <option value="" disabled>This task waits on…</option>
-        {options.map((o) => <option key={o.id} value={o.id}>{o.title}</option>)}
-      </select>
-      <button disabled={pending} className="bg-brass text-ink font-medium rounded px-3 py-1.5 text-sm disabled:opacity-50">Add</button>
-      {error && <span className="text-red-600 text-xs self-center">{error}</span>}
+      <div className="flex gap-2">
+        <select name="dep" defaultValue="" className={`${fieldClass} min-w-0 flex-1 text-[13px]`} aria-label="Depends on task">
+          <option value="" disabled>This task waits on…</option>
+          {options.map((o) => <option key={o.id} value={o.id}>{o.title}</option>)}
+        </select>
+        <button disabled={pending} className={secondaryBtn}>Add</button>
+      </div>
+      {error && <span role="alert" className={errorText}>{error}</span>}
     </form>
   );
 }
@@ -162,12 +197,15 @@ export function RemoveDependencyButton({ taskId, dependsOnId }: { taskId: string
   const [pending, start] = useTransition();
   return (
     <button
+      type="button"
       disabled={pending}
       onClick={() => start(() => removeTaskDependency(taskId, dependsOnId))}
-      className="text-xs text-gray-500 hover:text-red-600 disabled:opacity-50"
+      className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
       aria-label="Remove dependency"
     >
-      ✕
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-3.5 w-3.5" aria-hidden="true">
+        <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+      </svg>
     </button>
   );
 }
@@ -176,14 +214,15 @@ export function DeleteTaskButton({ id, title }: { id: string; title: string }) {
   const [pending, start] = useTransition();
   return (
     <button
+      type="button"
       disabled={pending}
       onClick={() => {
         if (!confirm(`Delete task "${title}"? Its log and focus sessions go with it. This cannot be undone.`)) return;
         start(() => deleteTask(id));
       }}
-      className="text-xs text-red-600 border border-red-600 rounded px-2 py-1 self-start disabled:opacity-50"
+      className="h-8 self-start rounded-md border border-red-300 bg-white px-3 text-[13px] font-medium text-red-700 transition-colors hover:border-red-600 hover:bg-red-600 hover:text-white disabled:opacity-50"
     >
-      Delete task
+      {pending ? "Deleting…" : "Delete task"}
     </button>
   );
 }
