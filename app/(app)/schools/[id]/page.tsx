@@ -12,7 +12,7 @@ import {
   AddLetterForm, InterviewRow, LetterRow, NoteForm, ScheduleInterviewForm, SchoolTaskForm, SopForm, VisaStepRow,
 } from "@/components/school-controls";
 import {
-  AddDepartmentButton, AddFundingButton, AddProfessorButton, DepartmentHeader, FundingCard, ProfessorCard,
+  AddFundingButton, FacultyView, FundingCard, fundingStatusLabel,
   type DepartmentRow, type FundingRow, type ProfessorRow,
 } from "@/components/faculty-controls";
 import { AdmissionsPanel, type Profile } from "@/components/admissions-panel";
@@ -135,6 +135,13 @@ export default async function SchoolDetailPage({
     f.professor_id ? `${profs.find((p) => p.id === f.professor_id)?.name ?? "Professor"}'s grant`
       : f.department_id ? depts.find((d) => d.id === f.department_id)?.name ?? "Department" : "Whole school";
   const sortedFunds = [...funds].sort((a, b) => FUNDING_RANK[a.status] - FUNDING_RANK[b.status] || (a.deadline_date ?? "9").localeCompare(b.deadline_date ?? "9"));
+  // Best awarded amount, only when every award is in the same currency (no conversion).
+  const awardedWithAmount = funds.filter((f) => f.status === "awarded" && f.amount != null);
+  const bestOffer = new Set(awardedWithAmount.map((f) => f.currency)).size === 1
+    ? [...awardedWithAmount].sort((a, b) => Number(b.amount) - Number(a.amount))[0] : null;
+  const nextFundingDeadline = funds
+    .filter((f) => f.deadline_date && f.deadline_date >= today && f.status !== "awarded" && f.status !== "not_eligible")
+    .sort((a, b) => a.deadline_date!.localeCompare(b.deadline_date!))[0];
 
   const deadlineDays = meta.deadline_date ? daysBetween(today, meta.deadline_date) : null;
   const deadlineTone = deadlineDays == null ? "" : deadlineDays < 0 || deadlineDays <= 30 ? "text-red-700" : "text-slate-600";
@@ -328,49 +335,80 @@ export default async function SchoolDetailPage({
         </div>
       )}
 
-      {/* ── Faculty (restyled in Phase 6b) ── */}
+      {/* ── Faculty ── */}
       {isOwner && tab === "faculty" && (
-        <div className="flex flex-col gap-6">
-          <p className="max-w-2xl text-sm text-slate-600">Group professors by department, or keep them directly under the school.</p>
-          {groups.filter((g) => g.dept || g.list.length > 0).map((g) => (
-            <section key={g.dept?.id ?? "school"} className="flex flex-col gap-4 border-b border-slate-200 pb-6 last:border-0">
-              {g.dept ? (
-                <DepartmentHeader schoolId={id} dept={g.dept} professorCount={g.list.length} />
-              ) : (
-                <div>
-                  <h3 className="text-lg font-semibold leading-tight text-slate-900">{depts.length ? "Not assigned to a department" : "Professors"}</h3>
-                  <p className="text-xs text-slate-500">{g.list.length} professor{g.list.length === 1 ? "" : "s"}</p>
-                </div>
-              )}
-              <div className="grid gap-3 md:grid-cols-2">
-                {g.list.map((p) => <ProfessorCard key={p.id} schoolId={id} prof={p} departments={deptOptions} />)}
-              </div>
-              {g.list.length === 0 && <Empty>No professors here yet.</Empty>}
-              <AddProfessorButton schoolId={id} departments={deptOptions} departmentId={g.dept?.id ?? null} label={g.dept ? `+ Add professor to ${g.dept.name}` : "+ Add professor"} />
-            </section>
-          ))}
-          {profs.length === 0 && depts.length === 0 && (
-            <div className="flex flex-col gap-3">
-              <Empty>No professors or departments yet.</Empty>
-              <AddProfessorButton schoolId={id} departments={[]} />
-            </div>
-          )}
-          <AddDepartmentButton schoolId={id} />
-        </div>
+        <FacultyView schoolId={id} groups={groups} departments={deptOptions} today={today} />
       )}
 
-      {/* ── Funding (restyled in Phase 6b) ── */}
+      {/* ── Funding ── */}
       {isOwner && tab === "funding" && (
         <div className="flex flex-col gap-4">
           {meta.funding_guarantee ? (
-            <p className="max-w-2xl text-xl leading-snug text-slate-900"><span className="font-semibold text-emerald-700">Guaranteed. </span>{meta.funding_guarantee}</p>
+            <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-[18px] py-3.5">
+              <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-emerald-700"><path d="M20 6 9 17l-5-5" /></svg>
+              <div>
+                <p className="text-sm font-semibold text-emerald-800">Funding guaranteed</p>
+                <p className="whitespace-pre-line text-[13px] text-emerald-800">{meta.funding_guarantee}</p>
+              </div>
+            </div>
           ) : (
             <p className="max-w-2xl text-sm text-slate-600">Every way this school could pay for you: school-wide, by department, or a professor&apos;s grant.</p>
           )}
-          {sortedFunds.length === 0 ? <Empty>No funding tracked yet.</Empty> : (
+
+          {funds.length > 0 && (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">Options tracked</p>
+                <p className="text-[22px] font-semibold tabular-nums text-slate-900">{funds.length}</p>
+                <p className="text-xs text-slate-500">
+                  {Object.entries(funds.reduce<Record<string, number>>((m, f) => ({ ...m, [f.status]: (m[f.status] ?? 0) + 1 }), {}))
+                    .sort(([a], [b]) => FUNDING_RANK[a] - FUNDING_RANK[b])
+                    .map(([st, n]) => `${n} ${fundingStatusLabel(st).toLowerCase()}`).join(" · ")}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">Best offer so far</p>
+                {bestOffer ? (
+                  <>
+                    <p className="text-[22px] font-semibold tabular-nums text-emerald-700">{bestOffer.currency} {Number(bestOffer.amount).toLocaleString()}</p>
+                    <p className="truncate text-xs text-slate-500">{bestOffer.period ? (bestOffer.period === "total" ? "total" : `per ${bestOffer.period}`) + " · " : ""}{bestOffer.name}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[22px] font-semibold text-slate-400">—</p>
+                    <p className="text-xs text-slate-500">{awardedWithAmount.length ? "Awards are in different currencies" : "Nothing awarded yet"}</p>
+                  </>
+                )}
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">Next funding deadline</p>
+                {nextFundingDeadline ? (
+                  <>
+                    <p className={`text-[22px] font-semibold ${daysBetween(today, nextFundingDeadline.deadline_date!) <= 30 ? "text-red-700" : "text-slate-900"}`}>{relative(daysBetween(today, nextFundingDeadline.deadline_date!))}</p>
+                    <p className="truncate text-xs text-slate-500">{new Date(nextFundingDeadline.deadline_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {nextFundingDeadline.name}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[22px] font-semibold text-slate-400">—</p>
+                    <p className="text-xs text-slate-500">No open funding deadlines</p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-[15px] font-semibold text-slate-900">Funding options{funds.length > 0 && <span className="ml-1 text-[13px] font-normal text-slate-500">· best status first</span>}</h2>
+          </div>
+          {sortedFunds.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
+              <p className="text-sm font-medium text-slate-900">No funding tracked yet</p>
+              <p className="mt-1 text-[13px] text-slate-500">Add assistantships, fellowships, waivers or a professor&apos;s grant.</p>
+            </div>
+          ) : (
             <div className="grid gap-3 md:grid-cols-2">
               {sortedFunds.map((f) => (
-                <FundingCard key={f.id} schoolId={id} funding={f} scopeLabel={scopeLabel(f)} departments={deptOptions} professors={profOptions} />
+                <FundingCard key={f.id} schoolId={id} funding={f} scopeLabel={scopeLabel(f)} departments={deptOptions} professors={profOptions} today={today} />
               ))}
             </div>
           )}
@@ -378,12 +416,8 @@ export default async function SchoolDetailPage({
         </div>
       )}
 
-      {/* ── Admissions (restyled in Phase 6b) ── */}
-      {isOwner && tab === "admissions" && (
-        <div className="max-w-3xl">
-          <AdmissionsPanel schoolId={id} p={profile} />
-        </div>
-      )}
+      {/* ── Admissions ── */}
+      {isOwner && tab === "admissions" && <AdmissionsPanel schoolId={id} p={profile} />}
 
       {/* ── Application ── */}
       {isOwner && tab === "application" && (
@@ -515,8 +549,4 @@ function Step({
       <div className="flex flex-col gap-3 px-5 py-4">{children}</div>
     </li>
   );
-}
-
-function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-center text-xs text-slate-500">{children}</p>;
 }
