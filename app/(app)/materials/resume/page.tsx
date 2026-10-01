@@ -13,23 +13,15 @@ export default async function ResumesPage() {
   ]);
 
   if (!user || user.id !== OWNER_USER_ID) {
-    return (
-      <main className="p-4 md:p-8 max-w-xl mx-auto text-xs font-medium text-slate-500 font-sans">
-        Materials are only available to the workspace owner.
-      </main>
-    );
+    return <main className="mx-auto max-w-xl p-4 text-sm text-slate-500 md:p-8">Materials are only available to the workspace owner.</main>;
   }
 
   return (
-    <main className="p-4 md:p-8 max-w-4xl mx-auto flex flex-col gap-6 font-sans">
-      <div className="flex flex-col gap-4 border-b border-slate-200 pb-4">
-        <PageHeader
-          title="Materials"
-          subtitle="Build a resume, keep a version for each kind of application, and download it as a PDF."
-        />
+    <main className="mx-auto flex w-full max-w-[1040px] flex-col gap-6 p-4 md:p-8">
+      <div className="flex flex-col gap-4">
+        <PageHeader eyebrow="Materials" title="Resume builder" subtitle="Keep a version for each kind of application and download it as a PDF." />
         <SubNav items={MATERIALS_TABS} current="/materials/resume" />
       </div>
-
       <ResumeList resumes={resumes ?? []} />
     </main>
   );

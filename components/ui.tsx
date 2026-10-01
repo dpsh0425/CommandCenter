@@ -151,7 +151,8 @@ export const SCHOOL_TABS = [
   { href: "/readiness", label: "Readiness" },
 ];
 export const MATERIALS_TABS = [
-  { href: "/materials", label: "Documents" },
+  { href: "/materials", label: "Overview" },
+  { href: "/materials/documents", label: "Documents" },
   { href: "/materials/resume", label: "Resume builder" },
   { href: "/materials/statements", label: "Statements" },
   { href: "/materials/letters", label: "Letters" },

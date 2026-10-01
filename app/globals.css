@@ -61,3 +61,80 @@ input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
   -webkit-text-fill-color: #0f172a !important;
 }
+
+/* ── Restored (Phase 8): styles the app still uses, recoloured for the light theme ── */
+
+details > summary { list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
+
+/* Resume builder: a "paper" preview that is also what gets printed. */
+.resume-paper { background: #fff; color: #111; padding: 28px 32px; border-radius: 4px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12), 0 8px 24px -12px rgba(15, 23, 42, 0.18); font-family: Georgia, "Times New Roman", serif; font-size: 12.5px; line-height: 1.4; }
+.resume-paper h1 { font-family: inherit; font-size: 24px; text-align: center; font-weight: 700; margin: 0; color: #111; letter-spacing: 0; }
+.resume-paper .contact { text-align: center; font-size: 11.5px; margin: 2px 0 0; color: #333; }
+.resume-paper h2 { font-family: inherit; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #111; margin: 0 0 3px; color: #111; }
+.resume-paper ul { margin: 2px 0 0 16px; list-style: disc; padding: 0; }
+.resume-paper p { margin: 0; }
+/* Only pages that contain a resume switch to "print just the resume"; every other page prints normally. */
+@media print {
+  body:has(.resume-print) * { visibility: hidden; }
+  body:has(.resume-print) .resume-print, body:has(.resume-print) .resume-print * { visibility: visible; }
+  body:has(.resume-print) .resume-print { position: absolute; left: 0; top: 0; width: 100%; }
+  .resume-paper { border-radius: 0; padding: 0; box-shadow: none; }
+  @page { margin: 16mm; }
+}
+
+/* The writing page: a white sheet. */
+.paper {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.paper-page { padding: 1.25rem 1.25rem 2rem; }
+@media (min-width: 640px) { .paper-page { padding: 2.25rem 2.75rem 3rem; } }
+textarea.paper { padding: 1.25rem; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.65; }
+textarea.paper::placeholder { color: #94a3b8; }
+.paper-content { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; line-height: 1.7; color: #0f172a; overflow-wrap: anywhere; }
+.paper-content:focus, .paper-content .ProseMirror:focus { outline: none; }
+.paper-content p { margin: 0 0 0.9em; }
+.paper-content h1, .paper-content h2, .paper-content h3 { font-family: Georgia, 'Times New Roman', serif; font-weight: 700; line-height: 1.25; margin: 1.1em 0 0.4em; letter-spacing: 0; }
+.paper-content h1 { font-size: 1.6em; }
+.paper-content h2 { font-size: 1.35em; }
+.paper-content h3 { font-size: 1.15em; }
+.paper-content ul, .paper-content ol { margin: 0 0 0.9em; padding-left: 1.5em; }
+.paper-content ul { list-style: disc; }
+.paper-content ol { list-style: decimal; }
+.paper-content li > p { margin: 0 0 0.3em; }
+.paper-content blockquote { margin: 0 0 0.9em; padding-left: 1em; border-left: 3px solid #cbd5e1; color: #475569; }
+.paper-content hr { border: 0; border-top: 1px solid #e2e8f0; margin: 1.2em 0; }
+.paper-content a { color: #2563eb; text-decoration: underline; }
+.paper-content .ProseMirror-selectednode { outline: 2px solid #2563eb; }
+.paper-content p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; pointer-events: none; color: #94a3b8; }
+
+/* Printing a statement: only the page text, in a plain document style. Other pages print normally. */
+@media print {
+  body:has(.statement-print) * { visibility: hidden; }
+  body:has(.statement-print) .statement-print, body:has(.statement-print) .statement-print * { visibility: visible; }
+  body:has(.statement-print) .statement-print { position: absolute; left: 0; top: 0; width: 100%; padding: 0; background: #fff; }
+  .statement-print .paper-content { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.4; color: #000; min-height: 0 !important; }
+  .statement-print .paper-content a { color: #000; text-decoration: none; }
+}
+
+/* Focus mode hides the fixed phone navigation so the writing overlay covers the whole screen. */
+body.writing-focus nav.fixed { display: none; }
+
+/* Saved rich text shown straight on the page (notes, journal details): the app's own font and colours. */
+.paper-content.on-dark { font-family: inherit; font-size: inherit; line-height: 1.55; color: #0f172a; }
+.paper-content.on-dark h1, .paper-content.on-dark h2, .paper-content.on-dark h3 { font-family: inherit; font-size: 1em; color: #0f172a; margin: 0.8em 0 0.3em; }
+.paper-content.on-dark p { margin: 0 0 0.6em; }
+.paper-content.on-dark p:last-child { margin-bottom: 0; }
+.paper-content.on-dark blockquote { color: #475569; border-left-color: #cbd5e1; }
+.paper-content.on-dark hr { border-top-color: #e2e8f0; }
+.paper-content.on-dark a { color: #2563eb; }
+
+/* Touch: on phones every button and select is at least 40px tall. Toolbar controls keep their own size. */
+@media (max-width: 640px) {
+  main button:not([data-tb]), main select:not([data-tb]) { min-height: 2.5rem; }
+  main button[aria-label^="Remove"], main button[aria-label^="Delete"] { min-width: 2.5rem; }
+}
